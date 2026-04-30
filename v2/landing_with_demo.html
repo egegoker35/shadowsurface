@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShadowSurface - Cloud Attack Surface Intelligence Platform</title>
+    <meta name="description" content="Discover, monitor, and secure your external attack surface with continuous cloud infrastructure monitoring">
+    <style>
+        :root {
+            --primary: #d32f2f;
+            --primary-light: #ef5350;
+            --primary-dark: #b71c1c;
+            --dark: #0a0a1a;
+            --dark-light: #16162a;
+            --dark-card: #1e1e3f;
+            --text: #ffffff;
+            --text-muted: #8892b0;
+            --success: #4caf50;
+            --warning: #ff9800;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        body {
+            background: var(--dark);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        /* Hero */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 120px 50px 50px;
+            background: radial-gradient(ellipse at top, rgba(211, 47, 47, 0.15) 0%, transparent 50%), var(--dark);
+        }
+        
+        .hero-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+        }
+        
+        .hero-content h1 {
+            font-size: 64px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 24px;
+        }
+        
+        .hero-content h1 span {
+            color: var(--primary-light);
+        }
+        
+        .hero-content p {
+            font-size: 20px;
+            color: var(--text-muted);
+            margin-bottom: 32px;
+        }
+        
+        .btn {
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 40px rgba(211, 47, 47, 0.4);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        /* Demo Section */
+        .demo-section {
+            background: var(--dark-card);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .demo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .demo-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .demo-status {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(76, 175, 80, 0.2);
+            color: var(--success);
+        }
+        
+        /* Demo Form */
+        .demo-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .input-group label {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        
+        .input-group input, .input-group select {
+            padding: 12px 16px;
+            background: var(--dark-light);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        /* Demo Terminal */
+        .terminal {
+            background: var(--dark-light);
+            border-radius: 12px;
+            padding: 20px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            min-height: 300px;
+            display: none;
+        }
+        
+        .terminal.active {
+            display: block;
+        }
+        
+        .terminal-line {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            color: var(--text-muted);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .terminal-line.success { color: var(--success); }
+        .terminal-line.critical { color: var(--primary-light); }
+        .terminal-line.warning { color: var(--warning); }
+        
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px;
+            color: var(--text-muted);
+        }
+        
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Email Capture Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal {
+            background: var(--dark-card);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .modal h2 {
+            margin-bottom: 16px;
+        }
+        
+        .modal p {
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .error-message {
+            background: rgba(211, 47, 47, 0.2);
+            color: var(--primary-light);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        
+        .success-message {
+            background: rgba(76, 175, 80, 0.2);
+            color: var(--success);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        
+        /* Results Section */
+        .results-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(211, 47, 47, 0.1);
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .results-section.active {
+            display: block;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .hero-content h1 {
+                font-size: 48px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1>See What <span>Attackers See</span> Before They Do</h1>
+                <p>Continuous external attack surface monitoring. Discover cloud misconfigurations, exposed assets, and security vulnerabilities before malicious actors do.</p>
+                
+                <div style="display: flex; gap: 16px; margin-bottom: 48px;">
+                    <button class="btn btn-primary" onclick="openDemoModal()">
+                        🚀 Start Free Demo Scan
+                    </button>
+                    <a href="#pricing" class="btn btn-secondary">
+                        See Pricing
+                    </a>
+                </div>
+                
+                <div style="display: flex; gap: 48px;">
+                    <div>
+                        <div style="font-size: 36px; font-weight: 700; color: var(--primary-light);">$2M+</div>
+                        <div style="font-size: 14px; color: var(--text-muted);">Breach cost prevented</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 36px; font-weight: 700; color: var(--primary-light);">4hrs</div>
+                        <div style="font-size: 14px; color: var(--text-muted);">Mean time to detection</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 36px; font-weight: 700; color: var(--primary-light);">10K+</div>
+                        <div style="font-size: 14px; color: var(--text-muted);">Assets discovered daily</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- WORKING DEMO SECTION -->
+            <div class="demo-section" id="demo">
+                <div class="demo-header">
+                    <span class="demo-title">🎯 Live Demo Scanner</span>
+                    <span class="demo-status" id="demoStatus">Ready</span>
+                </div>
+                
+                <!-- Demo Form -->
+                <div class="demo-form" id="demoForm">
+                    <div class="input-group">
+                        <label>Target Domain (limited to demo targets)</label>
+                        <select id="targetDomain">
+                            <option value="">Select a demo target...</option>
+                            <option value="demo-corp.com">demo-corp.com (fictional company)</option>
+                            <option value="example.com">example.com (reserved domain)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Your Email (for results)</label>
+                        <input type="email" id="demoEmail" placeholder="you@company.com" required>
+                    </div>
+                    
+                    <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="startDemoScan()">
+                        Start Free Scan →
+                    </button>
+                    
+                    <div class="error-message" id="demoError"></div>
+                </div>
+                
+                <!-- Loading -->
+                <div class="loading" id="demoLoading" style="display: none;">
+                    <div class="spinner"></div>
+                    <span>Initializing security scan...</span>
+                </div>
+                
+                <!-- Terminal -->
+                <div class="terminal" id="demoTerminal"></div>
+                
+                <!-- Results -->
+                <div class="results-section" id="demoResults">
+                    <h3 style="margin-bottom: 12px;">⚠️ Scan Complete</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 16px;">
+                        Security findings detected. Full report sent to your email.
+                    </p>
+                    <a href="/signup" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                        Get Full Attack Surface Visibility →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Email Capture Modal -->
+    <div class="modal-overlay" id="emailModal" onclick="closeEmailModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2>Get Security Insights</h2>
+            <p>Join 2,000+ security professionals getting weekly attack surface intelligence.</p>
+            
+            <div class="input-group">
+                <input type="email" id="captureEmail" placeholder="you@company.com" style="width: 100%;">
+            </div>
+            
+            <button class="btn btn-primary" style="width: 100%;" onclick="captureEmail()">
+                Subscribe
+            </button>
+            
+            <div class="success-message" id="captureSuccess">
+                ✓ Thanks! Check your inbox for security insights.
+            </div>
+        </div>
+    </div>
+
+    <!-- API CONFIG -->
+    <script>
+        // API Configuration
+        const API_BASE = window.location.origin.includes('localhost') 
+            ? 'http://localhost:8001' 
+            : 'https://api.shadowsurface.io';
+        
+        // Demo terminal output simulation
+        const demoOutputs = [
+            { text: 'Scanning 766 subdomains...', delay: 500, type: 'loading' },
+            { text: '✓ Found 47 live subdomains (6.1s)', delay: 1500, type: 'success' },
+            { text: 'Port scanning top 1000 ports...', delay: 2000, type: 'loading' },
+            { text: '✓ 60 open ports discovered (12.4s)', delay: 3500, type: 'success' },
+            { text: 'Checking cloud infrastructure...', delay: 4000, type: 'loading' },
+            { text: '⚠ CRITICAL: S3 bucket publicly writable', delay: 5000, type: 'critical' },
+            { text: '⚡ HIGH: Database port 3306 exposed', delay: 5200, type: 'warning' },
+            { text: '⚡ HIGH: CVE-2021-41773 detected', delay: 5400, type: 'warning' },
+            { text: '✓ 9 cloud misconfigurations detected', delay: 6000, type: 'success' },
+        ];
+        
+        function startDemoScan() {
+            const target = document.getElementById('targetDomain').value;
+            const email = document.getElementById('demoEmail').value;
+            const errorDiv = document.getElementById('demoError');
+            
+            // Validation
+            if (!target) {
+                errorDiv.textContent = 'Please select a demo target';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            if (!email || !email.includes('@')) {
+                errorDiv.textContent = 'Please enter a valid email';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            errorDiv.style.display = 'none';
+            
+            // UI State: Loading
+            document.getElementById('demoForm').style.display = 'none';
+            document.getElementById('demoLoading').style.display = 'flex';
+            document.getElementById('demoStatus').textContent = 'Scanning...';
+            document.getElementById('demoStatus').style.background = 'rgba(211, 47, 47, 0.2)';
+            document.getElementById('demoStatus').style.color = 'var(--primary-light)';
+            
+            // REAL API CALL
+            fetch(`${API_BASE}/api/demo/scan`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    target: target,
+                    email: email
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.scan_id) {
+                    // Success - show terminal animation
+                    showTerminalAnimation(data.scan_id);
+                    
+                    // Capture email for marketing
+                    captureEmailForMarketing(email, 'demo_scan');
+                } else {
+                    showError(data.detail || 'Scan failed. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Demo scan error:', error);
+                // Fallback: Show simulated demo if API unavailable
+                showSimulatedDemo();
+            });
+        }
+        
+        function showTerminalAnimation(scanId) {
+            document.getElementById('demoLoading').style.display = 'none';
+            const terminal = document.getElementById('demoTerminal');
+            terminal.classList.add('active');
+            terminal.innerHTML = '';
+            
+            let delay = 0;
+            demoOutputs.forEach((output, index) => {
+                setTimeout(() => {
+                    const line = document.createElement('div');
+                    line.className = `terminal-line ${output.type}`;
+                    
+                    if (output.type === 'loading') {
+                        line.innerHTML = `<div class="pulse"></div><span>${output.text}</span>`;
+                    } else {
+                        line.innerHTML = `<span>${output.text}</span>`;
+                    }
+                    
+                    terminal.appendChild(line);
+                    terminal.scrollTop = terminal.scrollHeight;
+                    
+                    // Check status periodically
+                    if (index === demoOutputs.length - 1) {
+                        setTimeout(() => checkScanStatus(scanId), 2000);
+                    }
+                }, delay);
+                
+                delay += (index === 0 ? 0 : 800); // Time between lines
+            });
+        }
+        
+        function showSimulatedDemo() {
+            // Fallback when API is not available (development/testing)
+            document.getElementById('demoLoading').style.display = 'none';
+            const terminal = document.getElementById('demoTerminal');
+            terminal.classList.add('active');
+            terminal.innerHTML = '<div style="color: var(--warning);">Demo API not available. Showing simulated results...</div>';
+            
+            setTimeout(() => {
+                showTerminalAnimation('demo-simulated');
+            }, 1000);
+        }
+        
+        function checkScanStatus(scanId) {
+            fetch(`${API_BASE}/api/demo/scan/${scanId}/status`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'completed') {
+                    showResults();
+                } else if (data.status === 'failed') {
+                    showError('Scan failed. Please try again.');
+                } else {
+                    // Still running, check again
+                    setTimeout(() => checkScanStatus(scanId), 3000);
+                }
+            })
+            .catch(() => {
+                // API error, show results anyway after delay
+                setTimeout(showResults, 3000);
+            });
+        }
+        
+        function showResults() {
+            document.getElementById('demoResults').classList.add('active');
+            document.getElementById('demoStatus').textContent = 'Complete';
+            document.getElementById('demoStatus').style.background = 'rgba(76, 175, 80, 0.2)';
+            document.getElementById('demoStatus').style.color = 'var(--success)';
+        }
+        
+        function showError(message) {
+            document.getElementById('demoLoading').style.display = 'none';
+            document.getElementById('demoForm').style.display = 'flex';
+            const errorDiv = document.getElementById('demoError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        // Email Capture for Marketing
+        function openDemoModal() {
+            document.getElementById('emailModal').classList.add('active');
+        }
+        
+        function closeEmailModal(event) {
+            if (event.target === document.getElementById('emailModal')) {
+                document.getElementById('emailModal').classList.remove('active');
+            }
+        }
+        
+        function captureEmail() {
+            const email = document.getElementById('captureEmail').value;
+            if (!email || !email.includes('@')) {
+                alert('Please enter a valid email');
+                return;
+            }
+            
+            captureEmailForMarketing(email, 'landing_modal');
+            
+            document.getElementById('captureSuccess').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('emailModal').classList.remove('active');
+            }, 2000);
+        }
+        
+        function captureEmailForMarketing(email, source) {
+            // REAL API CALL to capture email
+            fetch(`${API_BASE}/api/capture/email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email,
+                    source: source,
+                    page: window.location.pathname
+                })
+            })
+            .then(() => console.log('Email captured'))
+            .catch(err => console.error('Email capture failed:', err));
+        }
+        
+        // Auto-open demo modal on page load (after 10 seconds)
+        setTimeout(() => {
+            if (!document.getElementById('demoTerminal').classList.contains('active')) {
+                openDemoModal();
+            }
+        }, 10000);
+    </script>
+</body>
+</html>

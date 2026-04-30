@@ -1,0 +1,19 @@
+[Unit]
+Description=ShadowSurface Scan Worker
+After=network.target shadowsurface-app.service
+Requires=shadowsurface-app.service
+
+[Service]
+Type=simple
+User=shadowsurface
+WorkingDirectory=/opt/shadowsurface/nextjs
+ExecStart=/usr/bin/npm run worker
+Restart=on-failure
+RestartSec=10
+Environment=NODE_ENV=production
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=shadowsurface-worker
+
+[Install]
+WantedBy=multi-user.target

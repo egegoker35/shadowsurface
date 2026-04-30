@@ -1,0 +1,106 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id                 String   @id @default(uuid())
+  name               String
+  plan               String   @default("starter")
+  stripeCustomerId   String?
+  stripeSubscriptionId String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  users              User[]
+  scans              Scan[]
+  auditLogs          AuditLog[]
+}
+
+model User {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  passwordHash      String
+  verified          Boolean  @default(false)
+  role              String   @default("user")
+  orgId             String
+  org               Organization @relation(fields: [orgId], references: [id])
+  createdScans      Scan[]   @relation("CreatedBy")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Scan {
+  id            String   @id @default(uuid())
+  target        String
+  status        String   @default("pending")
+  resultJson    Json?
+  statistics    Json?
+  executiveSummary Json?
+  durationSeconds Float?
+  orgId         String
+  org           Organization @relation(fields: [orgId], references: [id])
+  createdById   String
+  createdBy     User     @relation("CreatedBy", fields: [createdById], references: [id])
+  assets        Asset[]
+  cloudAssets   CloudAsset[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Asset {
+  id            String   @id @default(cuid())
+  domain        String
+  subdomain     String
+  ip            String?
+  port          Int
+  service       String   @default("")
+  banner        String   @default("")
+  technology    String?
+  version       String?
+  cves          String[] @default([])
+  riskScore     Int      @default(0)
+  findings      Json?    @default("[]")
+  headers       Json?    @default("{}")
+  scanId        String
+  scan          Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+}
+
+model CloudAsset {
+  id              String   @id @default(cuid())
+  provider        String
+  serviceType     String
+  resourceId      String
+  url             String
+  permissions     String[] @default([])
+  misconfigurations Json?  @default("[]")
+  riskScore       Int      @default(0)
+  severity        String   @default("medium")
+  scanId          String
+  scan            Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  actorEmail  String?
+  ip          String?
+  metadata    Json?
+  orgId       String?
+  org         Organization? @relation(fields: [orgId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model VerificationToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
