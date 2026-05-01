@@ -114,3 +114,13 @@ model PasswordResetToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
+
+model Lead {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  plan      String
+  message   String?
+  status    String   @default("new")
+  createdAt DateTime @default(now())
+}
