@@ -15,14 +15,14 @@ export async function POST(req: NextRequest) {
     const appUrl = process.env.APP_URL || 'https://shadowsurface.com';
 
     const request = {
-      locale: Iyzipay.LOCALE.TR,
+      locale: 'tr',
       conversationId: `${user.id}-${Date.now()}`,
       price: planData.price,
       paidPrice: planData.price,
-      currency: Iyzipay.CURRENCY.TRY,
+      currency: 'TRY',
       installment: '1',
       basketId: `BASKET-${plan}-${Date.now()}`,
-      paymentGroup: Iyzipay.PAYMENT_GROUP.SUBSCRIPTION,
+      paymentGroup: 'SUBSCRIPTION',
       callbackUrl: `${appUrl}/api/iyzico/callback`,
       enabledInstallments: [1, 2, 3, 6, 9],
       buyer: {
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
         id: plan,
         name: planData.name,
         category1: 'Software',
-        itemType: Iyzipay.BASKET_ITEM_TYPE.VIRTUAL,
+        itemType: 'VIRTUAL',
         price: planData.price,
       }],
     };
