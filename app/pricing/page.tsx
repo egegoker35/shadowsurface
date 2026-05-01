@@ -3,9 +3,9 @@ import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 
 const plans = [
-  { name: 'Starter', price: '$99', period: '/month', planId: 'starter', gumroadLink: process.env.NEXT_PUBLIC_GUMROAD_STARTER || '#', description: 'For small teams getting started with attack surface visibility.', features: ['1 user', '5 domains', 'Weekly scans', 'Basic cloud checks', 'Email alerts', 'Community support'] },
-  { name: 'Professional', price: '$499', period: '/month', planId: 'professional', gumroadLink: process.env.NEXT_PUBLIC_GUMROAD_PRO || '#', description: 'For security teams that need continuous monitoring.', features: ['5 users', '50 domains', 'Daily scans', 'Advanced cloud + CVE', 'Slack/Teams alerts', 'Priority support', 'API access'] },
-  { name: 'Enterprise', price: '$1,999', period: '/month', planId: 'enterprise', gumroadLink: process.env.NEXT_PUBLIC_GUMROAD_ENTERPRISE || '#', description: 'For MSSPs and large organizations at scale.', features: ['Unlimited users', 'Unlimited domains', 'Hourly scans', 'Custom integrations', 'Dedicated CSM', 'SOC2 reporting', 'SLA guarantee'] },
+  { name: 'Starter', price: '$99', period: '/month', planId: 'starter', gumroadLink: 'https://goker35.gumroad.com/l/twnhzg', description: 'For small teams getting started with attack surface visibility.', features: ['1 user', '5 domains', 'Weekly scans', 'Basic cloud checks', 'Email alerts', 'Community support'] },
+  { name: 'Professional', price: '$499', period: '/month', planId: 'professional', gumroadLink: 'https://goker35.gumroad.com/l/gngjwl', description: 'For security teams that need continuous monitoring.', features: ['5 users', '50 domains', 'Daily scans', 'Advanced cloud + CVE', 'Slack/Teams alerts', 'Priority support', 'API access'] },
+  { name: 'Enterprise', price: '$1,999', period: '/month', planId: 'enterprise', gumroadLink: 'https://goker35.gumroad.com/l/sfwgfb', description: 'For MSSPs and large organizations at scale.', features: ['Unlimited users', 'Unlimited domains', 'Hourly scans', 'Custom integrations', 'Dedicated CSM', 'SOC2 reporting', 'SLA guarantee'] },
 ];
 
 export default function PricingPage() {
