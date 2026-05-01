@@ -221,7 +221,7 @@ export class ShadowSurfaceEngine {
 
           // SSL Certificate Check
           if (asset.port === 443 || asset.port === 8443) {
-            asset.sslInfo = await checkSSL(asset.subdomain || asset.ip);
+            asset.sslInfo = await checkSSL(asset.subdomain || asset.ip || '');
             if (asset.sslInfo && asset.sslInfo.daysRemaining !== undefined && asset.sslInfo.daysRemaining < 30) {
               asset.findings.push({ type: 'ssl_expiring', severity: asset.sslInfo.daysRemaining < 7 ? 'critical' : 'high', description: `SSL certificate expires in ${asset.sslInfo.daysRemaining} days` });
             }
