@@ -18,8 +18,8 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export function createToken(payload: object, expiresIn = '7d'): string {
-  return jwt.sign(payload, getJwtSecret(), { expiresIn });
+export function createToken(payload: object, expiresIn: string | number = '7d'): string {
+  return jwt.sign(payload, getJwtSecret(), { expiresIn } as jwt.SignOptions);
 }
 
 export function verifyToken<T>(token: string): T | null {
