@@ -201,7 +201,7 @@ export class ShadowSurfaceEngine {
         const proto = asset.port === 443 || asset.port === 8443 ? 'https' : 'http';
         const url = `${proto}://${asset.subdomain || asset.ip}:${asset.port}`;
         try {
-          const { headers, body } = await fetchHeaders(url, 8000);
+          const { headers, body } = await fetchHeaders(url, 5000);
           asset.headers = headers;
           const server = headers['server'] || '';
           const powered = headers['x-powered-by'] || '';
@@ -214,9 +214,28 @@ export class ShadowSurfaceEngine {
           else if (headers['x-amzn-requestid']) asset.waf = 'AWS CloudFront';
           else if (headers['x-sucuri-id']) asset.waf = 'Sucuri';
           else if (headers['server']?.toLowerCase().includes('cloudflare')) asset.waf = 'Cloudflare';
+          else if (body.includes('cdn-cgi')) asset.waf = 'Cloudflare';
+          else if (body.includes('sucuri')) asset.waf = 'Sucuri';
+          else if (body.includes('__cf_bm')) asset.waf = 'Cloudflare';
 
+          // Technology Detection - Headers
           if (server) { asset.technology = extractTech(server); asset.version = extractVersion(server); }
           if (powered && !asset.technology) asset.technology = extractTech(powered);
+
+          // Technology Detection - Body Patterns
+          if (!asset.technology) {
+            if (body.includes('wp-content') || body.includes('wp-includes')) asset.technology = 'WordPress';
+            else if (body.includes('Drupal')) asset.technology = 'Drupal';
+            else if (body.includes('Joomla')) asset.technology = 'Joomla';
+            else if (body.includes('reactroot') || body.includes('data-reactroot')) asset.technology = 'React';
+            else if (body.includes('next.js') || body.includes('__NEXT_DATA__')) asset.technology = 'Next.js';
+            else if (body.includes('laravel')) asset.technology = 'Laravel';
+            else if (body.includes('django')) asset.technology = 'Django';
+            else if (body.includes('express')) asset.technology = 'Express';
+            else if (body.includes('nginx') || body.includes('nginx/')) asset.technology = 'nginx';
+            else if (body.includes('apache') || body.includes('apache/')) asset.technology = 'Apache';
+          }
+
           if (asset.technology && asset.version) asset.cves = mapCves(asset.technology, asset.version);
 
           // SSL Certificate Check
