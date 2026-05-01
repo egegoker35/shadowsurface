@@ -7,7 +7,7 @@ import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput, abuseCheck } from 
 import { z } from 'zod';
 
 const createSchema = z.object({
-  target: z.string().min(3).max(128).regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*\.[a-zA-Z]{2,}$/),
+  target: z.string().min(3).max(128).regex(/^([a-zA-Z0-9][a-zA-Z0-9._-]*\.[a-zA-Z]{2,}|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/),
 });
 
 export async function POST(req: NextRequest) {

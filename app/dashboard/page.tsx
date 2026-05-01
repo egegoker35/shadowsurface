@@ -45,7 +45,7 @@ export default function DashboardPage() {
         <h2 className="text-lg font-semibold mb-4">New Scan</h2>
         {error && <div className="mb-3 text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2 text-sm">{error}</div>}
         <form onSubmit={startScan} className="flex gap-3">
-          <input value={target} onChange={(e) => setTarget(e.target.value)} placeholder="example.com" required className="flex-1 px-4 py-2.5 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <input value={target} onChange={(e) => setTarget(e.target.value)} placeholder="example.com or 192.168.1.1" required className="flex-1 px-4 py-2.5 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
           <button type="submit" disabled={loading} className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50">{loading ? 'Starting...' : 'Start Scan'}</button>
         </form>
       </div>
