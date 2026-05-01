@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build",
-    "postinstall": "prisma generate",
+    "build": "prisma generate && next build",
+    "postinstall": "echo 'skip prisma generate in install'",
     "start": "next start -p 3000",
     "lint": "next lint",
     "db:generate": "prisma generate",
