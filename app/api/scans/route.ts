@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
-import { redis } from '@/lib/redis';
+import { ShadowSurfaceEngine } from '@/lib/scanner/engine';
 import { rateLimitByUser, rateLimitByIP } from '@/lib/middleware/rateLimit';
 import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput, abuseCheck } from '@/lib/middleware/security';
 import { z } from 'zod';
@@ -22,7 +22,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email verification required before scanning.' }, { status: 403 });
     }
 
-    // Rate limit: 5 scans per user per hour
     const rl = await rateLimitByUser(user.id, 5, 3600);
     if (!rl.success) {
       return NextResponse.json(
@@ -46,14 +45,64 @@ export async function POST(req: NextRequest) {
     }
 
     const scan = await prisma.scan.create({
-      data: { target, status: 'pending', orgId: user.orgId, createdById: user.id },
+      data: { target, status: 'running', orgId: user.orgId, createdById: user.id },
     });
 
-    await redis.lpush('scan:queue', JSON.stringify({ scanId: scan.id, payload: { target, orgId: user.orgId, userId: user.id } }));
-    return NextResponse.json({ scan });
+    // SENKRON SCAN - worker gerekmez
+    const engine = new ShadowSurfaceEngine(target);
+    const result = await engine.runFullScan(30);
+
+    await prisma.scan.update({
+      where: { id: scan.id },
+      data: {
+        status: 'completed',
+        resultJson: result as any,
+        statistics: result.statistics as any,
+        executiveSummary: result.executiveSummary as any,
+        durationSeconds: result.durationSeconds,
+      },
+    });
+
+    if (result.assets.length > 0) {
+      const assetData = result.assets.map((asset) => ({
+        domain: asset.domain,
+        subdomain: asset.subdomain,
+        ip: asset.ip,
+        port: asset.port,
+        service: asset.service,
+        banner: asset.banner,
+        technology: asset.technology,
+        version: asset.version,
+        cves: asset.cves,
+        riskScore: asset.riskScore,
+        findings: asset.findings as any,
+        headers: asset.headers as any,
+        sslInfo: asset.sslInfo as any,
+        waf: asset.waf,
+        scanId: scan.id,
+      }));
+      await prisma.asset.createMany({ data: assetData });
+    }
+
+    if (result.cloudAssets.length > 0) {
+      const cloudData = result.cloudAssets.map((ca) => ({
+        provider: ca.provider,
+        serviceType: ca.serviceType,
+        resourceId: ca.resourceId,
+        url: ca.url,
+        permissions: ca.permissions,
+        misconfigurations: ca.misconfigurations as any,
+        riskScore: ca.riskScore,
+        severity: ca.severity,
+        scanId: scan.id,
+      }));
+      await prisma.cloudAsset.createMany({ data: cloudData });
+    }
+
+    return NextResponse.json({ scan: await prisma.scan.findUnique({ where: { id: scan.id } }) });
   } catch (e: any) {
     console.error('[Scan API Error]', e);
-    return NextResponse.json({ error: 'Failed to start scan. Please try again.' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to run scan: ' + (e.message || 'Unknown error') }, { status: 500 });
   }
 }
 
