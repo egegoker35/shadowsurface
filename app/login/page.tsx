@@ -38,7 +38,10 @@ export default function LoginPage() {
             </div>
             <button type="submit" disabled={loading} className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50">{loading ? 'Signing in...' : 'Sign In'}</button>
           </form>
-          <p className="mt-4 text-sm text-slate-400 text-center">No account? <Link href="/register" className="text-emerald-400 hover:underline">Get Started</Link></p>
+          <div className="mt-4 flex justify-between text-sm">
+            <Link href="/forgot-password" className="text-slate-400 hover:text-emerald-400">Forgot password?</Link>
+            <span className="text-slate-400">No account? <Link href="/register" className="text-emerald-400 hover:underline">Get Started</Link></span>
+          </div>
         </div>
       </div>
     </div>

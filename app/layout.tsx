@@ -1,5 +1,8 @@
 import './globals.css';
 import { ReactNode } from 'react';
+import dynamic from 'next/dynamic';
+
+const ChatWidget = dynamic(() => import('@/components/ChatWidget'), { ssr: false });
 
 export const metadata = {
   title: 'ShadowSurface - Cloud Attack Surface Intelligence Platform',
@@ -57,6 +60,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className="antialiased text-white bg-slate-950">
         {children}
+        <ChatWidget />
       </body>
     </html>
   );

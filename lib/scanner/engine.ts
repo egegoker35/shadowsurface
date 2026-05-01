@@ -29,17 +29,48 @@ async function tcpConnect(ip: string, port: number, ms = 2000): Promise<boolean>
   });
 }
 
+const SERVICE_NAMES: Record<number, string> = {
+  21: 'FTP', 22: 'SSH', 23: 'Telnet', 25: 'SMTP', 53: 'DNS', 80: 'HTTP', 110: 'POP3',
+  143: 'IMAP', 443: 'HTTPS', 445: 'SMB', 3306: 'MySQL', 3389: 'RDP', 5432: 'PostgreSQL',
+  6379: 'Redis', 8080: 'HTTP-Proxy', 8443: 'HTTPS-Alt', 9200: 'Elasticsearch', 27017: 'MongoDB',
+};
+
+const TECH_PATTERNS: [RegExp, string, string?][] = [
+  [/Server:\s*nginx[\/\s]*(\d+\.\d+\.\d+)?/i, 'nginx', '1'],
+  [/Server:\s*Apache[\/\s]*(\d+\.\d+\.\d+)?/i, 'Apache', '1'],
+  [/Server:\s*Microsoft-IIS[\/\s]*(\d+\.\d+)?/i, 'IIS', '1'],
+  [/X-Powered-By:\s*PHP[\/\s]*(\d+\.\d+)?/i, 'PHP', '1'],
+  [/X-Powered-By:\s*Express/i, 'Express', ''],
+  [/X-AspNet-Version:\s*(\d+\.\d+\.\d+)?/i, 'ASP.NET', '1'],
+  [/X-Generator:\s*WordPress/i, 'WordPress', ''],
+  [/wp-content/i, 'WordPress', ''],
+  [/drupal/i, 'Drupal', ''],
+  [/jquery/i, 'jQuery', ''],
+  [/react/i, 'React', ''],
+  [/laravel/i, 'Laravel', ''],
+  [/django/i, 'Django', ''],
+  [/spring/i, 'Spring', ''],
+  [/fastapi/i, 'FastAPI', ''],
+  [/flask/i, 'Flask', ''],
+  [/cloudflare/i, 'Cloudflare', ''],
+  [/akamai/i, 'Akamai', ''],
+];
+
 async function grabBanner(ip: string, port: number, ms = 3000): Promise<string> {
   return new Promise((resolve) => {
     const socket = createConnection({ host: ip, port, timeout: ms }, () => {
-      if ([80,8080,8000,3000,5000].includes(port)) socket.write('HEAD / HTTP/1.0\r\n\r\n');
+      if ([80,8080,8000,3000,5000,8081,8443].includes(port)) {
+        socket.write('GET / HTTP/1.1\r\nHost: ' + ip + '\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r\n');
+      } else if ([21,22,23,25,110,143].includes(port)) {
+        // banner will come from server
+      }
     });
     let data = '';
-    socket.on('data', (chunk) => { data += chunk.toString(); socket.end(); });
+    socket.on('data', (chunk) => { data += chunk.toString(); if (data.length > 2048) socket.end(); });
     socket.on('error', () => resolve(''));
     socket.on('timeout', () => { socket.destroy(); resolve(data); });
-    socket.on('close', () => resolve(data.slice(0, 512)));
-    setTimeout(() => { socket.destroy(); resolve(data.slice(0, 512)); }, ms);
+    socket.on('close', () => resolve(data.slice(0, 1024)));
+    setTimeout(() => { socket.destroy(); resolve(data.slice(0, 1024)); }, ms);
   });
 }
 
@@ -139,7 +170,7 @@ export class ShadowSurfaceEngine {
         const open = await tcpConnect(t.ip, t.port, 2000);
         if (!open) return null;
         const banner = await grabBanner(t.ip, t.port, 2000);
-        return { id: genId(), domain: this.target, subdomain: t.subdomain, ip: t.ip, port: t.port, service: '', banner, technology: null, version: null, cves: [], cloudProvider: null, riskScore: 0, findings: [], headers: {}, firstSeen: new Date().toISOString() } as DiscoveredAsset;
+        return { id: genId(), domain: this.target, subdomain: t.subdomain, ip: t.ip, port: t.port, service: SERVICE_NAMES[t.port] || '', banner, technology: null, version: null, cves: [], cloudProvider: null, riskScore: 0, findings: [], headers: {}, firstSeen: new Date().toISOString() } as DiscoveredAsset;
       }));
       for (const r of results) { if (r.status === 'fulfilled' && r.value) assets.push(r.value); }
     }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
-import { publishScanJob } from '@/lib/redis';
+import { runScan } from '@/lib/worker';
 import { rateLimitByUser, rateLimitByIP } from '@/lib/middleware/rateLimit';
 import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput, abuseCheck } from '@/lib/middleware/security';
 import { z } from 'zod';
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       data: { target, status: 'pending', orgId: user.orgId, createdById: user.id },
     });
 
-    await publishScanJob(scan.id, { target, orgId: user.orgId, userId: user.id });
+    await runScan(scan.id, { target, orgId: user.orgId, userId: user.id });
     return NextResponse.json({ scan });
   } catch (e: any) {
     console.error('[Scan API Error]', e);

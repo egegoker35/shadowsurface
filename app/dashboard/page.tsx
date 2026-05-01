@@ -59,8 +59,8 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {scans.map((s: any) => (
-                  <tr key={s.id} className="border-b border-slate-800 hover:bg-slate-800/50">
-                    <td className="py-2 font-medium">{s.target}</td>
+                  <tr key={s.id} className="border-b border-slate-800 hover:bg-slate-800/50 cursor-pointer" onClick={() => window.location.href = `/dashboard/scans/${s.id}`}>
+                    <td className="py-2 font-medium text-emerald-400 hover:underline">{s.target}</td>
                     <td className="py-2"><span className={`px-2 py-0.5 rounded text-xs ${s.status === 'completed' ? 'bg-emerald-900 text-emerald-300' : s.status === 'failed' ? 'bg-red-900 text-red-300' : 'bg-yellow-900 text-yellow-300'}`}>{s.status}</span></td>
                     <td className="py-2">{(s.executiveSummary as any)?.overallRisk || '-'}</td>
                     <td className="py-2 text-slate-400">{new Date(s.createdAt).toLocaleString()}</td>
