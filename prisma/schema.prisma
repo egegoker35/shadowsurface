@@ -66,6 +66,8 @@ model Asset {
   riskScore     Int      @default(0)
   findings      Json?    @default("[]")
   headers       Json?    @default("{}")
+  sslInfo       Json?
+  waf           String?
   scanId        String
   scan          Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
   createdAt     DateTime @default(now())

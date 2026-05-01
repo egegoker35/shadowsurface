@@ -91,6 +91,8 @@ async function processJob(raw: string, attempt = 1) {
         riskScore: asset.riskScore,
         findings: asset.findings as any,
         headers: asset.headers as any,
+        sslInfo: asset.sslInfo as any,
+        waf: asset.waf,
         scanId,
       }));
       await prisma.asset.createMany({ data: assetData });
