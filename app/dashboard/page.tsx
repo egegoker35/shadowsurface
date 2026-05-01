@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
@@ -7,7 +8,9 @@ export default function DashboardPage() {
   const [target, setTarget] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [paymentMsg, setPaymentMsg] = useState('');
   const token = typeof window !== 'undefined' ? localStorage.getItem('ss_token') : null;
+  const searchParams = useSearchParams();
 
   const fetchDashboard = async () => {
     const res = await fetch('/api/dashboard', { headers: { Authorization: `Bearer ${token}` } });
@@ -19,7 +22,12 @@ export default function DashboardPage() {
     if (res.ok) { const d = await res.json(); setScans(d.scans || []); }
   };
 
-  useEffect(() => { if (token) { fetchDashboard(); fetchScans(); } }, [token]);
+  useEffect(() => {
+    if (token) { fetchDashboard(); fetchScans(); }
+    const p = searchParams.get('payment');
+    if (p === 'success') setPaymentMsg('Payment successful! Your plan has been upgraded.');
+    if (p === 'failed') setPaymentMsg('Payment failed. Please try again or contact support.');
+  }, [token, searchParams]);
 
   const startScan = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true); setError('');
@@ -33,6 +41,11 @@ export default function DashboardPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      {paymentMsg && (
+        <div className={`mb-6 px-4 py-3 rounded-lg text-sm ${paymentMsg.includes('successful') ? 'bg-emerald-900/20 border border-emerald-800 text-emerald-400' : 'bg-red-900/20 border border-red-800 text-red-400'}`}>
+          {paymentMsg}
+        </div>
+      )}
       {data && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5"><div className="text-3xl font-bold text-white">{data.scanCount}</div><div className="text-xs text-slate-400 mt-1">Total Scans</div></div>
