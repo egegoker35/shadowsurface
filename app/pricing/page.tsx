@@ -9,6 +9,7 @@ const plans = [
 ];
 
 const hasStripe = !!(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+const hasIyzico = !!(process.env.NEXT_PUBLIC_IYZICO_ENABLED);
 
 export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
@@ -19,19 +20,45 @@ export default function PricingPage() {
   const [formSuccess, setFormSuccess] = useState(false);
 
   const subscribe = async (planId: string) => {
-    if (!hasStripe) {
-      setSelectedPlan(planId);
-      setModalOpen(true);
-      return;
-    }
     const token = localStorage.getItem('ss_token');
     if (!token) { window.location.href = '/login'; return; }
-    setLoading(planId);
-    const res = await fetch('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ plan: planId }) });
-    const data = await res.json();
-    setLoading(null);
-    if (data.url) window.location.href = data.url;
-    else alert(data.error || 'Checkout failed');
+
+    // IYZICO: Checkout form
+    if (hasIyzico) {
+      setLoading(planId);
+      const res = await fetch('/api/iyzico', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ plan: planId }) });
+      const data = await res.json();
+      setLoading(null);
+      if (data.checkoutFormContent) {
+        const div = document.createElement('div');
+        div.innerHTML = data.checkoutFormContent;
+        document.body.appendChild(div);
+        const script = div.querySelector('script');
+        if (script) {
+          const newScript = document.createElement('script');
+          newScript.src = script.src;
+          document.body.appendChild(newScript);
+        }
+      } else {
+        alert(data.error || 'Payment failed');
+      }
+      return;
+    }
+
+    // STRIPE: Redirect
+    if (hasStripe) {
+      setLoading(planId);
+      const res = await fetch('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ plan: planId }) });
+      const data = await res.json();
+      setLoading(null);
+      if (data.url) window.location.href = data.url;
+      else alert(data.error || 'Checkout failed');
+      return;
+    }
+
+    // Fallback: manual lead form
+    setSelectedPlan(planId);
+    setModalOpen(true);
   };
 
   const submitLead = async (e: React.FormEvent) => {
@@ -65,7 +92,7 @@ export default function PricingPage() {
                   ))}
                 </ul>
                 <button onClick={() => subscribe(plan.planId)} disabled={!!loading} className="block text-center w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50 transition-colors">
-                  {loading === plan.planId ? 'Loading...' : hasStripe ? 'Subscribe' : 'Get Started'}
+                  {loading === plan.planId ? 'Loading...' : hasStripe ? 'Subscribe' : hasIyzico ? 'Kredi Kartı ile Öde' : 'Get Started'}
                 </button>
               </div>
             ))}
