@@ -4,7 +4,6 @@ const KNOWLEDGE_BASE: Record<string, string> = {
   'sql injection': 'SQL Injection occurs when untrusted input is concatenated into SQL queries. Prevention: use parameterized queries/prepared statements, ORM frameworks, input validation, and least-privilege DB accounts.',
   'xss': 'Cross-Site Scripting (XSS) allows attackers to inject client-side scripts. Prevention: encode output, use Content-Security-Policy, validate/sanitize input, and use modern frameworks with automatic escaping.',
   'csrf': 'CSRF tricks users into performing unwanted actions. Prevention: use anti-CSRF tokens, SameSite cookies, and verify Origin/Referer headers.',
-  'ssti': 'Server-Side Template Injection allows RCE via template engines. Prevention: avoid user input in templates, use sandboxed environments, and sanitize input.',
   'ssrf': 'SSRF forces servers to make requests to unintended destinations. Prevention: whitelist URLs, disable unnecessary URL schemes, and use network segmentation.',
   'cve': 'Common Vulnerabilities and Exposures (CVE) is a dictionary of publicly known security vulnerabilities. Keep software updated and subscribe to vulnerability feeds.',
   'port scan': 'Port scanning identifies open ports/services. Nmap is the gold standard. Always get written authorization before scanning any target.',
@@ -20,16 +19,36 @@ const KNOWLEDGE_BASE: Record<string, string> = {
   'risk score': 'Risk Score = Likelihood × Impact. Critical (90+): immediate action. High (70-89): fix within days. Medium (40-69): fix within weeks. Low (<40): scheduled maintenance.',
 };
 
-function findAnswer(question: string): string {
+function findKnowledgeAnswer(question: string): string | null {
   const q = question.toLowerCase();
   for (const [keyword, answer] of Object.entries(KNOWLEDGE_BASE)) {
     if (q.includes(keyword)) return answer;
   }
-  if (q.includes('hello') || q.includes('hi')) return 'Hello! I am ShadowAI, your cybersecurity assistant. Ask me about vulnerabilities, scan results, or security best practices.';
-  if (q.includes('thank')) return 'You\'re welcome! Stay secure.';
-  if (q.includes('scan') && q.includes('mean')) return 'A scan discovers subdomains, open ports, services, technologies, and cloud misconfigurations for a target domain. Results show your attack surface.';
-  if (q.includes('how') && q.includes('fix')) return ' remediation depends on the specific finding. Provide the vulnerability type or CVE, and I can give tailored remediation steps.';
-  return 'I can help with cybersecurity topics like vulnerabilities (SQLi, XSS, CSRF), scanning techniques, cloud security, report writing, and risk scoring. Ask me anything specific!';
+  return null;
+}
+
+async function askOpenAI(message: string): Promise<string | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are ShadowAI, a cybersecurity expert assistant for the ShadowSurface attack surface management platform. You help users understand security vulnerabilities, scan results, and best practices. Be concise and actionable.' },
+          { role: 'user', content: message },
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+      }),
+    });
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || null;
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -37,7 +56,19 @@ export async function POST(req: NextRequest) {
     const { message } = await req.json();
     if (!message) return NextResponse.json({ error: 'Message required' }, { status: 400 });
 
-    const reply = findAnswer(message);
+    // Try OpenAI first
+    let reply = await askOpenAI(message);
+
+    // Fallback to knowledge base
+    if (!reply) {
+      reply = findKnowledgeAnswer(message);
+    }
+
+    // Generic fallback
+    if (!reply) {
+      reply = 'I can help with cybersecurity topics like vulnerabilities (SQLi, XSS, CSRF), scanning techniques, cloud security, report writing, and risk scoring. Ask me anything specific!';
+    }
+
     return NextResponse.json({ reply });
   } catch {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });

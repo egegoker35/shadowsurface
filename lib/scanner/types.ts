@@ -13,6 +13,8 @@ export interface DiscoveredAsset {
   riskScore: number;
   findings: Record<string, unknown>[];
   headers: Record<string, string>;
+  sslInfo?: { issuer?: string; subject?: string; validFrom?: string; validTo?: string; daysRemaining?: number } | null;
+  waf?: string | null;
   firstSeen: string;
 }
 

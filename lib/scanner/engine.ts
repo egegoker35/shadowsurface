@@ -74,6 +74,22 @@ async function grabBanner(ip: string, port: number, ms = 3000): Promise<string> 
   });
 }
 
+async function checkSSL(subdomain: string): Promise<{ issuer?: string; subject?: string; validFrom?: string; validTo?: string; daysRemaining?: number } | null> {
+  return new Promise((resolve) => {
+    const client = httpsRequest({ hostname: subdomain, port: 443, method: 'HEAD', timeout: 5000 }, (res) => {
+      const cert = (res as any).socket?.getPeerCertificate?.();
+      if (cert && cert.subject) {
+        const validTo = cert.valid_to ? new Date(cert.valid_to) : null;
+        const daysRemaining = validTo ? Math.floor((validTo.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : undefined;
+        resolve({ issuer: cert.issuer?.O, subject: cert.subject?.CN, validFrom: cert.valid_from, validTo: cert.valid_to, daysRemaining });
+      } else resolve(null);
+    });
+    client.on('error', () => resolve(null));
+    client.on('timeout', () => { client.destroy(); resolve(null); });
+    client.end();
+  });
+}
+
 async function fetchHeaders(url: string, ms = 8000): Promise<{ status: number; headers: Record<string, string>; body: string }> {
   return new Promise((resolve) => {
     const client = url.startsWith('https:') ? httpsRequest : httpRequest;
@@ -170,7 +186,7 @@ export class ShadowSurfaceEngine {
         const open = await tcpConnect(t.ip, t.port, 2000);
         if (!open) return null;
         const banner = await grabBanner(t.ip, t.port, 2000);
-        return { id: genId(), domain: this.target, subdomain: t.subdomain, ip: t.ip, port: t.port, service: SERVICE_NAMES[t.port] || '', banner, technology: null, version: null, cves: [], cloudProvider: null, riskScore: 0, findings: [], headers: {}, firstSeen: new Date().toISOString() } as DiscoveredAsset;
+        return { id: genId(), domain: this.target, subdomain: t.subdomain, ip: t.ip, port: t.port, service: SERVICE_NAMES[t.port] || '', banner, technology: null, version: null, cves: [], cloudProvider: null, riskScore: 0, findings: [], headers: {}, sslInfo: null, waf: null, firstSeen: new Date().toISOString() } as DiscoveredAsset;
       }));
       for (const r of results) { if (r.status === 'fulfilled' && r.value) assets.push(r.value); }
     }
@@ -189,15 +205,47 @@ export class ShadowSurfaceEngine {
           asset.headers = headers;
           const server = headers['server'] || '';
           const powered = headers['x-powered-by'] || '';
+          const cfRay = headers['cf-ray'] || '';
+          const akamai = headers['x-akamai-transformed'] || '';
+
+          // WAF/CDN Detection
+          if (cfRay) asset.waf = 'Cloudflare';
+          else if (akamai) asset.waf = 'Akamai';
+          else if (headers['x-amzn-requestid']) asset.waf = 'AWS CloudFront';
+          else if (headers['x-sucuri-id']) asset.waf = 'Sucuri';
+          else if (headers['server']?.toLowerCase().includes('cloudflare')) asset.waf = 'Cloudflare';
+
           if (server) { asset.technology = extractTech(server); asset.version = extractVersion(server); }
           if (powered && !asset.technology) asset.technology = extractTech(powered);
           if (asset.technology && asset.version) asset.cves = mapCves(asset.technology, asset.version);
-          for (const h of ['strict-transport-security','content-security-policy','x-frame-options','x-content-type-options','referrer-policy']) {
-            if (!headers[h]) asset.findings.push({ type: 'missing_security_headers', severity: 'low', description: `Missing ${h}` });
+
+          // SSL Certificate Check
+          if (asset.port === 443 || asset.port === 8443) {
+            asset.sslInfo = await checkSSL(asset.subdomain || asset.ip);
+            if (asset.sslInfo && asset.sslInfo.daysRemaining !== undefined && asset.sslInfo.daysRemaining < 30) {
+              asset.findings.push({ type: 'ssl_expiring', severity: asset.sslInfo.daysRemaining < 7 ? 'critical' : 'high', description: `SSL certificate expires in ${asset.sslInfo.daysRemaining} days` });
+            }
+            if (!asset.sslInfo) {
+              asset.findings.push({ type: 'ssl_invalid', severity: 'high', description: 'SSL certificate missing or invalid' });
+            }
           }
+
+          // Security Headers
+          const securityHeaders = ['strict-transport-security','content-security-policy','x-frame-options','x-content-type-options','referrer-policy','permissions-policy'];
+          const missing = securityHeaders.filter(h => !headers[h]);
+          if (missing.length > 0) {
+            asset.findings.push({ type: 'missing_security_headers', severity: missing.length > 3 ? 'medium' : 'low', description: `Missing ${missing.length} headers: ${missing.join(', ')}` });
+          }
+
+          // Admin Panel References
           for (const p of ['/admin','/administrator','/wp-admin','/dashboard']) {
-            if (body.includes(p)) asset.findings.push({ type: 'admin_panel_reference', severity: 'medium', description: `Admin panel ref: ${p}` });
+            if (body.toLowerCase().includes(p)) asset.findings.push({ type: 'admin_panel_reference', severity: 'low', description: `Potential admin panel reference: ${p}` });
           }
+
+          // Information Disclosure
+          if (body.toLowerCase().includes('phpinfo')) asset.findings.push({ type: 'information_disclosure', severity: 'high', description: 'Potential phpinfo() exposure detected' });
+          if (body.includes('stack trace') || body.includes('.java:')) asset.findings.push({ type: 'information_disclosure', severity: 'medium', description: 'Potential stack trace in response' });
+          if (headers['x-debug-token']) asset.findings.push({ type: 'debug_mode', severity: 'high', description: 'Debug mode potentially enabled' });
         } catch {}
       }));
     }

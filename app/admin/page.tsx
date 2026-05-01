@@ -3,14 +3,27 @@ import { useEffect, useState } from 'react';
 
 export default function AdminPage() {
   const [data, setData] = useState<any>(null);
+  const [error, setError] = useState('');
   const token = typeof window !== 'undefined' ? localStorage.getItem('ss_token') : null;
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) { setError('Not logged in'); return; }
     fetch('/api/admin', { headers: { Authorization: `Bearer ${token}` } }).then(async (res) => {
-      if (res.ok) setData(await res.json());
-    });
+      if (res.status === 403) { setError('Forbidden. Admin access only.'); return; }
+      if (!res.ok) { setError('Failed to load admin data'); return; }
+      setData(await res.json());
+    }).catch(() => setError('Network error'));
   }, [token]);
+
+  if (error) return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-red-400 mb-2">Access Denied</h1>
+        <p className="text-slate-400">{error}</p>
+        <a href="/login" className="mt-4 inline-block px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white">Login</a>
+      </div>
+    </div>
+  );
 
   if (!data) return <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400">Loading...</div>;
 
@@ -29,7 +42,7 @@ export default function AdminPage() {
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-slate-400 uppercase border-b border-slate-800"><tr><th className="py-2">Target</th><th className="py-2">User</th><th className="py-2">Status</th><th className="py-2">Date</th></tr></thead>
             <tbody>
-              {data.recentScans.map((s: any) => (
+              {data.recentScans?.map((s: any) => (
                 <tr key={s.id} className="border-b border-slate-800 hover:bg-slate-800/50">
                   <td className="py-2">{s.target}</td>
                   <td className="py-2 text-slate-400">{s.createdBy?.email}</td>

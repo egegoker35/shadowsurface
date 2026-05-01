@@ -1,12 +1,27 @@
+'use client';
+import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 
 const plans = [
-  { name: 'Starter', price: '$99', period: '/month', description: 'For small teams getting started with attack surface visibility.', features: ['1 user', '5 domains', 'Weekly scans', 'Basic cloud checks', 'Email alerts', 'Community support'] },
-  { name: 'Professional', price: '$499', period: '/month', description: 'For security teams that need continuous monitoring.', features: ['5 users', '50 domains', 'Daily scans', 'Advanced cloud + CVE', 'Slack/Teams alerts', 'Priority support', 'API access'] },
-  { name: 'Enterprise', price: '$1,999', period: '/month', description: 'For MSSPs and large organizations at scale.', features: ['Unlimited users', 'Unlimited domains', 'Hourly scans', 'Custom integrations', 'Dedicated CSM', 'SOC2 reporting', 'SLA guarantee'] },
+  { name: 'Starter', price: '$99', period: '/month', planId: 'starter', description: 'For small teams getting started with attack surface visibility.', features: ['1 user', '5 domains', 'Weekly scans', 'Basic cloud checks', 'Email alerts', 'Community support'] },
+  { name: 'Professional', price: '$499', period: '/month', planId: 'professional', description: 'For security teams that need continuous monitoring.', features: ['5 users', '50 domains', 'Daily scans', 'Advanced cloud + CVE', 'Slack/Teams alerts', 'Priority support', 'API access'] },
+  { name: 'Enterprise', price: '$1,999', period: '/month', planId: 'enterprise', description: 'For MSSPs and large organizations at scale.', features: ['Unlimited users', 'Unlimited domains', 'Hourly scans', 'Custom integrations', 'Dedicated CSM', 'SOC2 reporting', 'SLA guarantee'] },
 ];
 
 export default function PricingPage() {
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const subscribe = async (planId: string) => {
+    const token = localStorage.getItem('ss_token');
+    if (!token) { window.location.href = '/login'; return; }
+    setLoading(planId);
+    const res = await fetch('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ plan: planId }) });
+    const data = await res.json();
+    setLoading(null);
+    if (data.url) window.location.href = data.url;
+    else alert(data.error || 'Checkout failed');
+  };
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -25,7 +40,9 @@ export default function PricingPage() {
                     <li key={f} className="flex items-center gap-2"><span className="text-emerald-400">&#10003;</span>{f}</li>
                   ))}
                 </ul>
-                <a href="/register" className="block text-center w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">Get Started</a>
+                <button onClick={() => subscribe(plan.planId)} disabled={!!loading} className="block text-center w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50">
+                  {loading === plan.planId ? 'Loading...' : 'Subscribe'}
+                </button>
               </div>
             ))}
           </div>
