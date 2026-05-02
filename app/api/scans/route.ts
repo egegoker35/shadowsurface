@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
       } catch {
         await prisma.scan.update({ where: { id: scan.id }, data: { status: 'failed' } });
       }
-    }).catch(() => {
+    }).catch(async () => {
       await prisma.scan.update({ where: { id: scan.id }, data: { status: 'failed' } });
     });
 
