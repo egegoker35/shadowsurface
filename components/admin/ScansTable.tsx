@@ -1,7 +1,10 @@
 'use client';
+import { useState } from 'react';
+import ScanDetailModal from './ScanDetailModal';
 
 export default function ScansTable({ scans, onRefresh }: { scans: any[]; onRefresh?: () => void }) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('ss_token') : null;
+  const [selectedScan, setSelectedScan] = useState<any>(null);
 
   const del = async (scanId: string) => {
     if (!confirm('Delete this scan?')) return;
@@ -26,7 +29,7 @@ export default function ScansTable({ scans, onRefresh }: { scans: any[]; onRefre
           <tbody>
             {scans.map((s: any) => (
               <tr key={s.id} className="border-b border-slate-800/60 hover:bg-slate-800/40 transition-colors">
-                <td className="px-8 py-5 font-medium text-emerald-400 cursor-pointer" onClick={() => window.open(`/dashboard/scans/${s.id}`, '_blank')}>{s.target}</td>
+                <td className="px-8 py-5 font-medium text-emerald-400 cursor-pointer hover:underline" onClick={() => setSelectedScan(s)}>{s.target}</td>
                 <td className="px-8 py-5 text-slate-400">{s.createdBy?.email}</td>
                 <td className="px-8 py-5">
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${s.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : s.status === 'failed' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>{s.status}</span>
@@ -43,6 +46,7 @@ export default function ScansTable({ scans, onRefresh }: { scans: any[]; onRefre
           </tbody>
         </table>
       </div>
+      {selectedScan && <ScanDetailModal scan={selectedScan} onClose={() => setSelectedScan(null)} />}
     </div>
   );
 }

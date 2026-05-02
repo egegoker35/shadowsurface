@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 export default function DashboardPage() {
@@ -12,22 +12,30 @@ export default function DashboardPage() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('ss_token') : null;
   const searchParams = useSearchParams();
 
-  const fetchDashboard = async () => {
+  const fetchDashboard = useCallback(async () => {
     const res = await fetch('/api/dashboard', { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) setData(await res.json());
-  };
+  }, [token]);
 
-  const fetchScans = async () => {
+  const fetchScans = useCallback(async () => {
     const res = await fetch('/api/scans', { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) { const d = await res.json(); setScans(d.scans || []); }
-  };
+  }, [token]);
 
   useEffect(() => {
     if (token) { fetchDashboard(); fetchScans(); }
     const p = searchParams.get('payment');
     if (p === 'success') setPaymentMsg('Payment successful! Your plan has been upgraded.');
     if (p === 'failed') setPaymentMsg('Payment failed. Please try again or contact support.');
-  }, [token, searchParams]);
+  }, [token, searchParams, fetchDashboard, fetchScans]);
+
+  // POLLING: auto-refresh scans every 3 seconds while any scan is running
+  useEffect(() => {
+    const hasRunning = scans.some((s: any) => s.status === 'running' || s.status === 'pending');
+    if (!hasRunning) return;
+    const interval = setInterval(() => { fetchScans(); fetchDashboard(); }, 3000);
+    return () => clearInterval(interval);
+  }, [scans, fetchScans, fetchDashboard]);
 
   const startScan = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true); setError('');
@@ -59,7 +67,7 @@ export default function DashboardPage() {
         {error && <div className="mb-3 text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2 text-sm">{error}</div>}
         <form onSubmit={startScan} className="flex gap-3">
           <input value={target} onChange={(e) => setTarget(e.target.value)} placeholder="example.com or 192.168.1.1" required className="flex-1 px-4 py-2.5 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-          <button type="submit" disabled={loading} className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50">{loading ? 'Starting...' : 'Start Scan'}</button>
+          <button type="submit" disabled={loading} className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50">{loading ? 'Scanning...' : 'Start Scan'}</button>
         </form>
       </div>
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
