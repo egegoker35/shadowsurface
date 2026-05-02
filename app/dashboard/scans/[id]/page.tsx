@@ -63,6 +63,7 @@ export default function ScanDetailPage() {
 
   const exec = scan.executiveSummary || {};
   const stats = scan.statistics || {};
+  const durationVal = typeof scan.durationSeconds === 'number' && !isNaN(scan.durationSeconds) ? scan.durationSeconds : 0;
   const allFindings = (scan.assets || []).flatMap((a: any) => (a.findings || []).map((f: any) => ({ ...f, asset: a.subdomain, port: a.port })));
   const criticalFindings = allFindings.filter((f: any) => f.severity === 'critical');
   const highFindings = allFindings.filter((f: any) => f.severity === 'high');
@@ -80,7 +81,7 @@ export default function ScanDetailPage() {
               {exec.overallRisk || 'UNKNOWN'} RISK
             </span>
           </div>
-          <p className="text-slate-400">Target: <span className="text-white font-semibold">{scan.target}</span> · {new Date(scan.createdAt).toLocaleString()} · {scan.durationSeconds?.toFixed(1)}s</p>
+          <p className="text-slate-400">Target: <span className="text-white font-semibold">{scan.target}</span> · {new Date(scan.createdAt).toLocaleString()} · {durationVal > 0 ? `${durationVal.toFixed(1)}s` : 'In progress'}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={exportJSON} className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-medium transition-colors flex items-center gap-2">
@@ -114,7 +115,7 @@ export default function ScanDetailPage() {
         </div>
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
           <div className="text-slate-400 text-xs uppercase tracking-wider mb-1">Duration</div>
-          <div className="text-2xl font-bold">{scan.durationSeconds?.toFixed(1) || '-'}s</div>
+          <div className="text-2xl font-bold">{durationVal > 0 ? `${durationVal.toFixed(1)}s` : '-'}</div>
         </div>
       </div>
 
