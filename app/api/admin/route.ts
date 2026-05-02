@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
       prisma.asset.count(),
       prisma.cloudAsset.count(),
       prisma.user.findMany({ orderBy: { createdAt: 'desc' }, take: 50, include: { org: true } }),
-      prisma.scan.findMany({ orderBy: { createdAt: 'desc' }, take: 50, include: { createdBy: true, org: true } }),
+      prisma.scan.findMany({ orderBy: { createdAt: 'desc' }, take: 50, include: { createdBy: true, org: true, assets: true, cloudAssets: true } }),
       prisma.lead.findMany({ orderBy: { createdAt: 'desc' }, take: 100 }),
       prisma.organization.findMany({ orderBy: { createdAt: 'desc' }, take: 50 }),
     ]);
