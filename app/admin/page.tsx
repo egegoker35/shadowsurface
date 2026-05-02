@@ -30,11 +30,14 @@ export default function AdminPage() {
         window.location.href = '/admin-login';
         return;
       }
-      if (!res.ok) throw new Error('Failed');
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || `API returned ${res.status}`);
+      }
       setData(await res.json());
       setLoading(false);
-    } catch {
-      setError('Failed to load');
+    } catch (e: any) {
+      setError(e.message || 'Failed to load');
       setLoading(false);
     }
   };

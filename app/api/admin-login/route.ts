@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import { createToken } from '@/lib/auth';
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'egegoker35@gmail.com';
