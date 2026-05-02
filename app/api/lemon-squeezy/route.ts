@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment not configured' }, { status: 500 });
     }
 
-    const appUrl = process.env.APP_URL || 'https://shadowsurface.com';
+    const appUrl = process.env.APP_URL || 'https://shadowsurface.app';
 
     const res = await fetch('https://api.lemonsqueezy.com/v1/checkouts', {
       method: 'POST',

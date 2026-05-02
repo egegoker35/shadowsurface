@@ -11,12 +11,12 @@ export const metadata = {
   authors: [{ name: 'ShadowSurface' }],
   creator: 'ShadowSurface',
   publisher: 'ShadowSurface',
-  metadataBase: new URL('https://shadowsurface.com'),
+  metadataBase: new URL('https://shadowsurface.app'),
   openGraph: {
     title: 'ShadowSurface - Cloud Attack Surface Intelligence',
     description: 'Discover, monitor, and secure your external attack surface before attackers do. Automated subdomain, port, CVE, and cloud scanning.',
     type: 'website',
-    url: 'https://shadowsurface.com',
+    url: 'https://shadowsurface.app',
     siteName: 'ShadowSurface',
     locale: 'en_US',
   },
@@ -25,7 +25,7 @@ export const metadata = {
     title: 'ShadowSurface - Cloud Attack Surface Intelligence',
     description: 'Discover, monitor, and secure your external attack surface before attackers do.',
   },
-  alternates: { canonical: 'https://shadowsurface.com' },
+  alternates: { canonical: 'https://shadowsurface.app' },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
   verification: {
     google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
@@ -49,8 +49,8 @@ const jsonLd = {
     ratingCount: '127',
   },
   description: 'Cloud Attack Surface Intelligence platform with automated subdomain enumeration, port scanning, CVE mapping, and cloud misconfiguration detection.',
-  url: 'https://shadowsurface.com',
-  logo: 'https://shadowsurface.com/logo.png',
+  url: 'https://shadowsurface.app',
+  logo: 'https://shadowsurface.app/logo.png',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

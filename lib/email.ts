@@ -14,7 +14,7 @@ const smtpTransporter = process.env.SMTP_HOST ? createTransport({
 }) : null;
 
 async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
-  const from = process.env.EMAIL_FROM || 'ShadowSurface <noreply@shadowsurface.com>';
+  const from = process.env.EMAIL_FROM || 'ShadowSurface <noreply@shadowsurface.app>';
 
   // Try Resend first
   if (resend) {
@@ -44,7 +44,7 @@ async function sendEmail({ to, subject, html }: { to: string; subject: string; h
 }
 
 export async function sendVerificationEmail(email: string, token: string) {
-  const baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://shadowsurface.com';
+  const baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://shadowsurface.app';
   const url = `${baseUrl}/verify?token=${token}`;
   await sendEmail({
     to: email,
@@ -54,7 +54,7 @@ export async function sendVerificationEmail(email: string, token: string) {
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
-  const baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://shadowsurface.com';
+  const baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://shadowsurface.app';
   const url = `${baseUrl}/reset-password?token=${token}`;
   console.log(`[Password Reset] Generated URL: ${url}`);
   await sendEmail({

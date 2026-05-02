@@ -10,9 +10,9 @@ export default function ContactPage() {
           <p className="text-slate-400 text-center mb-8">Questions about pricing, features, or enterprise deals? Reach out.</p>
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-8">
             <div className="space-y-4 text-sm">
-              <div><span className="text-slate-400">Email:</span> <a href="mailto:hello@shadowsurface.com" className="text-emerald-400 hover:underline">hello@shadowsurface.com</a></div>
-              <div><span className="text-slate-400">Sales:</span> <a href="mailto:sales@shadowsurface.com" className="text-emerald-400 hover:underline">sales@shadowsurface.com</a></div>
-              <div><span className="text-slate-400">Security:</span> <a href="mailto:security@shadowsurface.com" className="text-emerald-400 hover:underline">security@shadowsurface.com</a></div>
+              <div><span className="text-slate-400">Email:</span> <a href="mailto:hello@shadowsurface.app" className="text-emerald-400 hover:underline">hello@shadowsurface.app</a></div>
+              <div><span className="text-slate-400">Sales:</span> <a href="mailto:sales@shadowsurface.app" className="text-emerald-400 hover:underline">sales@shadowsurface.app</a></div>
+              <div><span className="text-slate-400">Security:</span> <a href="mailto:security@shadowsurface.app" className="text-emerald-400 hover:underline">security@shadowsurface.app</a></div>
               <div className="pt-4 border-t border-slate-800">
                 <p className="text-slate-400">Enterprise customers get a dedicated Slack channel and phone support.</p>
               </div>
