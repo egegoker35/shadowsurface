@@ -17,9 +17,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'txHash, email, plan required' }, { status: 400 });
     }
 
+    if (plan === 'free') {
+      return NextResponse.json({ error: 'Free plan cannot be activated via payment' }, { status: 400 });
+    }
+
     const expectedAmount = PLAN_AMOUNTS[plan];
     if (!expectedAmount) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+    }
+
+    // Replay attack prevention
+    const existingPayment = await prisma.payment.findUnique({ where: { txHash } });
+    if (existingPayment) {
+      return NextResponse.json({ error: 'This transaction has already been used' }, { status: 400 });
     }
 
     // Verify via TronScan API
@@ -80,6 +90,10 @@ export async function POST(req: NextRequest) {
         data: { plan },
       });
     }
+
+    await prisma.payment.create({
+      data: { txHash, email: email.toLowerCase().trim(), plan, amount },
+    });
 
     return NextResponse.json({ success: true, message: `Payment verified! ${plan} plan activated.` });
   } catch (e: any) {

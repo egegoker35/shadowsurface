@@ -197,3 +197,13 @@ model Notification {
   data      Json?    // related scanId, etc.
   createdAt DateTime @default(now())
 }
+
+model Payment {
+  id        String   @id @default(cuid())
+  txHash    String   @unique
+  email     String
+  plan      String
+  amount    Float
+  confirmed Boolean  @default(true)
+  createdAt DateTime @default(now())
+}

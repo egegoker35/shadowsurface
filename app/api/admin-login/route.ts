@@ -3,13 +3,17 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import { createToken } from '@/lib/auth';
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'egegoker35@gmail.com';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { email, password } = body || {};
+
+    if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+      return NextResponse.json({ error: 'Admin login not configured' }, { status: 503 });
+    }
 
     if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runDemoScan } from '@/lib/scanner/demoScanner';
-import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput, abuseCheck } from '@/lib/middleware/security';
+import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput } from '@/lib/middleware/security';
 import { rateLimitByIP } from '@/lib/middleware/rateLimit';
 import { z } from 'zod';
 
@@ -10,9 +10,6 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const abuse = await abuseCheck(req);
-    if (abuse) return abuse;
-
     const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
     const rl = await rateLimitByIP(ip, 1, 1800);
     if (!rl.success) {
