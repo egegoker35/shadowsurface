@@ -108,8 +108,8 @@ export default function PricingPage() {
               <>
                 <h2 className="text-xl font-bold mb-1">{selectedPlan.name} Plan</h2>
                 <p className="text-slate-400 text-sm mb-6">{selectedPlan.price} / month</p>
+                {verifyError && <div className="text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2 text-sm mb-3">{verifyError}</div>}
                 <form onSubmit={submitLead} className="space-y-4">
-                  {verifyError && <div className="text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2 text-sm">{verifyError}</div>}
                   <div>
                     <label className="block text-sm text-slate-400 mb-1">Full Name *</label>
                     <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="w-full px-4 py-3 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white" placeholder="John Doe" />
