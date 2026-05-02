@@ -76,6 +76,8 @@ export async function POST(req: NextRequest) {
           await prisma.asset.createMany({
             data: result.assets.map((a) => ({
               scanId: scan.id,
+              domain: a.subdomain || a.ip || "unknown",
+              subdomain: a.subdomain || a.ip || "unknown",
               ip: a.ip,
               port: a.port,
               service: a.service,
