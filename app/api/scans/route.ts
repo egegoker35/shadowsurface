@@ -17,10 +17,10 @@ const PLAN_LIMITS: Record<string, { perHour: number; perMonth: number }> = {
 };
 
 // Hard timeout wrapper for scan
-function runScanWithTimeout(engine: ShadowSurfaceEngine, ms = 300000): Promise<any> {
+function runScanWithTimeout(engine: ShadowSurfaceEngine, ms = 300000, portLimit = 20): Promise<any> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Scan timed out after 5 minutes')), ms);
-    engine.runFullScan(50).then((result) => {
+    engine.runFullScan(portLimit).then((result) => {
       clearTimeout(timer);
       resolve(result);
     }).catch((err: any) => {
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
     // Run scan in background with hard timeout
     const engine = new ShadowSurfaceEngine(target);
-    runScanWithTimeout(engine, 300000).then(async (result: any) => {
+    runScanWithTimeout(engine, 300000, 20).then(async (result: any) => {
       try {
         await prisma.scan.update({
           where: { id: scan.id },
