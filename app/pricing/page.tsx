@@ -8,14 +8,14 @@ const plans = [
     price: '$0',
     period: '/month',
     planId: 'free',
-    description: 'Explore the platform before committing.',
+    description: 'Explore before you commit.',
     features: [
       '1 user',
       'Dashboard access',
       'View scan history',
       'Export reports (read-only)',
     ],
-    unavailable: ['Scan execution', 'Cloud misconfiguration scan', 'Full combined scan', 'Bulk multi-domain scan', 'API access', 'Team invites'],
+    unavailable: ['Scan execution', 'Cloud scan', 'Full scan', 'Bulk scan', 'API access', 'Team invites'],
     cta: 'Sign Up Free',
     ctaStyle: 'outline',
   },
@@ -24,13 +24,13 @@ const plans = [
     price: '$99',
     period: '/month',
     planId: 'starter',
-    description: 'For small teams getting started with attack surface visibility.',
+    description: 'For small teams getting started.',
     features: [
       '1 user',
       '5 scans/hour, 20/month',
       'Subdomain enumeration',
       'Port scan (top 20 ports)',
-      'Known CVE checks (limited)',
+      'Known CVE checks',
       'Email alerts',
     ],
     unavailable: ['Cloud misconfiguration scan', 'Full combined scan', 'Bulk multi-domain scan', 'API access'],
@@ -42,7 +42,7 @@ const plans = [
     price: '$499',
     period: '/month',
     planId: 'professional',
-    description: 'For security teams that need continuous monitoring and deeper intel.',
+    description: 'For security teams that need deeper intel.',
     features: [
       '5 users',
       '20 scans/hour, 200/month',
@@ -61,7 +61,7 @@ const plans = [
     price: '$1,999',
     period: '/month',
     planId: 'enterprise',
-    description: 'For MSSPs and large organizations that need scale and automation.',
+    description: 'For MSSPs and large orgs that need scale.',
     features: [
       'Unlimited users',
       '100 scans/hour, unlimited/month',
@@ -69,7 +69,7 @@ const plans = [
       'Port scan (top 100 ports)',
       'Full CVE + cloud + SSL + WAF',
       'Bulk multi-domain scan (up to 50)',
-      'API access',
+      'Full REST API access',
       'Custom integrations',
       'Dedicated CSM',
       'SOC2 reporting',
@@ -147,29 +147,29 @@ export default function PricingPage() {
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">Simple, Transparent Pricing</h1>
           <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-12">Pay with crypto. No hidden fees. Cancel anytime.</p>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 max-w-7xl mx-auto">
             {plans.map((plan) => (
-              <div key={plan.name} className={`bg-slate-900 border ${plan.name === 'Professional' ? 'border-emerald-500/50 ring-1 ring-emerald-500/20' : 'border-slate-800'} rounded-2xl p-8 text-left hover:border-slate-700 transition-colors`}>
-                <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-                <p className="text-slate-400 text-sm mb-4">{plan.description}</p>
-                <div className="text-3xl font-bold mb-6">{plan.price}<span className="text-base font-normal text-slate-400">{plan.period}</span></div>
-                <ul className="space-y-3 text-sm text-slate-300 mb-4">
+              <div key={plan.name} className={`bg-slate-900 border ${plan.name === 'Professional' ? 'border-emerald-500/50 ring-1 ring-emerald-500/20' : 'border-slate-800'} rounded-xl p-5 text-left hover:border-slate-700 transition-colors flex flex-col h-full`}>
+                <h3 className="text-sm font-bold mb-1 uppercase tracking-wider text-slate-400">{plan.name}</h3>
+                <div className="text-2xl font-bold mb-1">{plan.price}<span className="text-xs font-normal text-slate-400">{plan.period}</span></div>
+                <p className="text-slate-400 text-xs mb-3 leading-relaxed">{plan.description}</p>
+                <ul className="space-y-1.5 text-xs text-slate-300 mb-3 flex-1">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2"><span className="text-emerald-400">&#10003;</span>{f}</li>
+                    <li key={f} className="flex items-start gap-2"><span className="text-emerald-400 mt-0.5 shrink-0">&#10003;</span><span>{f}</span></li>
                   ))}
                 </ul>
                 {plan.unavailable.length > 0 && (
-                  <ul className="space-y-2 text-sm text-slate-500 mb-6">
+                  <ul className="space-y-1 text-xs text-slate-600 mb-3">
                     {plan.unavailable.map((f) => (
-                      <li key={f} className="flex items-center gap-2"><span className="text-slate-600">&#10007;</span>{f}</li>
+                      <li key={f} className="flex items-start gap-2"><span className="text-slate-600 mt-0.5 shrink-0">&#10007;</span><span>{f}</span></li>
                     ))}
                   </ul>
                 )}
-                {plan.unavailable.length === 0 && <div className="mb-6" />}
+                {plan.unavailable.length === 0 && <div className="mb-3" />}
                 {plan.planId === 'free' ? (
-                  <a href="/register" className="block text-center w-full py-2.5 rounded-lg font-semibold transition-colors bg-slate-800 hover:bg-slate-700 text-white border border-slate-700">Sign Up Free</a>
+                  <a href="/register" className="block text-center w-full py-2 rounded-lg font-semibold transition-colors bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 text-sm">Sign Up Free</a>
                 ) : (
-                  <button onClick={() => openModal(plan)} className={`block text-center w-full py-2.5 rounded-lg font-semibold transition-colors ${plan.name === 'Professional' ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}>
+                  <button onClick={() => openModal(plan)} className={`block text-center w-full py-2 rounded-lg font-semibold transition-colors text-sm ${plan.name === 'Professional' ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}>
                     Get Started
                   </button>
                 )}

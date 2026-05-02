@@ -186,18 +186,23 @@ export default function DashboardPage() {
           <div className="overflow-auto">
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-slate-400 uppercase border-b border-slate-800">
-                <tr><th className="py-2">Target</th><th className="py-2">Type</th><th className="py-2">Status</th><th className="py-2">Risk</th><th className="py-2">Date</th></tr>
+                <tr><th className="py-2">Target</th><th className="py-2">Type</th><th className="py-2">Status</th><th className="py-2">Risk</th><th className="py-2">Date</th><th className="py-2 text-right">Action</th></tr>
               </thead>
               <tbody>
                 {scans.map((s: any) => (
-                  <tr key={s.id} className="border-b border-slate-800 hover:bg-slate-800/50 cursor-pointer" onClick={() => window.location.href = `/dashboard/scans/${s.id}`}>
-                    <td className="py-2 font-medium text-emerald-400 hover:underline">{s.target}</td>
-                    <td className="py-2"><span className="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-300 capitalize">{s.scanType || 'full'}</span></td>
-                    <td className="py-2">
-                      <span className={`px-2 py-0.5 rounded text-xs ${s.status === 'completed' ? 'bg-emerald-900 text-emerald-300' : s.status === 'failed' ? 'bg-red-900 text-red-300' : 'bg-yellow-900 text-yellow-300'}`}>{s.status}</span>
+                  <tr key={s.id} className="border-b border-slate-800 hover:bg-slate-800/50">
+                    <td className="py-2 font-medium text-emerald-400 hover:underline cursor-pointer" onClick={() => window.location.href = `/dashboard/scans/${s.id}`}>{s.target}</td>
+                    <td className="py-2 cursor-pointer" onClick={() => window.location.href = `/dashboard/scans/${s.id}`}><span className="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-300 capitalize">{s.scanType || 'full'}</span></td>
+                    <td className="py-2 cursor-pointer" onClick={() => window.location.href = `/dashboard/scans/${s.id}`}>
+                      <span className={`px-2 py-0.5 rounded text-xs ${s.status === 'completed' ? 'bg-emerald-900 text-emerald-300' : s.status === 'failed' ? 'bg-red-900 text-red-300' : s.status === 'cancelled' ? 'bg-slate-800 text-slate-500' : 'bg-yellow-900 text-yellow-300'}`}>{s.status}</span>
                     </td>
-                    <td className="py-2">{(s.executiveSummary as any)?.overallRisk || '-'}</td>
-                    <td className="py-2 text-slate-400">{new Date(s.createdAt).toLocaleString()}</td>
+                    <td className="py-2 cursor-pointer" onClick={() => window.location.href = `/dashboard/scans/${s.id}`}>{(s.executiveSummary as any)?.overallRisk || '-'}</td>
+                    <td className="py-2 text-slate-400 cursor-pointer" onClick={() => window.location.href = `/dashboard/scans/${s.id}`}>{new Date(s.createdAt).toLocaleString()}</td>
+                    <td className="py-2 text-right">
+                      {(s.status === 'running' || s.status === 'pending') && (
+                        <button onClick={async (e) => { e.stopPropagation(); if (!confirm('Cancel this scan?')) return; await fetch(`/api/scans/cancel?id=${s.id}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }); fetchScans(); }} className="text-xs text-red-400 hover:text-red-300 border border-red-900/50 rounded px-2 py-0.5 hover:bg-red-900/20 transition-colors">Cancel</button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
