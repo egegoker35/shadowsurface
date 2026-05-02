@@ -250,10 +250,13 @@ export class ShadowSurfaceEngine {
           }
 
           // Security Headers
-          const securityHeaders = ['strict-transport-security','content-security-policy','x-frame-options','x-content-type-options','referrer-policy','permissions-policy'];
+          const securityHeaders = ['content-security-policy','x-frame-options','x-content-type-options','referrer-policy'];
+          if (asset.port === 443 || asset.port === 8443) securityHeaders.push('strict-transport-security');
           const missing = securityHeaders.filter(h => !headers[h]);
           if (missing.length > 0) {
-            asset.findings.push({ type: 'missing_security_headers', severity: missing.length > 3 ? 'medium' : 'low', description: `Missing ${missing.length} headers: ${missing.join(', ')}` });
+            const isHTTPS = asset.port === 443 || asset.port === 8443;
+            const severity = missing.includes('strict-transport-security') || missing.includes('content-security-policy') || missing.includes('x-frame-options') ? 'medium' : 'low';
+            asset.findings.push({ type: 'missing_security_headers', severity, description: `Missing ${missing.length} header(s): ${missing.join(', ')}` });
           }
 
           // Admin Panel References

@@ -13,10 +13,11 @@ export default function LoginPage() {
     e.preventDefault(); setLoading(true); setError('');
     try {
       const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-      const data = await res.json();
-      if (!res.ok) setError(data.error || 'Login failed');
+      let data: any = {};
+      try { data = await res.json(); } catch { data = { error: `Server returned ${res.status}. Please try again.` }; }
+      if (!res.ok) setError(data.error || `Login failed (${res.status})`);
       else { localStorage.setItem('ss_token', data.token); window.location.href = '/dashboard'; }
-    } catch { setError('Network error'); }
+    } catch { setError('Network error. Server may be down.'); }
     setLoading(false);
   };
 

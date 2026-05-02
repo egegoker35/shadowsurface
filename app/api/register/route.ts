@@ -3,13 +3,18 @@ import { prisma } from '@/lib/prisma';
 import { hashPassword, createToken } from '@/lib/auth';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 const schema = z.object({ email: z.string().email(), password: z.string().min(8), organizationName: z.string().min(2) });
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const parsed = schema.safeParse(body);
-    if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
+    if (!parsed.success) {
+      console.error('[Register] Validation failed:', parsed.error.format());
+      return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
+    }
     const { email, password, organizationName } = parsed.data;
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return NextResponse.json({ error: 'Email already registered' }, { status: 409 });
@@ -19,6 +24,7 @@ export async function POST(req: NextRequest) {
     const jwt = createToken({ userId: user.id, email: user.email, orgId: org.id });
     return NextResponse.json({ token: jwt, user: { id: user.id, email: user.email, verified: user.verified }, organization: org });
   } catch (e: any) {
+    console.error('[Register API Error]', e);
     return NextResponse.json({ error: e.message || 'Internal error' }, { status: 500 });
   }
 }

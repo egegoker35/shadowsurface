@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
       prisma.organization.findUnique({ where: { id: user.orgId } }),
     ]);
 
-    return NextResponse.json({ scanCount, assetCount, cloudCount, highRiskAssets, scans, plan: org?.plan || 'starter' });
+    return NextResponse.json({ scanCount, assetCount, cloudCount, highRiskAssets, scans, plan: org?.plan || 'starter', user, organization: org });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Failed' }, { status: 500 });
   }

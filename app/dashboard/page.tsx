@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 const SCAN_TYPES = [
@@ -18,6 +18,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [paymentMsg, setPaymentMsg] = useState('');
+  const [csvName, setCsvName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const token = typeof window !== 'undefined' ? localStorage.getItem('ss_token') : null;
   const searchParams = useSearchParams();
 
@@ -45,12 +47,32 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, [scans, fetchScans, fetchDashboard]);
 
+  const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = String(ev.target?.result || '');
+      const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      const domains: string[] = [];
+      for (const line of lines) {
+        const cols = line.split(',').map((c) => c.trim());
+        const first = cols[0];
+        if (first && /^[a-zA-Z0-9][a-zA-Z0-9._-]*\.[a-zA-Z]{2,}$/.test(first)) domains.push(first);
+      }
+      if (domains.length > 0) setTarget(domains.join(', '));
+      else setError('No valid domains found in CSV. First column must contain domains.');
+    };
+    reader.readAsText(file);
+  };
+
   const startScan = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true); setError('');
     const res = await fetch('/api/scans', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ target, scanType }) });
     const d = await res.json();
     if (!res.ok) setError(d.error || 'Failed');
-    else { setTarget(''); fetchScans(); }
+    else { setTarget(''); setCsvName(''); if (fileInputRef.current) fileInputRef.current.value = ''; fetchScans(); }
     setLoading(false);
   };
 
@@ -59,6 +81,7 @@ export default function DashboardPage() {
 
   const plan = data?.plan || 'starter';
   const allowedTypes = plan === 'enterprise' ? ['subdomain','port','cve','cloud','full'] : plan === 'professional' ? ['subdomain','port','cve','cloud','full'] : ['subdomain','port','cve'];
+  const canBulk = plan === 'enterprise';
 
   return (
     <div>
@@ -102,7 +125,19 @@ export default function DashboardPage() {
             </select>
             <button type="submit" disabled={loading} className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50 whitespace-nowrap">{loading ? 'Starting...' : 'Start Scan'}</button>
           </div>
-          <p className="text-xs text-slate-500">{SCAN_TYPES.find((t) => t.id === scanType)?.desc}. {plan === 'starter' ? 'Starter: 20 ports, no cloud/bulk.' : plan === 'professional' ? 'Pro: 50 ports, no bulk.' : 'Enterprise: 100 ports, bulk up to 50 domains.'}</p>
+          <div className="flex items-center gap-3">
+            {canBulk && (
+              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-slate-300 transition-colors">
+                <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} />
+                <span className="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors flex items-center gap-2">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                  {csvName || 'Upload CSV'}
+                </span>
+                <span className="text-slate-500">First column = domains</span>
+              </label>
+            )}
+            <p className="text-xs text-slate-500">{SCAN_TYPES.find((t) => t.id === scanType)?.desc}. {plan === 'starter' ? 'Starter: 20 ports, no cloud/bulk.' : plan === 'professional' ? 'Pro: 50 ports, no bulk.' : 'Enterprise: 100 ports, bulk up to 50 domains.'}</p>
+          </div>
         </form>
       </div>
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
