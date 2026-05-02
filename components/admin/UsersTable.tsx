@@ -5,13 +5,18 @@ const PLAN_PRICES: Record<string, number> = { starter: 99, professional: 499, en
 export default function UsersTable({ users, onRefresh }: { users: any[]; onRefresh: () => void }) {
   const upgrade = async (userId: string, plan: string) => {
     if (!confirm(`Upgrade to ${plan}?`)) return;
-    const res = await fetch('/api/admin/upgrade', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, plan }),
-    });
-    if (res.ok) { alert('Upgraded!'); onRefresh(); }
-    else alert('Failed');
+    try {
+      const res = await fetch('/api/admin/upgrade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, plan }),
+      });
+      const data = await res.json();
+      if (res.ok) { alert('Upgraded successfully!'); onRefresh(); }
+      else alert(data.error || 'Failed to upgrade');
+    } catch (e: any) {
+      alert('Network error: ' + (e.message || 'Failed'));
+    }
   };
 
   return (
