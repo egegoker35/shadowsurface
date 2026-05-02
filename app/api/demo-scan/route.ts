@@ -13,7 +13,8 @@ export async function POST(req: NextRequest) {
     const abuse = await abuseCheck(req);
     if (abuse) return abuse;
 
-    const rl = await rateLimitByIP(req, 1, 1800);
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const rl = await rateLimitByIP(ip, 1, 1800);
     if (!rl.success) {
       return NextResponse.json({ error: 'Demo scan limit: 1 per 30 minutes.' }, { status: 429 });
     }
