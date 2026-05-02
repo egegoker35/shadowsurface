@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
-import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
-
-function isAdmin(headers: Headers): boolean {
-  const auth = headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return false;
-  const token = auth.slice(7);
-  const decoded = verifyToken<{ userId: string; email: string; role?: string }>(token);
-  return decoded ? decoded.role === 'admin' || decoded.email === 'egegoker35@gmail.com' : false;
-}
 
 export async function POST(req: NextRequest) {
   try {
-    if (!isAdmin(req.headers)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-
     const { userId, plan } = await req.json();
     if (!userId || !plan) return NextResponse.json({ error: 'userId and plan required' }, { status: 400 });
 

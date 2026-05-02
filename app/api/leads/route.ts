@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
+import { rateLimitByIP } from '@/lib/middleware/rateLimit';
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const rl = await rateLimitByIP(ip, 5, 3600);
+    if (!rl.success) {
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
     const { name, email, plan, message } = await req.json();
     if (!name || !email || !plan) {
       return NextResponse.json({ error: 'Name, email and plan required' }, { status: 400 });
@@ -20,9 +27,8 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const token = searchParams.get('token');
-    if (token !== process.env.ADMIN_SECRET) {
+    const adminToken = req.headers.get('x-admin-secret');
+    if (adminToken !== process.env.ADMIN_SECRET) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const leads = await prisma.lead.findMany({ orderBy: { createdAt: 'desc' }, take: 100 });
