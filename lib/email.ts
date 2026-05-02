@@ -44,7 +44,8 @@ async function sendEmail({ to, subject, html }: { to: string; subject: string; h
 }
 
 export async function sendVerificationEmail(email: string, token: string) {
-  const url = `${process.env.APP_URL}/verify?token=${token}`;
+  const baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://shadowsurface.com';
+  const url = `${baseUrl}/verify?token=${token}`;
   await sendEmail({
     to: email,
     subject: 'Verify your ShadowSurface account',
@@ -53,10 +54,12 @@ export async function sendVerificationEmail(email: string, token: string) {
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
-  const url = `${process.env.APP_URL}/reset-password?token=${token}`;
+  const baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://shadowsurface.com';
+  const url = `${baseUrl}/reset-password?token=${token}`;
+  console.log(`[Password Reset] Generated URL: ${url}`);
   await sendEmail({
     to: email,
     subject: 'Reset your ShadowSurface password',
-    html: `<p>Click to reset your password: <a href="${url}">${url}</a></p><p>This link expires in 1 hour.</p>`,
+    html: `<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px;"><h2 style="color:#10b981;">ShadowSurface Password Reset</h2><p>You requested a password reset. Click the button below to set a new password:</p><p style="text-align:center;margin:30px 0;"><a href="${url}" style="background:#10b981;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:bold;">Reset Password</a></p><p style="color:#666;font-size:12px;">Or copy this link: <a href="${url}">${url}</a></p><p style="color:#999;font-size:12px;">This link expires in 1 hour. If you didn't request this, ignore this email.</p></div>`,
   });
 }
