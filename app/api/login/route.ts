@@ -9,9 +9,9 @@ const schema = z.object({ email: z.string().email(), password: z.string().min(1)
 export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-    const rl = await rateLimitByIP(ip, 10, 300);
+    const rl = await rateLimitByIP(ip, 10, 1800);
     if (!rl.success) {
-      return NextResponse.json({ error: 'Too many login attempts. Try again in 5 minutes.' }, { status: 429 });
+      return NextResponse.json({ error: 'Too many login attempts. Try again in 30 minutes.' }, { status: 429 });
     }
 
     const body = await req.json();
