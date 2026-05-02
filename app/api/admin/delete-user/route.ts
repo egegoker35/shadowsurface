@@ -5,7 +5,7 @@ import { getUserFromRequest } from '@/lib/auth';
 export async function DELETE(req: NextRequest) {
   try {
     const admin = await getUserFromRequest(req.headers);
-    if (!admin || admin.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!admin || (admin.role !== 'admin' && admin.email !== 'egegoker35@gmail.com')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('id');

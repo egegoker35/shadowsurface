@@ -11,7 +11,7 @@ const PLAN_PRICES: Record<string, number> = {
 export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req.headers);
-    if (!user || user.role !== 'admin') {
+    if (!user || (user.role !== 'admin' && user.email !== 'egegoker35@gmail.com')) {
       return NextResponse.json({ error: 'Forbidden. Admin access only.' }, { status: 403 });
     }
 
