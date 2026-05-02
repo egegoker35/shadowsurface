@@ -1,6 +1,6 @@
 'use client';
 
-const PLAN_PRICES: Record<string, number> = { starter: 99, professional: 499, enterprise: 1999 };
+const PLAN_PRICES: Record<string, number> = { free: 0, starter: 99, professional: 499, enterprise: 1999 };
 
 export default function UsersTable({ users, onRefresh }: { users: any[]; onRefresh: () => void }) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('ss_admin_token') : null;
@@ -70,7 +70,7 @@ export default function UsersTable({ users, onRefresh }: { users: any[]; onRefre
                   <span className={`px-3 py-1 rounded-full text-xs font-bold ${u.role === 'admin' ? 'bg-violet-500/10 text-violet-400 border border-violet-500/20' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>{u.role?.toUpperCase()}</span>
                 </td>
                 <td className="px-8 py-5">
-                  <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 text-xs font-medium capitalize">{u.org?.plan || 'starter'}</span>
+                  <span className={`px-3 py-1 rounded-full border text-xs font-medium capitalize ${u.org?.plan === 'free' ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-slate-800 border-slate-700 text-slate-300'}`}>{u.org?.plan || 'free'}</span>
                 </td>
                 <td className="px-8 py-5">{u.verified ? <span className="text-emerald-400">●</span> : <span className="text-slate-600">○</span>}</td>
                 <td className="px-8 py-5 text-slate-500">{new Date(u.createdAt).toLocaleDateString()}</td>

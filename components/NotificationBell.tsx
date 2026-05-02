@@ -5,17 +5,23 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unread, setUnread] = useState(0);
-  const token = typeof window !== 'undefined' ? localStorage.getItem('ss_token') : null;
+  const [token, setToken] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
-  const fetchNotifications = async () => {
-    const res = await fetch('/api/notifications', { headers: { Authorization: `Bearer ${token}` } });
+  useEffect(() => {
+    setToken(localStorage.getItem('ss_token'));
+  }, []);
+
+  const fetchNotifications = async (authToken: string | null) => {
+    if (!authToken) return;
+    const res = await fetch('/api/notifications', { headers: { Authorization: `Bearer ${authToken}` } });
     if (res.ok) { const d = await res.json(); setNotifications(d.notifications || []); setUnread(d.unread || 0); }
   };
 
   useEffect(() => {
-    if (token) fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+    if (!token) return;
+    fetchNotifications(token);
+    const interval = setInterval(() => fetchNotifications(token), 15000);
     return () => clearInterval(interval);
   }, [token]);
 
@@ -26,8 +32,9 @@ export default function NotificationBell() {
   }, []);
 
   const markRead = async (id?: string) => {
+    if (!token) return;
     await fetch('/api/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ id: id || 'all' }) });
-    fetchNotifications();
+    fetchNotifications(token);
   };
 
   if (!token) return null;
@@ -45,12 +52,16 @@ export default function NotificationBell() {
             {unread > 0 && <button onClick={() => markRead('all')} className="text-xs text-emerald-400 hover:text-emerald-300">Mark all read</button>}
           </div>
           <div className="max-h-80 overflow-y-auto">
-            {notifications.length === 0 && <p className="px-4 py-6 text-sm text-slate-500 text-center">No notifications</p>}
+            {notifications.length === 0 && <p className="px-4 py-6 text-sm text-slate-500 text-center">No notifications yet</p>}
             {notifications.map((n) => (
               <div key={n.id} onClick={() => { if (!n.read) markRead(n.id); }} className={`px-4 py-3 border-b border-slate-800/50 cursor-pointer hover:bg-slate-800/50 ${n.read ? 'opacity-60' : ''}`}>
                 <div className="flex items-start gap-2">
                   {!n.read && <span className="w-2 h-2 bg-emerald-400 rounded-full mt-1.5 shrink-0" />}
-                  <div className="flex-1"><div className="text-sm font-medium">{n.title}</div><div className="text-xs text-slate-400 mt-0.5">{n.message}</div><div className="text-[10px] text-slate-600 mt-1">{new Date(n.createdAt).toLocaleString()}</div></div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{n.title}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{n.message}</div>
+                    <div className="text-[10px] text-slate-600 mt-1">{new Date(n.createdAt).toLocaleString()}</div>
+                  </div>
                 </div>
               </div>
             ))}

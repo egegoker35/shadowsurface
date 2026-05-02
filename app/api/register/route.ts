@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const { email, password, organizationName } = parsed.data;
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return NextResponse.json({ error: 'Email already registered' }, { status: 409 });
-    const org = await prisma.organization.create({ data: { name: organizationName, plan: 'starter' } });
+    const org = await prisma.organization.create({ data: { name: organizationName, plan: 'free' } });
     const passwordHash = await hashPassword(password);
     const user = await prisma.user.create({ data: { email, passwordHash, verified: true, orgId: org.id } });
     const jwt = createToken({ userId: user.id, email: user.email, orgId: org.id });

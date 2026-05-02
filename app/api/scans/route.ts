@@ -9,6 +9,7 @@ import { z } from 'zod';
 const VALID_SCAN_TYPES = ['subdomain', 'port', 'cve', 'cloud', 'full', 'bulk'];
 
 const PLAN_CONFIG: Record<string, { perHour: number; perMonth: number; portLimit: number; allowedTypes: string[]; bulkDomains: number }> = {
+  free: { perHour: 0, perMonth: 0, portLimit: 0, allowedTypes: [], bulkDomains: 0 },
   starter: { perHour: 5, perMonth: 20, portLimit: 20, allowedTypes: ['subdomain', 'port', 'cve'], bulkDomains: 1 },
   professional: { perHour: 20, perMonth: 200, portLimit: 50, allowedTypes: ['subdomain', 'port', 'cve', 'cloud', 'full'], bulkDomains: 5 },
   enterprise: { perHour: 100, perMonth: 9999, portLimit: 100, allowedTypes: ['subdomain', 'port', 'cve', 'cloud', 'full', 'bulk'], bulkDomains: 50 },
@@ -38,7 +39,10 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const org = await prisma.organization.findUnique({ where: { id: user.orgId } });
-    const plan = org?.plan || 'starter';
+    const plan = org?.plan || 'free';
+    if (plan === 'free') {
+      return NextResponse.json({ error: 'Please upgrade your plan to start scanning. Visit /pricing' }, { status: 403 });
+    }
     const config = PLAN_CONFIG[plan] || PLAN_CONFIG.starter;
 
     const hourRL = await rateLimitByUser(user.id, config.perHour, 3600);
@@ -134,9 +138,15 @@ export async function POST(req: NextRequest) {
         console.error('[Scan Save Error]', e);
         await prisma.scan.update({ where: { id: scan.id }, data: { status: 'failed' } });
       }
+      await prisma.notification.create({
+        data: { userId: user.id, type: 'scan_complete', title: 'Scan Completed', message: `${target} scan finished with ${result.statistics?.highRiskCount || 0} high-risk findings.`, data: { scanId: scan.id } },
+      });
     }).catch(async (err: any) => {
       console.error('[Scan Engine Error]', err?.message || err);
       await prisma.scan.update({ where: { id: scan.id }, data: { status: 'failed' } });
+      await prisma.notification.create({
+        data: { userId: user.id, type: 'scan_failed', title: 'Scan Failed', message: `${target} scan could not be completed. Target may be unreachable.`, data: { scanId: scan.id } },
+      });
     });
 
     return NextResponse.json({ scanId: scan.id, status: 'running', message: 'Scan started. This may take 5-30 minutes depending on target size.' });

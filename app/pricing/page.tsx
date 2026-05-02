@@ -4,6 +4,22 @@ import Navbar from '@/components/Navbar';
 
 const plans = [
   {
+    name: 'Free',
+    price: '$0',
+    period: '/month',
+    planId: 'free',
+    description: 'Explore the platform before committing.',
+    features: [
+      '1 user',
+      'Dashboard access',
+      'View scan history',
+      'Export reports (read-only)',
+    ],
+    unavailable: ['Scan execution', 'Cloud misconfiguration scan', 'Full combined scan', 'Bulk multi-domain scan', 'API access', 'Team invites'],
+    cta: 'Sign Up Free',
+    ctaStyle: 'outline',
+  },
+  {
     name: 'Starter',
     price: '$99',
     period: '/month',
@@ -18,6 +34,8 @@ const plans = [
       'Email alerts',
     ],
     unavailable: ['Cloud misconfiguration scan', 'Full combined scan', 'Bulk multi-domain scan', 'API access'],
+    cta: 'Get Started',
+    ctaStyle: 'solid',
   },
   {
     name: 'Professional',
@@ -148,9 +166,13 @@ export default function PricingPage() {
                   </ul>
                 )}
                 {plan.unavailable.length === 0 && <div className="mb-6" />}
-                <button onClick={() => openModal(plan)} className={`block text-center w-full py-2.5 rounded-lg font-semibold transition-colors ${plan.name === 'Professional' ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}>
-                  Get Started
-                </button>
+                {plan.planId === 'free' ? (
+                  <a href="/register" className="block text-center w-full py-2.5 rounded-lg font-semibold transition-colors bg-slate-800 hover:bg-slate-700 text-white border border-slate-700">Sign Up Free</a>
+                ) : (
+                  <button onClick={() => openModal(plan)} className={`block text-center w-full py-2.5 rounded-lg font-semibold transition-colors ${plan.name === 'Professional' ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}>
+                    Get Started
+                  </button>
+                )}
               </div>
             ))}
           </div>
