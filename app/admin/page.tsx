@@ -11,33 +11,37 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
-  const token = typeof window !== 'undefined' ? localStorage.getItem('ss_token') : null;
+
+  const token = typeof window !== 'undefined' ? localStorage.getItem('ss_admin_token') : null;
+
+  useEffect(() => {
+    if (!token) {
+      window.location.href = '/admin-login';
+      return;
+    }
+    fetchData();
+  }, [token]);
 
   const fetchData = async () => {
-    if (!token) { setError('Not logged in'); setLoading(false); return; }
     try {
       const res = await fetch('/api/admin', { headers: { Authorization: `Bearer ${token}` } });
-      if (res.status === 403) { setError('Forbidden. Admin access only.'); setLoading(false); return; }
-      if (!res.ok) { setError('Failed to load'); setLoading(false); return; }
+      if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem('ss_admin_token');
+        window.location.href = '/admin-login';
+        return;
+      }
+      if (!res.ok) throw new Error('Failed');
       setData(await res.json());
       setLoading(false);
-    } catch { setError('Network error'); setLoading(false); }
+    } catch {
+      setError('Failed to load');
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchData(); }, [token]);
-
-  const setupAdmin = async () => {
-    if (!confirm('Make yourself admin?')) return;
-    try {
-      const res = await fetch('/api/admin/setup', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
-      const d = await res.json();
-      if (res.ok) { alert(d.message); window.location.reload(); }
-      else alert(d.error || 'Failed');
-    } catch { alert('Network error'); }
-  };
-
+  if (!token) return null;
   if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">Loading...</div>;
-  if (error) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white"><div className="text-center"><h1 className="text-2xl font-bold text-red-400 mb-2">Access Denied</h1><p className="text-slate-400">{error}</p><div className="flex gap-3 justify-center mt-4"><button onClick={setupAdmin} className="px-6 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-semibold">Setup Admin Access</button><a href="/login" className="px-6 py-2.5 rounded-lg bg-slate-800 text-white">Login</a></div></div></div>;
+  if (error) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white"><div className="text-center"><h1 className="text-2xl font-bold text-red-400 mb-2">Error</h1><p className="text-slate-400">{error}</p><button onClick={fetchData} className="mt-4 px-6 py-2.5 rounded-lg bg-emerald-600 text-white">Retry</button></div></div>;
 
   const stats = data?.stats || {};
 

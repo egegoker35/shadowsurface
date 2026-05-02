@@ -3,7 +3,7 @@
 const PLAN_PRICES: Record<string, number> = { starter: 99, professional: 499, enterprise: 1999 };
 
 export default function UsersTable({ users, onRefresh }: { users: any[]; onRefresh: () => void }) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('ss_token') : null;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('ss_admin_token') : null;
 
   const upgrade = async (userId: string, plan: string) => {
     if (!confirm(`Upgrade to ${plan}?`)) return;

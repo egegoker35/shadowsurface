@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getUserFromRequest } from '@/lib/auth';
+import { verifyToken } from '@/lib/auth';
 
 const PLAN_PRICES: Record<string, number> = {
   starter: 99,
@@ -8,10 +8,17 @@ const PLAN_PRICES: Record<string, number> = {
   enterprise: 1999,
 };
 
+function isAdmin(headers: Headers): boolean {
+  const auth = headers.get('authorization');
+  if (!auth?.startsWith('Bearer ')) return false;
+  const token = auth.slice(7);
+  const decoded = verifyToken<{ userId: string; email: string; role?: string }>(token);
+  return decoded ? decoded.role === 'admin' || decoded.email === 'egegoker35@gmail.com' : false;
+}
+
 export async function GET(req: NextRequest) {
   try {
-    const user = await getUserFromRequest(req.headers);
-    if (!user || (user.role !== 'admin' && user.email !== 'egegoker35@gmail.com')) {
+    if (!isAdmin(req.headers)) {
       return NextResponse.json({ error: 'Forbidden. Admin access only.' }, { status: 403 });
     }
 
@@ -26,10 +33,9 @@ export async function GET(req: NextRequest) {
       prisma.organization.findMany({ orderBy: { createdAt: 'desc' }, take: 50 }),
     ]);
 
-    // Calculate revenue from paid orgs
     const paidOrgs = orgs.filter(o => PLAN_PRICES[o.plan]);
     const totalRevenue = paidOrgs.reduce((sum, o) => sum + (PLAN_PRICES[o.plan] || 0), 0);
-    const mrr = totalRevenue; // Monthly recurring
+    const mrr = totalRevenue;
 
     return NextResponse.json({
       stats: { userCount, scanCount, assetCount, cloudCount, totalRevenue, mrr, paidCustomers: paidOrgs.length },

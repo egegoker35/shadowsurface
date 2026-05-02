@@ -3,7 +3,7 @@ import { useState } from 'react';
 import ScanDetailModal from './ScanDetailModal';
 
 export default function ScansTable({ scans, onRefresh }: { scans: any[]; onRefresh?: () => void }) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('ss_token') : null;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('ss_admin_token') : null;
   const [selectedScan, setSelectedScan] = useState<any>(null);
 
   const del = async (scanId: string) => {

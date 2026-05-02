@@ -1,11 +1,12 @@
 'use client';
 
 export default function PaymentRequests({ leads, onRefresh }: { leads: any[]; onRefresh: () => void }) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('ss_admin_token') : null;
   const approve = async (lead: any) => {
     if (!confirm(`Approve ${lead.plan} plan for ${lead.email}?`)) return;
     const res = await fetch('/api/admin/approve', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ email: lead.email, plan: lead.plan }),
     });
     if (res.ok) { alert('Approved! User upgraded.'); onRefresh(); }
@@ -14,7 +15,7 @@ export default function PaymentRequests({ leads, onRefresh }: { leads: any[]; on
 
   const del = async (id: string) => {
     if (!confirm('Delete this lead permanently?')) return;
-    const token = localStorage.getItem('ss_token');
+    const token = localStorage.getItem('ss_admin_token');
     const res = await fetch(`/api/leads?id=${id}`, {
       method: 'DELETE',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
