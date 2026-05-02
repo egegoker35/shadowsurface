@@ -158,7 +158,7 @@ export default function LandingPage() {
           )}
         </div>
       </section>
-      <section className="py-16 border-t border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+      <section className="py-16 border-t border-slate-800 bg-slate-900/50">
         <div className="max-w-6xl mx-auto px-4 grid sm:grid-cols-3 gap-8">
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 ">
             <h3 className="text-lg font-semibold mb-2">Continuous Monitoring</h3>
@@ -174,7 +174,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-      <section className="py-16 border-t border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+      <section className="py-16 border-t border-slate-800 bg-slate-900/50">
         <div className="max-w-3xl mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to See Your Attack Surface?</h2>
           <p className="text-slate-400 mb-8">Start with a free scan. No credit card required.</p>
