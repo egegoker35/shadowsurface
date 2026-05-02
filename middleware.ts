@@ -33,8 +33,8 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // Protect admin API routes
-  if (pathname.startsWith('/api/admin')) {
+  // Protect admin API routes (exclude login)
+  if (pathname.startsWith('/api/admin') && pathname !== '/api/admin-login') {
     if (!isAdminRequest(req)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
