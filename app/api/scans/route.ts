@@ -16,6 +16,20 @@ const PLAN_LIMITS: Record<string, { perHour: number; perMonth: number }> = {
   enterprise: { perHour: 100, perMonth: 9999 },
 };
 
+// Hard timeout wrapper for scan
+function runScanWithTimeout(engine: ShadowSurfaceEngine, ms = 300000): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Scan timed out after 5 minutes')), ms);
+    engine.runFullScan(50).then((result) => {
+      clearTimeout(timer);
+      resolve(result);
+    }).catch((err: any) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req.headers);
@@ -52,8 +66,9 @@ export async function POST(req: NextRequest) {
       data: { target, status: 'running', orgId: user.orgId, createdById: user.id },
     });
 
+    // Run scan in background with hard timeout
     const engine = new ShadowSurfaceEngine(target);
-    engine.runFullScan(80).then(async (result) => {
+    runScanWithTimeout(engine, 300000).then(async (result: any) => {
       try {
         await prisma.scan.update({
           where: { id: scan.id },
@@ -64,9 +79,9 @@ export async function POST(req: NextRequest) {
             statistics: result.statistics as any,
           },
         });
-        if (result.assets.length > 0) {
+        if (result.assets?.length > 0) {
           await prisma.asset.createMany({
-            data: result.assets.map((a) => ({
+            data: result.assets.map((a: any) => ({
               scanId: scan.id,
               domain: a.subdomain || a.ip || 'unknown',
               subdomain: a.subdomain || a.ip || 'unknown',
@@ -84,9 +99,9 @@ export async function POST(req: NextRequest) {
             })),
           });
         }
-        if (result.cloudAssets.length > 0) {
+        if (result.cloudAssets?.length > 0) {
           await prisma.cloudAsset.createMany({
-            data: result.cloudAssets.map((c) => ({
+            data: result.cloudAssets.map((c: any) => ({
               scanId: scan.id,
               provider: c.provider,
               serviceType: c.serviceType,
@@ -99,10 +114,12 @@ export async function POST(req: NextRequest) {
             })),
           });
         }
-      } catch {
+      } catch (e: any) {
+        console.error('[Scan Save Error]', e);
         await prisma.scan.update({ where: { id: scan.id }, data: { status: 'failed' } });
       }
-    }).catch(async () => {
+    }).catch(async (err: any) => {
+      console.error('[Scan Engine Error]', err?.message || err);
       await prisma.scan.update({ where: { id: scan.id }, data: { status: 'failed' } });
     });
 

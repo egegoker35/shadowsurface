@@ -23,6 +23,7 @@ export default function ScanDetailModal({ scan, onClose }: { scan: any; onClose:
   const exec = scan.executiveSummary || {};
   const stats = scan.statistics || {};
   const assets = scan.assets || [];
+  const cloudAssets = scan.cloudAssets || [];
   const allFindings = assets.flatMap((a: any) => (a.findings || []).map((f: any) => ({ ...f, asset: a.subdomain || a.ip, port: a.port })));
 
   return (
@@ -96,7 +97,7 @@ export default function ScanDetailModal({ scan, onClose }: { scan: any; onClose:
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="text-left text-slate-500 uppercase border-b border-slate-800">
-                      <th className="pb-2">Subdomain</th><th className="pb-2">IP</th><th className="pb-2">Port</th><th className="pb-2">Service</th><th className="pb-2">Tech</th><th className="pb-2">CVEs</th><th className="pb-2 text-right">Risk</th>
+                      <th className="pb-2">Subdomain</th><th className="pb-2">IP</th><th className="pb-2">Port</th><th className="pb-2">Service</th><th className="pb-2">Tech</th><th className="pb-2">WAF</th><th className="pb-2">CVEs</th><th className="pb-2 text-right">Risk</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/50">
@@ -107,6 +108,7 @@ export default function ScanDetailModal({ scan, onClose }: { scan: any; onClose:
                         <td className="py-2"><span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">{a.port}</span></td>
                         <td className="py-2 text-slate-300">{a.service || '-'}</td>
                         <td className="py-2 text-slate-300">{a.technology ? `${a.technology} ${a.version || ''}` : '-'}</td>
+                        <td className="py-2">{a.waf ? <span className="px-1.5 py-0.5 rounded bg-blue-900/30 text-blue-300 text-xs border border-blue-800">{a.waf}</span> : '-'}</td>
                         <td className="py-2">
                           {a.cves?.length > 0 ? a.cves.map((cve: string) => <span key={cve} className="inline-block px-1.5 py-0.5 rounded bg-red-900/30 text-red-300 text-xs border border-red-800/50 mr-1">{cve}</span>) : '-'}
                         </td>
@@ -119,20 +121,32 @@ export default function ScanDetailModal({ scan, onClose }: { scan: any; onClose:
             </div>
           )}
 
-          {scan.cloudAssets?.length > 0 && (
+          {cloudAssets.length > 0 && (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-3 text-amber-400">Cloud Issues ({scan.cloudAssets.length})</h3>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {scan.cloudAssets.map((c: any, i: number) => (
-                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-slate-950/50 border border-slate-800/50">
-                    <span className={`px-2 py-1 rounded text-xs font-bold ${c.severity === 'critical' || c.severity === 'high' ? 'bg-red-900/30 text-red-300' : 'bg-amber-900/30 text-amber-300'}`}>{c.severity?.toUpperCase()}</span>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">{c.provider} {c.serviceType}</div>
-                      <div className="text-xs text-slate-400">{c.resourceId}</div>
-                    </div>
-                    <RiskBadge score={c.riskScore || 0} />
-                  </div>
-                ))}
+              <h3 className="text-sm font-semibold mb-3 text-amber-400">Cloud Misconfigurations ({cloudAssets.length})</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-slate-500 uppercase border-b border-slate-800">
+                      <th className="pb-2">Provider</th><th className="pb-2">Resource</th><th className="pb-2">Type</th><th className="pb-2">Severity</th><th className="pb-2">Permissions</th><th className="pb-2">URL</th><th className="pb-2 text-right">Risk</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/50">
+                    {cloudAssets.map((c: any, i: number) => (
+                      <tr key={i} className="hover:bg-slate-800/30">
+                        <td className="py-2"><span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">{c.provider}</span></td>
+                        <td className="py-2 font-medium text-white">{c.resourceId}</td>
+                        <td className="py-2 text-slate-300">{c.serviceType}</td>
+                        <td className="py-2"><SeverityBadge severity={c.severity} /></td>
+                        <td className="py-2 text-slate-400">{Array.isArray(c.permissions) ? c.permissions.join(', ') : c.permissions || '-'}</td>
+                        <td className="py-2">
+                          {c.url ? <a href={c.url} target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline truncate max-w-[200px] inline-block">{c.url}</a> : '-'}
+                        </td>
+                        <td className="py-2 text-right"><RiskBadge score={c.riskScore || 0} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

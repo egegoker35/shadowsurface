@@ -46,12 +46,26 @@ export default function DashboardPage() {
     setLoading(false);
   };
 
+  const runningScans = scans.filter((s: any) => s.status === 'running');
+  const failedScans = scans.filter((s: any) => s.status === 'failed');
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6"><h1 className="text-2xl font-bold">Dashboard</h1><span className="px-3 py-1 rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 text-xs font-bold uppercase">{data?.plan || "starter"} Plan</span></div>
       {paymentMsg && (
         <div className={`mb-6 px-4 py-3 rounded-lg text-sm ${paymentMsg.includes('successful') ? 'bg-emerald-900/20 border border-emerald-800 text-emerald-400' : 'bg-red-900/20 border border-red-800 text-red-400'}`}>
           {paymentMsg}
+        </div>
+      )}
+      {runningScans.length > 0 && (
+        <div className="mb-6 px-4 py-3 rounded-lg bg-amber-900/20 border border-amber-800 text-amber-300 text-sm flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+          {runningScans.length} scan in progress. This may take 1-5 minutes. Auto-refreshing every 3 seconds...
+        </div>
+      )}
+      {failedScans.length > 0 && (
+        <div className="mb-6 px-4 py-3 rounded-lg bg-red-900/20 border border-red-800 text-red-300 text-sm">
+          <strong>Failed scans:</strong> {failedScans.map((s: any) => s.target).join(', ')}. Target unreachable or scan timed out after 5 minutes. Try again.
         </div>
       )}
       {data && (
@@ -67,7 +81,7 @@ export default function DashboardPage() {
         {error && <div className="mb-3 text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2 text-sm">{error}</div>}
         <form onSubmit={startScan} className="flex gap-3">
           <input value={target} onChange={(e) => setTarget(e.target.value)} placeholder="example.com or 192.168.1.1" required className="flex-1 px-4 py-2.5 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-          <button type="submit" disabled={loading} className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50">{loading ? 'Scanning...' : 'Start Scan'}</button>
+          <button type="submit" disabled={loading} className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50">{loading ? 'Starting...' : 'Start Scan'}</button>
         </form>
       </div>
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
@@ -82,7 +96,9 @@ export default function DashboardPage() {
                 {scans.map((s: any) => (
                   <tr key={s.id} className="border-b border-slate-800 hover:bg-slate-800/50 cursor-pointer" onClick={() => window.location.href = `/dashboard/scans/${s.id}`}>
                     <td className="py-2 font-medium text-emerald-400 hover:underline">{s.target}</td>
-                    <td className="py-2"><span className={`px-2 py-0.5 rounded text-xs ${s.status === 'completed' ? 'bg-emerald-900 text-emerald-300' : s.status === 'failed' ? 'bg-red-900 text-red-300' : 'bg-yellow-900 text-yellow-300'}`}>{s.status}</span></td>
+                    <td className="py-2">
+                      <span className={`px-2 py-0.5 rounded text-xs ${s.status === 'completed' ? 'bg-emerald-900 text-emerald-300' : s.status === 'failed' ? 'bg-red-900 text-red-300' : 'bg-yellow-900 text-yellow-300'}`}>{s.status}</span>
+                    </td>
                     <td className="py-2">{(s.executiveSummary as any)?.overallRisk || '-'}</td>
                     <td className="py-2 text-slate-400">{new Date(s.createdAt).toLocaleString()}</td>
                   </tr>
