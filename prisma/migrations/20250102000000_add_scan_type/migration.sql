@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Scan" ADD COLUMN IF NOT EXISTS "scanType" TEXT NOT NULL DEFAULT 'full';
