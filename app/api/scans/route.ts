@@ -25,25 +25,17 @@ export async function POST(req: NextRequest) {
     const plan = org?.plan || 'starter';
     const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.starter;
 
-    // Hourly limit
     const hourRL = await rateLimitByUser(user.id, limits.perHour, 3600);
     if (!hourRL.success) {
-      return NextResponse.json(
-        { error: `Hourly limit (${limits.perHour}/hour). Upgrade at /pricing` },
-        { status: 429 }
-      );
+      return NextResponse.json({ error: `Hourly limit (${limits.perHour}/hour). Upgrade at /pricing` }, { status: 429 });
     }
 
-    // Monthly limit
     const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const monthCount = await prisma.scan.count({
       where: { orgId: user.orgId, createdAt: { gte: monthAgo } },
     });
     if (monthCount >= limits.perMonth) {
-      return NextResponse.json(
-        { error: `Monthly limit (${limits.perMonth}/month). Upgrade at /pricing` },
-        { status: 429 }
-      );
+      return NextResponse.json({ error: `Monthly limit (${limits.perMonth}/month). Upgrade at /pricing` }, { status: 429 });
     }
 
     const body = await req.json();
@@ -67,17 +59,17 @@ export async function POST(req: NextRequest) {
           where: { id: scan.id },
           data: {
             status: 'completed',
-            resultJson: JSON.parse(JSON.stringify(result)),
-            executiveSummary: result.executiveSummary,
-            statistics: result.statistics,
+            resultJson: result as any,
+            executiveSummary: result.executiveSummary as any,
+            statistics: result.statistics as any,
           },
         });
         if (result.assets.length > 0) {
           await prisma.asset.createMany({
             data: result.assets.map((a) => ({
               scanId: scan.id,
-              domain: a.subdomain || a.ip || "unknown",
-              subdomain: a.subdomain || a.ip || "unknown",
+              domain: a.subdomain || a.ip || 'unknown',
+              subdomain: a.subdomain || a.ip || 'unknown',
               ip: a.ip,
               port: a.port,
               service: a.service,
@@ -85,9 +77,9 @@ export async function POST(req: NextRequest) {
               version: a.version,
               riskScore: a.riskScore,
               cves: a.cves,
-              findings: a.findings,
-              headers: a.headers,
-              sslInfo: a.sslInfo,
+              findings: a.findings as any,
+              headers: a.headers as any,
+              sslInfo: a.sslInfo as any,
               waf: a.waf,
             })),
           });
@@ -100,8 +92,8 @@ export async function POST(req: NextRequest) {
               serviceType: c.serviceType,
               resourceId: c.resourceId,
               url: c.url,
-              permissions: c.permissions,
-              misconfigurations: c.misconfigurations,
+              permissions: c.permissions as any,
+              misconfigurations: c.misconfigurations as any,
               riskScore: c.riskScore,
               severity: c.severity,
             })),
