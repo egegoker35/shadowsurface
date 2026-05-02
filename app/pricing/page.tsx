@@ -23,18 +23,30 @@ export default function PricingPage() {
     setModalOpen(true);
     setStep('form');
     setForm({ name: '', email: '', company: '' });
+    setVerifyError('');
   };
 
   const submitLead = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormSubmitting(true);
-    const res = await fetch('/api/leads', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, plan: selectedPlan?.planId }),
-    });
-    setFormSubmitting(false);
-    if (res.ok) setStep('payment');
+    setVerifyError('');
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, plan: selectedPlan?.planId }),
+      });
+      setFormSubmitting(false);
+      if (res.ok) {
+        setStep('payment');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setVerifyError(data.error || 'Failed to submit. Please try again.');
+      }
+    } catch {
+      setFormSubmitting(false);
+      setVerifyError('Network error. Please try again.');
+    }
   };
 
   const verifyPayment = async (e: React.FormEvent) => {
@@ -97,6 +109,7 @@ export default function PricingPage() {
                 <h2 className="text-xl font-bold mb-1">{selectedPlan.name} Plan</h2>
                 <p className="text-slate-400 text-sm mb-6">{selectedPlan.price} / month</p>
                 <form onSubmit={submitLead} className="space-y-4">
+                  {verifyError && <div className="text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2 text-sm">{verifyError}</div>}
                   <div>
                     <label className="block text-sm text-slate-400 mb-1">Full Name *</label>
                     <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="w-full px-4 py-3 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white" placeholder="John Doe" />
