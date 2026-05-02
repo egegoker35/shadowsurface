@@ -41,10 +41,20 @@ export default function AdminPage() {
             <button onClick={fetchData} className="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm">Refresh</button>
           </div>
 
-          {activeTab === 'dashboard' && <div className="space-y-6"><DashboardStats data={data} /><div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><PaymentRequests leads={data?.leads?.slice(0,5)||[]} onRefresh={fetchData} /><ScansTable scans={data?.scans?.slice(0,5)||[]} /></div></div>}
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+              <DashboardStats data={data} />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <PaymentRequests leads={data?.leads?.slice(0,5)||[]} onRefresh={fetchData} />
+                <ScansTable scans={data?.scans?.slice(0,5)||[]} onRefresh={fetchData} />
+              </div>
+            </div>
+          )}
+
           {activeTab === 'payments' && <PaymentRequests leads={data?.leads||[]} onRefresh={fetchData} />}
           {activeTab === 'users' && <UsersTable users={data?.users||[]} onRefresh={fetchData} />}
-          {activeTab === 'scans' && <ScansTable scans={data?.scans||[]} />}
+          {activeTab === 'scans' && <ScansTable scans={data?.scans||[]} onRefresh={fetchData} />}
+
           {activeTab === 'revenue' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
