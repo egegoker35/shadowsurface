@@ -183,9 +183,9 @@ export class ShadowSurfaceEngine {
     for (let i = 0; i < allTargets.length; i += 100) {
       const batch = allTargets.slice(i, i + 100);
       const results = await Promise.allSettled(batch.map(async (t) => {
-        const open = await tcpConnect(t.ip, t.port, 2000);
+        const open = await tcpConnect(t.ip, t.port, 1500);
         if (!open) return null;
-        const banner = await grabBanner(t.ip, t.port, 2000);
+        const banner = await grabBanner(t.ip, t.port, 1500);
         return { id: genId(), domain: this.target, subdomain: t.subdomain, ip: t.ip, port: t.port, service: SERVICE_NAMES[t.port] || '', banner, technology: null, version: null, cves: [], cloudProvider: null, riskScore: 0, findings: [], headers: {}, sslInfo: null, waf: null, firstSeen: new Date().toISOString() } as DiscoveredAsset;
       }));
       for (const r of results) { if (r.status === 'fulfilled' && r.value) assets.push(r.value); }
@@ -201,7 +201,7 @@ export class ShadowSurfaceEngine {
         const proto = asset.port === 443 || asset.port === 8443 ? 'https' : 'http';
         const url = `${proto}://${asset.subdomain || asset.ip}:${asset.port}`;
         try {
-          const { headers, body } = await fetchHeaders(url, 5000);
+          const { headers, body } = await fetchHeaders(url, 3000);
           asset.headers = headers;
           const server = headers['server'] || '';
           const powered = headers['x-powered-by'] || '';
@@ -334,6 +334,61 @@ export class ShadowSurfaceEngine {
     if (outdated.length > 0) recs.push(`HIGH: ${outdated.length} asset(s) with known CVEs`);
     recs.push('Implement continuous monitoring', 'Review cloud storage policies', 'Deploy WAF for public assets');
     return recs;
+  }
+
+  async runScan(type: string = "full", portLimit = 100): Promise<ScanResult> {
+    switch (type) {
+      case "subdomain": return this.runSubdomainOnly();
+      case "port": return this.runPortOnly(portLimit);
+      case "cve": return this.runCVEOnly(portLimit);
+      case "cloud": return this.runCloudOnly();
+      default: return this.runFullScan(portLimit);
+    }
+  }
+
+  async runSubdomainOnly(): Promise<ScanResult> {
+    const start = Date.now();
+    const subdomainIps = await this.enumerateSubdomains();
+    this.scanResult.assets = []; this.scanResult.cloudAssets = [];
+    this.scanResult.durationSeconds = (Date.now() - start) / 1000;
+    this.scanResult.statistics = { totalSubdomains: Object.keys(subdomainIps).length, totalAssets: 0, totalCloudAssets: 0, highRiskCount: 0, mediumRiskCount: 0, lowRiskCount: 0 };
+    this.scanResult.executiveSummary = { overallRisk: "LOW", criticalFindings: 0, attackSurfaceSize: Object.keys(subdomainIps).length, recommendations: ["Run port scan to discover open services."]};
+    return this.scanResult;
+  }
+
+  async runPortOnly(portLimit = 50): Promise<ScanResult> {
+    const start = Date.now();
+    const subdomainIps = await this.enumerateSubdomains();
+    const assets = await this.scanPortsOnAssets(subdomainIps, TOP_PORTS.slice(0, portLimit));
+    this.scanResult.assets = assets; this.scanResult.cloudAssets = [];
+    this.scanResult.durationSeconds = (Date.now() - start) / 1000;
+    this.scanResult.statistics = { totalSubdomains: Object.keys(subdomainIps).length, totalAssets: assets.length, totalCloudAssets: 0, highRiskCount: 0, mediumRiskCount: 0, lowRiskCount: 0 };
+    this.scanResult.executiveSummary = { overallRisk: "LOW", criticalFindings: 0, attackSurfaceSize: assets.length, recommendations: ["Run full scan for CVE mapping and cloud checks."]};
+    return this.scanResult;
+  }
+
+  async runCVEOnly(portLimit = 50): Promise<ScanResult> {
+    const start = Date.now();
+    const subdomainIps = await this.enumerateSubdomains();
+    const assets = await this.scanPortsOnAssets(subdomainIps, TOP_PORTS.slice(0, portLimit));
+    await this.analyzeWebAssets(assets);
+    this.calculateRiskScores(assets, []);
+    const crit = assets.filter((a) => a.riskScore >= 70).length;
+    this.scanResult.assets = assets; this.scanResult.cloudAssets = [];
+    this.scanResult.durationSeconds = (Date.now() - start) / 1000;
+    this.scanResult.statistics = { totalSubdomains: Object.keys(subdomainIps).length, totalAssets: assets.length, totalCloudAssets: 0, highRiskCount: crit, mediumRiskCount: assets.filter((a) => a.riskScore >= 40 && a.riskScore < 70).length, lowRiskCount: assets.filter((a) => a.riskScore < 40).length };
+    this.scanResult.executiveSummary = { overallRisk: crit > 0 ? "CRITICAL" : assets.some((a) => a.riskScore >= 70) ? "HIGH" : assets.some((a) => a.riskScore >= 40) ? "MEDIUM" : "LOW", criticalFindings: crit, attackSurfaceSize: assets.length, recommendations: this.generateRecommendations(assets, []) };
+    return this.scanResult;
+  }
+
+  async runCloudOnly(): Promise<ScanResult> {
+    const start = Date.now();
+    const cloudAssets = await this.scanCloudInfrastructure();
+    this.scanResult.assets = []; this.scanResult.cloudAssets = cloudAssets;
+    this.scanResult.durationSeconds = (Date.now() - start) / 1000;
+    this.scanResult.statistics = { totalSubdomains: 0, totalAssets: 0, totalCloudAssets: cloudAssets.length, highRiskCount: cloudAssets.filter((a) => a.severity === "critical").length, mediumRiskCount: 0, lowRiskCount: 0 };
+    this.scanResult.executiveSummary = { overallRisk: cloudAssets.some((a) => a.severity === "critical") ? "CRITICAL" : cloudAssets.some((a) => a.severity === "high") ? "HIGH" : "LOW", criticalFindings: cloudAssets.filter((a) => a.severity === "critical").length, attackSurfaceSize: cloudAssets.length, recommendations: this.generateRecommendations([], cloudAssets) };
+    return this.scanResult;
   }
 
   async runFullScan(portLimit = 100): Promise<ScanResult> {

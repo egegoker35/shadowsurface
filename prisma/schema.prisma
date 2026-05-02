@@ -37,6 +37,7 @@ model User {
 model Scan {
   id            String   @id @default(uuid())
   target        String
+  scanType      String   @default("full")
   status        String   @default("pending")
   resultJson    Json?
   statistics    Json?
