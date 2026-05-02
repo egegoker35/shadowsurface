@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { publishScanJob, redis } from '@/lib/redis';
-import { rateLimitByIP, rateLimitByEndpoint } from '@/lib/middleware/rateLimit';
-import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput, abuseCheck, blockIfAbusive } from '@/lib/middleware/security';
+import { rateLimitByIP } from '@/lib/middleware/rateLimit';
+import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput } from '@/lib/middleware/security';
 import { randomUUID } from 'crypto';
 import { z } from 'zod';
 
@@ -11,29 +11,16 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const abuse = await abuseCheck(req);
-    if (abuse) return abuse;
-
     const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
 
-    // AGGRESSIVE: 1 demo scan per IP per 30 minutes
-    const rl = await rateLimitByIP(ip, 1, 1800);
+    const rl = await rateLimitByIP(ip, 3, 1800);
     if (!rl.success) {
-      await blockIfAbusive(ip, 2);
       return NextResponse.json(
-        { error: 'Demo rate limit: 1 scan per 30 minutes per IP.', reset: rl.reset },
-        { status: 429, headers: { 'X-RateLimit-Limit': String(rl.limit), 'X-RateLimit-Remaining': String(rl.remaining), 'X-RateLimit-Reset': String(rl.reset) } }
+        { error: 'Demo rate limit: 3 scans per 30 minutes per IP.', reset: rl.reset },
+        { status: 429 }
       );
     }
 
-    // Burst: max 3 POSTs to /api/demo per minute
-    const burst = await rateLimitByEndpoint(ip, 'demo-post', 3, 60);
-    if (!burst.success) {
-      await blockIfAbusive(ip, 1);
-      return NextResponse.json({ error: 'Too many requests.' }, { status: 429 });
-    }
-
-    // QUEUE GUARD: if queue has >5 demo jobs, reject
     const queueLen = await redis.llen('scan:queue');
     if (queueLen > 5) {
       return NextResponse.json(
@@ -47,15 +34,10 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) return NextResponse.json({ error: 'Invalid target domain format' }, { status: 400 });
 
     const rawTarget = parsed.data.target;
-    if (hasSuspiciousInput(rawTarget)) {
-      await blockIfAbusive(ip, 1);
-      return NextResponse.json({ error: 'Suspicious input detected' }, { status: 400 });
-    }
+    if (hasSuspiciousInput(rawTarget)) return NextResponse.json({ error: 'Suspicious input detected' }, { status: 400 });
 
     const target = sanitizeTarget(rawTarget);
-    if (isBlockedTarget(target)) {
-      return NextResponse.json({ error: 'Target blocked for security' }, { status: 403 });
-    }
+    if (isBlockedTarget(target)) return NextResponse.json({ error: 'Target blocked for security' }, { status: 403 });
 
     const scanId = randomUUID();
     await publishScanJob(scanId, { target, isDemo: true });

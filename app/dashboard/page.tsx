@@ -40,7 +40,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      <div className="flex items-center justify-between mb-6"><h1 className="text-2xl font-bold">Dashboard</h1><span className="px-3 py-1 rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 text-xs font-bold uppercase">{data?.plan || "starter"} Plan</span></div>
       {paymentMsg && (
         <div className={`mb-6 px-4 py-3 rounded-lg text-sm ${paymentMsg.includes('successful') ? 'bg-emerald-900/20 border border-emerald-800 text-emerald-400' : 'bg-red-900/20 border border-red-800 text-red-400'}`}>
           {paymentMsg}
