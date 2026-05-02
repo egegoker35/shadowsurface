@@ -24,15 +24,6 @@ export function middleware(req: NextRequest) {
   response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   response.headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://api.openai.com https://apilist.tronscanapi.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';");
 
-  // Protect admin page routes
-  if (pathname.startsWith('/admin') && pathname !== '/admin-login') {
-    const auth = req.headers.get('authorization');
-    const token = auth?.startsWith('Bearer ') ? auth.slice(7) : null;
-    if (!token) {
-      return NextResponse.redirect(new URL('/admin-login', req.url));
-    }
-  }
-
   // Protect admin API routes (exclude login)
   if (pathname.startsWith('/api/admin') && pathname !== '/api/admin-login') {
     if (!isAdminRequest(req)) {
