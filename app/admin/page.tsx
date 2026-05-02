@@ -26,8 +26,18 @@ export default function AdminPage() {
 
   useEffect(() => { fetchData(); }, [token]);
 
+  const setupAdmin = async () => {
+    if (!confirm('Make yourself admin?')) return;
+    try {
+      const res = await fetch('/api/admin/setup', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const d = await res.json();
+      if (res.ok) { alert(d.message); window.location.reload(); }
+      else alert(d.error || 'Failed');
+    } catch { alert('Network error'); }
+  };
+
   if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">Loading...</div>;
-  if (error) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white"><div className="text-center"><h1 className="text-2xl font-bold text-red-400 mb-2">Access Denied</h1><p className="text-slate-400">{error}</p><a href="/login" className="mt-4 inline-block px-6 py-2.5 rounded-lg bg-emerald-600 text-white">Login</a></div></div>;
+  if (error) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white"><div className="text-center"><h1 className="text-2xl font-bold text-red-400 mb-2">Access Denied</h1><p className="text-slate-400">{error}</p><div className="flex gap-3 justify-center mt-4"><button onClick={setupAdmin} className="px-6 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-semibold">Setup Admin Access</button><a href="/login" className="px-6 py-2.5 rounded-lg bg-slate-800 text-white">Login</a></div></div></div>;
 
   const stats = data?.stats || {};
 

@@ -35,6 +35,22 @@ export default function UsersTable({ users, onRefresh }: { users: any[]; onRefre
     }
   };
 
+  const makeAdmin = async (userId: string) => {
+    if (!confirm('Make this user admin?')) return;
+    try {
+      const res = await fetch('/api/admin/make-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      if (res.ok) { alert('User is now admin!'); onRefresh(); }
+      else alert(data.error || 'Failed');
+    } catch (e: any) {
+      alert('Network error: ' + (e.message || 'Failed'));
+    }
+  };
+
   return (
     <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
       <div className="px-8 py-6 border-b border-slate-800">
@@ -63,6 +79,7 @@ export default function UsersTable({ users, onRefresh }: { users: any[]; onRefre
                     {Object.keys(PLAN_PRICES).map(p => (
                       <button key={p} onClick={() => upgrade(u.id, p)} className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors capitalize ${u.org?.plan === p ? 'bg-emerald-600/20 text-emerald-400 border-emerald-600/30' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'}`}>{p.slice(0,3)}</button>
                     ))}
+                    <button onClick={() => makeAdmin(u.id)} className="px-3 py-1.5 rounded-lg text-xs font-bold border border-violet-700/50 text-violet-400 hover:bg-violet-600/20 transition-colors" disabled={u.role === 'admin'}>{u.role === 'admin' ? 'Admin' : 'Make Admin'}</button>
                     <button onClick={() => del(u.id)} className="ml-2 px-3 py-1.5 rounded-lg text-xs font-bold border border-red-700/50 text-red-400 hover:bg-red-600/20 transition-colors">Del</button>
                   </div>
                 </td>
