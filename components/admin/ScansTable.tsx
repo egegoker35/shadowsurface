@@ -24,13 +24,24 @@ export default function ScansTable({ scans, onRefresh }: { scans: any[]; onRefre
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
           <thead className="text-xs text-slate-500 uppercase bg-slate-950/60 border-b border-slate-800">
-            <tr><th className="px-8 py-4 font-semibold">Target</th><th className="px-8 py-4 font-semibold">User</th><th className="px-8 py-4 font-semibold">Status</th><th className="px-8 py-4 font-semibold">Risk</th><th className="px-8 py-4 font-semibold">Date</th><th className="px-8 py-4 font-semibold text-right"></th></tr>
+            <tr>
+              <th className="px-8 py-4 font-semibold">Target</th>
+              <th className="px-8 py-4 font-semibold">User</th>
+              <th className="px-8 py-4 font-semibold">Plan</th>
+              <th className="px-8 py-4 font-semibold">Status</th>
+              <th className="px-8 py-4 font-semibold">Risk</th>
+              <th className="px-8 py-4 font-semibold">Date</th>
+              <th className="px-8 py-4 font-semibold text-right"></th>
+            </tr>
           </thead>
           <tbody>
             {scans.map((s: any) => (
               <tr key={s.id} className="border-b border-slate-800/60 hover:bg-slate-800/40 transition-colors">
                 <td className="px-8 py-5 font-medium text-emerald-400 cursor-pointer hover:underline" onClick={() => setSelectedScan(s)}>{s.target}</td>
                 <td className="px-8 py-5 text-slate-400">{s.createdBy?.email}</td>
+                <td className="px-8 py-5">
+                  <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 text-xs font-medium capitalize">{s.org?.plan || 'starter'}</span>
+                </td>
                 <td className="px-8 py-5">
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${s.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : s.status === 'failed' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>{s.status}</span>
                 </td>
