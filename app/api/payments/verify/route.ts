@@ -58,14 +58,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Transaction not yet confirmed. Wait 1-2 minutes and try again.' }, { status: 400 });
     }
 
-    // Find user and upgrade
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
-    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-
-    await prisma.organization.update({
-      where: { id: user.orgId },
-      data: { plan },
-    });
+    // Find or create user
+    let user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    
+    if (!user) {
+      // Auto-create user and org
+      const { hashPassword } = await import('@/lib/auth');
+      const tempPassword = Math.random().toString(36).slice(2, 10);
+      const org = await prisma.organization.create({ data: { name: email.split('@')[0], plan } });
+      user = await prisma.user.create({
+        data: {
+          email: email.toLowerCase().trim(),
+          passwordHash: await hashPassword(tempPassword),
+          verified: true,
+          orgId: org.id,
+        },
+      });
+    } else {
+      await prisma.organization.update({
+        where: { id: user.orgId },
+        data: { plan },
+      });
+    }
 
     return NextResponse.json({ success: true, message: `Payment verified! ${plan} plan activated.` });
   } catch (e: any) {
