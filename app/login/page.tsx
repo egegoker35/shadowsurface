@@ -21,26 +21,26 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-white dark:bg-slate-950">
       <Navbar />
       <div className="max-w-md mx-auto pt-32 px-4">
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 shadow-xl">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 shadow-xl">
           <h1 className="text-2xl font-bold mb-6">Sign In</h1>
           {error && <div className="mb-4 text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2 text-sm">{error}</div>}
           <form onSubmit={submit} className="space-y-4">
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+              <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">Email</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Password</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+              <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">Password</label>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
             </div>
             <button type="submit" disabled={loading} className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50">{loading ? 'Signing in...' : 'Sign In'}</button>
           </form>
           <div className="mt-4 flex justify-between text-sm">
-            <Link href="/forgot-password" className="text-slate-400 hover:text-emerald-400">Forgot password?</Link>
-            <span className="text-slate-400">No account? <Link href="/register" className="text-emerald-400 hover:underline">Get Started</Link></span>
+            <Link href="/forgot-password" className="text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400">Forgot password?</Link>
+            <span className="text-slate-600 dark:text-slate-400">No account? <Link href="/register" className="text-emerald-400 hover:underline">Get Started</Link></span>
           </div>
         </div>
       </div>
