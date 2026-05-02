@@ -11,8 +11,11 @@ const plans = [
 export default function PricingPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
-  const [step, setStep] = useState<'form' | 'payment'>('form');
+  const [step, setStep] = useState<'form' | 'payment' | 'verify' | 'success'>('form');
   const [form, setForm] = useState({ name: '', email: '', company: '' });
+  const [txHash, setTxHash] = useState('');
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyError, setVerifyError] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
 
   const openModal = (plan: any) => {
@@ -32,6 +35,21 @@ export default function PricingPage() {
     });
     setFormSubmitting(false);
     if (res.ok) setStep('payment');
+  };
+
+  const verifyPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setVerifyLoading(true);
+    setVerifyError('');
+    const res = await fetch('/api/payments/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ txHash, email: form.email, plan: selectedPlan?.planId }),
+    });
+    const data = await res.json();
+    setVerifyLoading(false);
+    if (res.ok) setStep('success');
+    else setVerifyError(data.error || 'Verification failed');
   };
 
   const copyText = (text: string) => {
@@ -134,10 +152,46 @@ export default function PricingPage() {
                   </div>
                 </div>
 
-                <button onClick={() => setModalOpen(false)} className="mt-6 w-full py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-sm transition-colors">
-                  I have completed the payment
+                <button onClick={() => setStep('verify')} className="mt-4 w-full py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition-colors">
+                  I Have Paid — Verify Now
                 </button>
               </>
+            )}
+
+            {step === 'verify' && (
+              <>
+                <div className="text-center mb-6">
+                  <div className="w-12 h-12 bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </div>
+                  <h2 className="text-xl font-bold">Verify Payment</h2>
+                  <p className="text-slate-400 text-sm">Enter your transaction hash (TxID) from TronScan</p>
+                </div>
+                <form onSubmit={verifyPayment} className="space-y-4">
+                  {verifyError && <div className="text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2 text-sm">{verifyError}</div>}
+                  <div>
+                    <label className="block text-sm text-slate-400 mb-1">Transaction Hash (TxID) *</label>
+                    <input value={txHash} onChange={(e) => setTxHash(e.target.value)} required placeholder="abcd1234..." className="w-full px-4 py-3 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white font-mono text-sm" />
+                  </div>
+                  <button type="submit" disabled={verifyLoading} className="w-full py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50 transition-colors">
+                    {verifyLoading ? 'Verifying...' : 'Verify & Activate'}
+                  </button>
+                  <button type="button" onClick={() => setStep('payment')} className="w-full py-2 text-slate-400 text-sm hover:text-white transition-colors">
+                    Back to payment info
+                  </button>
+                </form>
+              </>
+            )}
+
+            {step === 'success' && (
+              <div className="text-center py-4">
+                <div className="w-16 h-16 bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                </div>
+                <h2 className="text-2xl font-bold text-emerald-400">Payment Verified!</h2>
+                <p className="text-slate-400 text-sm mt-2">Your {selectedPlan?.name} plan is now active.</p>
+                <a href="/login" className="mt-6 inline-block px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">Go to Dashboard</a>
+              </div>
             )}
           </div>
         </div>
