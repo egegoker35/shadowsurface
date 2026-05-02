@@ -97,7 +97,8 @@ export default function LandingPage() {
               {loading ? (polling ? 'Scanning...' : 'Starting...') : 'Run Free Scan'}
             </button>
           </div>
-          <p className="text-xs text-slate-500 mb-12">Limited to 1 demo scan per 30 minutes per IP</p>
+          <p className="text-xs text-slate-500 mb-2">Limited to 1 demo scan per 30 minutes per IP</p>
+          <p className="text-[10px] text-slate-600 mb-12">We do not perform intrusive or exploitative scanning.</p>
 
           {error && (
             <div className="mb-8 text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-4 py-3 inline-block">

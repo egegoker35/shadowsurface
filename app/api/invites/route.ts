@@ -21,13 +21,13 @@ export async function POST(req: NextRequest) {
     const user = await getUserFromRequest(req.headers);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await req.json();
-    const { email, role } = body;
+    const { email } = body;
     if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 });
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return NextResponse.json({ error: 'User already exists' }, { status: 409 });
     const token = crypto.randomBytes(32).toString('hex');
     const invite = await prisma.invite.create({
-      data: { email, token, role: role || 'user', expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), orgId: user.orgId },
+      data: { email, token, role: 'user', expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), orgId: user.orgId },
     });
     return NextResponse.json({ invite, link: `/invite/${invite.token}` });
   } catch (e: any) {

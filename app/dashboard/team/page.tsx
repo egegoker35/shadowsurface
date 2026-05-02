@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 export default function TeamPage() {
   const [invites, setInvites] = useState<any[]>([]);
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('user');
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState('');
   const token = typeof window !== 'undefined' ? localStorage.getItem('ss_token') : null;
@@ -19,7 +18,7 @@ export default function TeamPage() {
   const invite = async (e: React.FormEvent) => {
     e.preventDefault();
     setSending(true);
-    const res = await fetch('/api/invites', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ email, role }) });
+    const res = await fetch('/api/invites', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ email }) });
     if (res.ok) { setEmail(''); fetchInvites(); }
     else alert('Failed to send invite');
     setSending(false);
@@ -53,13 +52,6 @@ export default function TeamPage() {
               <div>
                 <label className="block text-xs text-slate-400 mb-1.5">Email Address</label>
                 <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="colleague@company.com" required className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Role</label>
-                <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-sm">
-                  <option value="user">User — Can run scans and view reports</option>
-                  <option value="admin">Admin — Full access including billing</option>
-                </select>
               </div>
               <button type="submit" disabled={sending} className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-sm transition-colors">
                 {sending ? 'Sending...' : 'Send Invite'}
