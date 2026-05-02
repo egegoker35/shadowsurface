@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
+import NotificationBell from './NotificationBell';
 
 export default function Navbar() {
   const [token, setToken] = useState<string | null>(null);
@@ -42,6 +43,7 @@ export default function Navbar() {
           {token ? (
             <>
               <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white transition-colors">Dashboard</Link>
+              <NotificationBell />
               <div className="relative" ref={menuRef}>
                 <button
                   onClick={() => setMenuOpen((v) => !v)}
@@ -54,6 +56,10 @@ export default function Navbar() {
                 {menuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-xl shadow-xl overflow-hidden">
                     <Link href="/dashboard/settings" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">Settings</Link>
+                    <Link href="/dashboard/scheduled-scans" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">Scheduled Scans</Link>
+                    <Link href="/dashboard/integrations" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">Integrations</Link>
+                    <Link href="/dashboard/team" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">Team</Link>
+                    <div className="border-t border-slate-700" />
                     <Link href="/privacy" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">Privacy Policy</Link>
                     <Link href="/terms" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">Terms of Service</Link>
                     <div className="border-t border-slate-700" />

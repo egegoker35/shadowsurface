@@ -19,6 +19,10 @@ model Organization {
   users              User[]
   scans              Scan[]
   auditLogs          AuditLog[]
+  scheduledScans     ScheduledScan[]
+  webhooks           Webhook[]
+  apiKeys            ApiKey[]
+  invites            Invite[]
 }
 
 model User {
@@ -30,6 +34,7 @@ model User {
   orgId             String
   org               Organization @relation(fields: [orgId], references: [id])
   createdScans      Scan[]   @relation("CreatedBy")
+  notifications     Notification[]
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
@@ -123,5 +128,72 @@ model Lead {
   plan      String
   message   String?
   status    String   @default("new")
+  createdAt DateTime @default(now())
+}
+
+// ─── Professional EASM Models ──────────────────────────────────────────────
+
+model ScheduledScan {
+  id        String   @id @default(uuid())
+  name      String
+  target    String
+  scanType  String   @default("full")
+  cron      String   // e.g. "0 0 * * 1" for weekly Monday
+  enabled   Boolean  @default(true)
+  nextRun   DateTime
+  lastRun   DateTime?
+  lastScanId String?
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Webhook {
+  id        String   @id @default(uuid())
+  name      String
+  url       String
+  secret    String?  // HMAC signature
+  events    String[] @default(["scan.completed","scan.failed"])
+  active    Boolean  @default(true)
+  lastStatus Int?    // last HTTP status
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  name      String
+  keyHash   String   @unique
+  permissions String[] @default(["scan:read","scan:create"])
+  lastUsed  DateTime?
+  expiresAt DateTime?
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Invite {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  role      String   @default("user")
+  accepted  Boolean  @default(false)
+  expiresAt DateTime
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // scan_complete, scan_failed, alert, invite
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  data      Json?    // related scanId, etc.
   createdAt DateTime @default(now())
 }
