@@ -8,6 +8,7 @@ const SCAN_TYPES = [
   { id: 'cve', label: 'CVE Check', desc: 'Known vulnerabilities' },
   { id: 'cloud', label: 'Cloud Scan', desc: 'S3/GCS/Azure checks' },
   { id: 'full', label: 'Full Scan', desc: 'Everything combined' },
+  { id: 'bulk', label: 'Bulk Scan', desc: 'Multiple domains via CSV' },
 ];
 
 export default function DashboardPage() {
