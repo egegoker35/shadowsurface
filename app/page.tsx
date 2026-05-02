@@ -79,7 +79,7 @@ export default function LandingPage() {
           <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight mb-6">
             Know Your <span className="text-emerald-400">Attack Surface</span> Before Attackers Do
           </h1>
-          <p className="text-lg dark:text-slate-400 text-slate-500 max-w-2xl mx-auto mb-10">
+          <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-10">
             ShadowSurface continuously discovers subdomains, open ports, cloud misconfigurations, and known CVEs across your external infrastructure.
           </p>
           <div className="flex items-center justify-center gap-3 mb-4">
@@ -105,7 +105,7 @@ export default function LandingPage() {
             </div>
           )}
           {result && (
-            <div className="text-left mx-auto max-w-3xl bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xl">
+            <div className="text-left mx-auto max-w-3xl bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Demo Results: {result.target}</h2>
                 <span
@@ -158,32 +158,32 @@ export default function LandingPage() {
           )}
         </div>
       </section>
-      <section className="py-16 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+      <section className="py-16 border-t border-slate-800 bg-slate-50 dark:bg-slate-900/50">
         <div className="max-w-6xl mx-auto px-4 grid sm:grid-cols-3 gap-8">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm dark:shadow-none">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 ">
             <h3 className="text-lg font-semibold mb-2">Continuous Monitoring</h3>
-            <p className="dark:text-slate-400 text-slate-500 text-sm">Detect new subdomains, open ports, and cloud assets as they appear in real time.</p>
+            <p className="text-slate-400 text-sm">Detect new subdomains, open ports, and cloud assets as they appear in real time.</p>
           </div>
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm dark:shadow-none">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 ">
             <h3 className="text-lg font-semibold mb-2">Cloud Misconfigurations</h3>
-            <p className="dark:text-slate-400 text-slate-500 text-sm">Identify publicly accessible S3 buckets, GCS containers, and Azure Blobs before attackers do.</p>
+            <p className="text-slate-400 text-sm">Identify publicly accessible S3 buckets, GCS containers, and Azure Blobs before attackers do.</p>
           </div>
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm dark:shadow-none">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 ">
             <h3 className="text-lg font-semibold mb-2">CVE Mapping</h3>
-            <p className="dark:text-slate-400 text-slate-500 text-sm">Automatically match discovered technologies against known vulnerabilities.</p>
+            <p className="text-slate-400 text-sm">Automatically match discovered technologies against known vulnerabilities.</p>
           </div>
         </div>
       </section>
-      <section className="py-16 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+      <section className="py-16 border-t border-slate-800 bg-slate-50 dark:bg-slate-900/50">
         <div className="max-w-3xl mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to See Your Attack Surface?</h2>
-          <p className="dark:text-slate-400 text-slate-500 mb-8">Start with a free scan. No credit card required.</p>
+          <p className="text-slate-400 mb-8">Start with a free scan. No credit card required.</p>
           <Link href="/register" className="inline-block px-8 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">
             Create Free Account
           </Link>
         </div>
       </section>
-      <footer className="border-t border-slate-200 dark:border-slate-800 py-10 px-4">
+      <footer className="border-t border-slate-800 py-10 px-4">
         <div className="max-w-6xl mx-auto grid sm:grid-cols-4 gap-8 text-sm">
           <div>
             <div className="font-bold text-emerald-400 mb-2">ShadowSurface</div>
@@ -212,7 +212,7 @@ export default function LandingPage() {
             </ul>
           </div>
         </div>
-        <div className="max-w-6xl mx-auto mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 text-center text-slate-500 text-xs">
+        <div className="max-w-6xl mx-auto mt-8 pt-6 border-t border-slate-800 text-center text-slate-500 text-xs">
           &copy; {new Date().getFullYear()} ShadowSurface. All rights reserved.
         </div>
       </footer>

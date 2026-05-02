@@ -1,7 +1,6 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import ThemeToggle from './ThemeToggle';
 
 export default function Navbar() {
   const [token, setToken] = useState<string | null>(null);
@@ -27,7 +26,6 @@ export default function Navbar() {
           <Link href="/contact" className="text-sm text-slate-400 hover:text-white transition-colors">Contact</Link>
         </div>
         <div className="flex items-center gap-4">
-          <ThemeToggle />
           {token ? (
             <>
               <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white transition-colors">Dashboard</Link>

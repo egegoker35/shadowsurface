@@ -1,7 +1,6 @@
 import './globals.css';
 import { ReactNode } from 'react';
 import dynamic from 'next/dynamic';
-import Providers from './providers';
 
 const ChatWidget = dynamic(() => import('@/components/ChatWidget'), { ssr: false });
 
@@ -27,12 +26,10 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-white transition-colors duration-300">
-        <Providers>
-          {children}
-          <ChatWidget />
-        </Providers>
+    <html lang="en">
+      <body className="antialiased text-white bg-slate-950">
+        {children}
+        <ChatWidget />
       </body>
     </html>
   );
