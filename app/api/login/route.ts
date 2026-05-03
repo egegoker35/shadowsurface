@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     const valid = await verifyPassword(password, user.passwordHash);
     if (!valid) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
-    const token = createToken({ userId: user.id, email: user.email, orgId: user.orgId });
+    const token = await createToken({ userId: user.id, email: user.email, orgId: user.orgId });
     return NextResponse.json({ token, user: { id: user.id, email: user.email, verified: user.verified }, organization: user.org });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Internal error' }, { status: 500 });

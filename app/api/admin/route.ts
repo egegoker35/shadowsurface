@@ -1,29 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-export const runtime = "nodejs";
 import { prisma } from '@/lib/prisma';
 import jwt from 'jsonwebtoken';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 function isAdmin(headers: Headers): { valid: boolean; reason?: string; decoded?: any } {
   const auth = headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) {
-    return { valid: false, reason: 'No Bearer token in header' };
-  }
+  if (!auth?.startsWith('Bearer ')) return { valid: false, reason: 'No Bearer token' };
   const token = auth.slice(7);
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    return { valid: false, reason: 'JWT_SECRET not set on server' };
-  }
+  const secret = process.env.JWT_SECRET?.trim();
+  if (!secret) return { valid: false, reason: 'JWT_SECRET not set' };
   try {
     const decoded = jwt.verify(token, secret) as any;
-    console.log('[AdminAPI] Decoded:', decoded);
-    if (decoded.role !== 'admin') {
-      return { valid: false, reason: `Role is '${decoded.role}', expected 'admin'` };
-    }
+    if (decoded.role !== 'admin') return { valid: false, reason: `Role is '${decoded.role}', expected 'admin'` };
     return { valid: true, decoded };
   } catch (e: any) {
-    console.log('[AdminAPI] JWT verify error:', e.message);
     return { valid: false, reason: `JWT verify error: ${e.message}` };
   }
 }
@@ -31,7 +23,6 @@ function isAdmin(headers: Headers): { valid: boolean; reason?: string; decoded?:
 export async function GET(req: NextRequest) {
   try {
     const check = isAdmin(req.headers);
-    console.log('[AdminAPI] Auth check:', check);
     if (!check.valid) {
       return NextResponse.json({ error: 'Forbidden', reason: check.reason }, { status: 403 });
     }
@@ -45,7 +36,6 @@ export async function GET(req: NextRequest) {
     ]);
     return NextResponse.json({ totalUsers, totalScans, totalRevenue: totalRevenue._sum.amount || 0, recentUsers, recentScans, recentPayments });
   } catch (e: any) {
-    console.error('[AdminAPI Error]', e);
     return NextResponse.json({ error: e.message || 'Failed' }, { status: 500 });
   }
 }
