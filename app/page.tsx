@@ -2,6 +2,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+import SchemaOrg from '@/components/SchemaOrg';
+import FAQSchema from '@/components/FAQSchema';
+import DemoResult from '@/components/DemoResult';
 
 export default function LandingPage() {
   const [target, setTarget] = useState('');
@@ -35,6 +38,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen">
+      <SchemaOrg />
       <Navbar />
       <section className="pt-32 pb-20 px-4">
         <div className="max-w-5xl mx-auto text-center">
@@ -64,11 +68,7 @@ export default function LandingPage() {
               </button>
             </div>
             {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
-            {result && (
-              <div className="mt-4 text-left bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-auto max-h-80">
-                <pre className="text-xs text-slate-300">{JSON.stringify(result, null, 2)}</pre>
-              </div>
-            )}
+            {result && <DemoResult result={result} />}
           </div>
 
           <div className="flex justify-center gap-4">
@@ -119,6 +119,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <FAQSchema />
 
       <section className="py-20 border-t border-slate-800/50 text-center">
         <div className="max-w-3xl mx-auto px-6">
