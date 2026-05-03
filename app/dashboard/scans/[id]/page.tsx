@@ -44,18 +44,9 @@ export default function ScanDetailPage() {
     URL.revokeObjectURL(url);
   };
 
-  const exportMarkdown = async () => {
+  const openReport = () => {
     if (!scan) return;
-    const res = await fetch(`/api/reports/export-pdf?scanId=${scan.id}`, { headers: { Authorization: `Bearer ${token}` } });
-    if (res.ok) {
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `shadowsurface-report-${scan.target}-${new Date().toISOString().split('T')[0]}.md`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+    window.open(`/dashboard/scans/${scan.id}/report`, '_blank');
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading report...</div>;
@@ -88,9 +79,9 @@ export default function ScanDetailPage() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
             Export JSON
           </button>
-          <button onClick={exportMarkdown} className="px-4 py-2 rounded-lg bg-emerald-900/30 hover:bg-emerald-900/50 border border-emerald-800 text-emerald-400 text-sm font-medium transition-colors flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-            Export Report
+          <button onClick={openReport} className="px-4 py-2 rounded-lg bg-emerald-900/30 hover:bg-emerald-900/50 border border-emerald-800 text-emerald-400 text-sm font-medium transition-colors flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+            View Report
           </button>
         </div>
       </div>
@@ -310,7 +301,7 @@ export default function ScanDetailPage() {
       {(!scan.assets || scan.assets.length === 0) && (!scan.cloudAssets || scan.cloudAssets.length === 0) && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center">
           <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
           </div>
           <h3 className="text-lg font-semibold text-slate-300">No Assets Found</h3>
           <p className="text-slate-500 mt-1">This scan did not discover any exposed assets or misconfigurations.</p>

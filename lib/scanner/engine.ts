@@ -232,10 +232,16 @@ function extractVersion(banner: string): string | null {
 
 function mapCves(tech: string, version: string): string[] {
   const key = Object.keys(CVE_DATABASE).find((k) => tech.toLowerCase().includes(k));
-  if (!key) return [];
+  if (!key || !version) return [];
   const vMap = CVE_DATABASE[key];
   const majorMinor = version.split('.').slice(0, 2).join('.');
-  return vMap[version] || vMap[majorMinor] || Object.values(vMap).flat().slice(0, 3);
+  // Only return CVEs when version matches exactly or major.minor matches
+  const exact = vMap[version];
+  if (exact) return exact;
+  const partial = vMap[majorMinor];
+  if (partial) return partial;
+  // No fuzzy fallback to avoid false positives
+  return [];
 }
 
 // ─── Main Engine ───────────────────────────────────────────────────────────
