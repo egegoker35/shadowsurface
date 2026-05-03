@@ -70,10 +70,6 @@ const CVE_DATABASE: Record<string, Record<string, string[]>> = {
     '5.7.0': ['CVE-2021-29447'],
     '5.0.0': ['CVE-2019-8942'],
   },
-  iis: {
-    '10.0': ['CVE-2021-31166'],
-    '8.5': ['CVE-2015-1635'],
-  },
   jenkins: {
     '2.0': ['CVE-2024-23897'],
     '2.100': ['CVE-2018-1000861'],
@@ -91,6 +87,10 @@ const CVE_DATABASE: Record<string, Record<string, string[]>> = {
   nodejs: {
     '14.0': ['CVE-2021-22940'],
     '12.0': ['CVE-2020-8265'],
+  },
+  iis: {
+    '10.0.19041': ['CVE-2021-31166'],
+    '10.0.19042': ['CVE-2021-31166'],
   },
   python: {
     '3.8': ['CVE-2021-3177'],
@@ -234,10 +234,13 @@ function mapCves(tech: string, version: string): string[] {
   const key = Object.keys(CVE_DATABASE).find((k) => tech.toLowerCase().includes(k));
   if (!key || !version) return [];
   const vMap = CVE_DATABASE[key];
-  const majorMinor = version.split('.').slice(0, 2).join('.');
+  // Confidence check: IIS needs a 3-segment version (build number) for CVE matching
+  // because IIS 10.0 exists on Server 2016/2019/2022 but CVE-2021-31166 only affects specific Windows builds
+  if (key === 'iis' && version.split('.').length < 3) return [];
   // Only return CVEs when version matches exactly or major.minor matches
   const exact = vMap[version];
   if (exact) return exact;
+  const majorMinor = version.split('.').slice(0, 2).join('.');
   const partial = vMap[majorMinor];
   if (partial) return partial;
   // No fuzzy fallback to avoid false positives
