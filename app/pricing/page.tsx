@@ -28,12 +28,12 @@ const plans = [
     features: [
       '1 user',
       '5 scans/hour, 20/month',
-      'Subdomain enumeration',
-      'Port scan (top 20 ports)',
-      'Known CVE checks',
+      'Subdomain Only scan',
+      'Port Scan (top 20 ports)',
+      'CVE Check (known vulnerabilities)',
       'Email alerts',
     ],
-    unavailable: ['Cloud misconfiguration scan', 'Full combined scan', 'Bulk multi-domain scan', 'API access'],
+    unavailable: ['Cloud Scan (S3/GCS/Azure)', 'Full combined scan', 'Bulk multi-domain scan', 'API access'],
     cta: 'Get Started',
     ctaStyle: 'solid',
   },
@@ -46,15 +46,15 @@ const plans = [
     features: [
       '5 users',
       '20 scans/hour, 200/month',
-      'Subdomain enumeration',
-      'Port scan (top 50 ports)',
+      'Subdomain Only scan',
+      'Port Scan (top 50 ports)',
       'Full CVE mapping',
-      'Cloud misconfiguration scan (S3/GCS/Azure)',
-      'Full combined scan',
+      'Cloud Scan (S3/GCS/Azure)',
+      'Full Scan (everything combined)',
       'Slack/Teams alerts',
       'Priority support',
     ],
-    unavailable: ['Bulk multi-domain scan (up to 50)', 'API access', 'Custom integrations'],
+    unavailable: ['Bulk Scan (multi-domain)', 'API access', 'Custom integrations'],
   },
   {
     name: 'Enterprise',
@@ -65,10 +65,10 @@ const plans = [
     features: [
       'Unlimited users',
       '100 scans/hour, unlimited/month',
-      'All scan types included',
-      'Port scan (top 100 ports)',
-      'Full CVE + cloud + SSL + WAF',
-      'Bulk multi-domain scan (up to 50)',
+      'All scan types',
+      'Port Scan (top 100 ports)',
+      'Subdomain Only + CVE + Cloud + Full',
+      'Bulk Scan (up to 50 domains)',
       'Full REST API access',
       'Custom integrations',
       'Dedicated CSM',
@@ -182,6 +182,7 @@ export default function PricingPage() {
             <div className="flex items-center gap-2"><span className="text-lg">⚡</span> Instant</div>
             <div className="flex items-center gap-2"><span className="text-lg">🔒</span> Secure</div>
           </div>
+          <p className="mt-4 text-center text-[10px] text-slate-600">We do not perform intrusive or exploitative scanning.</p>
         </div>
       </section>
 
