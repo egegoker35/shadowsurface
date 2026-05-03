@@ -1,5 +1,12 @@
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Blog | ShadowSurface - Attack Surface Management & Cloud Security',
+  description: 'Read the latest insights on attack surface management, cloud security misconfigurations, subdomain takeovers, and CVE prioritization.',
+  keywords: ['attack surface management blog', 'cloud security blog', 'subdomain takeover', 'CVE prioritization', 'cybersecurity insights'],
+};
 
 const posts = [
   { slug: 'what-is-attack-surface-management', title: 'What Is Attack Surface Management?', date: '2025-04-28', excerpt: 'A complete guide to understanding your external attack surface and why continuous monitoring matters.' },
