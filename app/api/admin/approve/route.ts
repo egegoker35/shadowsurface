@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
 export async function POST(req: NextRequest) {
   try {
     const check = isAdmin(req.headers);
-    if (!check.valid) return adminForbidden(check.reason);
+    if (!check.valid) return adminForbidden();
 
     const { email, plan } = await req.json();
     if (!email || !plan) return NextResponse.json({ error: 'email and plan required' }, { status: 400 });

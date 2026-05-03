@@ -3,19 +3,19 @@ import { NextResponse } from 'next/server';
 
 export function isAdmin(headers: Headers): { valid: boolean; decoded?: any; reason?: string } {
   const auth = headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return { valid: false, reason: 'No Bearer token' };
+  if (!auth?.startsWith('Bearer ')) return { valid: false };
   const token = auth.slice(7);
   const secret = process.env.JWT_SECRET?.trim();
-  if (!secret) return { valid: false, reason: 'JWT_SECRET not set' };
+  if (!secret) return { valid: false };
   try {
     const decoded = jwt.verify(token, secret) as any;
-    if (decoded.role !== 'admin') return { valid: false, reason: 'Not admin' };
+    if (decoded.role !== 'admin') return { valid: false };
     return { valid: true, decoded };
-  } catch (e: any) {
-    return { valid: false, reason: `JWT error: ${e.message}` };
+  } catch {
+    return { valid: false };
   }
 }
 
-export function adminForbidden(reason?: string) {
-  return NextResponse.json({ error: 'Forbidden', reason }, { status: 403 });
+export function adminForbidden() {
+  return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 }

@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export async function POST(req: NextRequest) {
   try {
     const check = isAdmin(req.headers);
-    if (!check.valid) return adminForbidden(check.reason);
+    if (!check.valid) return adminForbidden();
 
     const { userId, role } = await req.json();
     if (!userId || !role) {

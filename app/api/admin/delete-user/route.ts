@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export async function DELETE(req: NextRequest) {
   try {
     const check = isAdmin(req.headers);
-    if (!check.valid) return adminForbidden(check.reason);
+    if (!check.valid) return adminForbidden();
 
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('id');
