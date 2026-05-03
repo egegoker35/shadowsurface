@@ -15,8 +15,11 @@ function Badge({ severity }: { severity: string }) {
   );
 }
 
-function ScoreRing({ score, label }: { score: number; label: string }) {
-  const color = score >= 80 ? 'text-red-400' : score >= 50 ? 'text-yellow-400' : 'text-emerald-400';
+function ScoreRing({ score, label, invert = false }: { score: number; label: string; invert?: boolean }) {
+  // For risk: higher = worse (red). For discovered: higher = better (emerald)
+  const color = invert
+    ? score >= 70 ? 'text-red-400' : score >= 40 ? 'text-yellow-400' : 'text-emerald-400'
+    : score >= 50 ? 'text-emerald-400' : 'text-slate-400';
   return (
     <div className="flex flex-col items-center">
       <div className={`text-2xl font-bold ${color}`}>{score}</div>
@@ -30,17 +33,24 @@ export default function DemoResult({ result }: { result: any }) {
   const subdomains = result.subdomains || [];
   const findings = result.findings || [];
   const ports = result.ports || [];
-  const riskScore = Math.min(100, Math.max(0, 100 - (findings.filter((f: any) => f.severity === 'critical').length * 15) - (findings.filter((f: any) => f.severity === 'high').length * 10)));
+  
+  // Risk score: 0 = safe, 100 = critical (based on findings severity)
+  const crit = findings.filter((f: any) => f.severity === 'critical').length;
+  const high = findings.filter((f: any) => f.severity === 'high').length;
+  const med = findings.filter((f: any) => f.severity === 'medium').length;
+  const low = findings.filter((f: any) => f.severity === 'low').length;
+  const riskScore = Math.min(100, (crit * 25) + (high * 15) + (med * 5) + (low * 1));
 
   return (
     <div className="mt-4 text-left space-y-4">
+      {/* Executive Summary */}
       <div className="bg-slate-950 border border-slate-800 rounded-xl p-5">
         <h4 className="text-sm font-semibold text-white mb-3">Scan Summary</h4>
         <div className="flex justify-around">
           <ScoreRing score={subdomains.length} label="Subdomains" />
           <ScoreRing score={ports.length} label="Open Ports" />
           <ScoreRing score={findings.length} label="Findings" />
-          <ScoreRing score={riskScore} label="Risk Score" />
+          <ScoreRing score={riskScore} label="Risk Score" invert />
         </div>
       </div>
 
