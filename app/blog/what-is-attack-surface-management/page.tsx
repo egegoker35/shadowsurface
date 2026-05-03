@@ -1,4 +1,11 @@
 import Navbar from '@/components/Navbar';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'What Is Attack Surface Management? | ShadowSurface',
+  description: 'A complete guide to Attack Surface Management (ASM). Learn how continuous discovery, monitoring, and prioritization of external assets protects your organization.',
+  keywords: ['attack surface management', 'ASM', 'external attack surface', 'asset discovery', 'cybersecurity'],
+};
 
 export default function BlogPost() {
   return (
