@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from './prisma';
 
 function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
+  const secret = process.env.JWT_SECRET?.trim();
   if (!secret || secret.length < 32) {
     throw new Error('JWT_SECRET must be set and at least 32 characters long');
   }
@@ -25,7 +25,8 @@ export function createToken(payload: object, expiresIn: string | number = '7d'):
 export function verifyToken<T>(token: string): T | null {
   try {
     return jwt.verify(token, getJwtSecret()) as T;
-  } catch {
+  } catch (e: any) {
+    console.error('[verifyToken] Error:', e.message);
     return null;
   }
 }
