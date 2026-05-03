@@ -6,16 +6,20 @@ export const dynamic = 'force-dynamic';
 
 function isAdmin(headers: Headers): { valid: boolean; reason?: string; decoded?: any } {
   const auth = headers.get('authorization');
-  console.log('[AdminAPI] Auth header exists:', !!auth);
   if (!auth?.startsWith('Bearer ')) {
     return { valid: false, reason: 'No Bearer token' };
   }
   const token = auth.slice(7);
-  console.log('[AdminAPI] Token length:', token.length);
   const decoded = verifyToken<{ userId: string; email: string; role?: string }>(token);
-  console.log('[AdminAPI] Decoded:', decoded);
   if (!decoded) {
-    return { valid: false, reason: 'Token invalid or expired' };
+    try {
+      const jwt = require('jsonwebtoken');
+      const secret = process.env.JWT_SECRET;
+      jwt.verify(token, secret || '');
+    } catch (e: any) {
+      return { valid: false, reason: `JWT verify failed: ${e.message}` };
+    }
+    return { valid: false, reason: 'Token decoded null but no error' };
   }
   if (decoded.role !== 'admin') {
     return { valid: false, reason: `Role is '${decoded.role}', expected 'admin'` };
@@ -26,11 +30,9 @@ function isAdmin(headers: Headers): { valid: boolean; reason?: string; decoded?:
 export async function GET(req: NextRequest) {
   try {
     const check = isAdmin(req.headers);
-    console.log('[AdminAPI] Auth check:', check);
     if (!check.valid) {
-      return NextResponse.json({ error: 'Forbidden', reason: check.reason }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', reason: check.reason, envSecretExists: !!process.env.JWT_SECRET }, { status: 403 });
     }
-
     const [totalUsers, totalScans, totalRevenue, recentUsers, recentScans, recentPayments] = await Promise.all([
       prisma.user.count(),
       prisma.scan.count(),
@@ -41,7 +43,6 @@ export async function GET(req: NextRequest) {
     ]);
     return NextResponse.json({ totalUsers, totalScans, totalRevenue: totalRevenue._sum.amount || 0, recentUsers, recentScans, recentPayments });
   } catch (e: any) {
-    console.error('[AdminAPI Error]', e);
     return NextResponse.json({ error: e.message || 'Failed' }, { status: 500 });
   }
 }
