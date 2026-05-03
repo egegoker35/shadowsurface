@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Sidebar from '@/components/admin/Sidebar';
 import DashboardStats from '@/components/admin/DashboardStats';
 import PaymentRequests from '@/components/admin/PaymentRequests';
@@ -15,82 +15,39 @@ export default function AdminPage() {
 
   useEffect(() => {
     const t = localStorage.getItem('ss_admin_token');
-    console.log('[AdminPage] Token from localStorage:', t ? `${t.substring(0, 20)}...` : 'null');
-    if (!t) {
-      console.log('[AdminPage] No token, redirecting to login');
-      window.location.replace('/admin-login');
-      return;
-    }
+    if (!t) { window.location.replace('/admin-login'); return; }
     setToken(t);
   }, []);
 
-  const fetchData = async () => {
-    if (!token) return;
-    console.log('[AdminPage] Fetching data with token');
+  const fetchData = useCallback(async (currentToken: string) => {
     try {
-      const res = await fetch('/api/admin', { headers: { Authorization: `Bearer ${token}` } });
-      console.log('[AdminPage] API status:', res.status);
+      setLoading(true); setError('');
+      const res = await fetch('/api/admin', { headers: { Authorization: `Bearer ${currentToken}` } });
       const d = await res.json().catch(() => ({}));
-      console.log('[AdminPage] API response:', d);
+      if (res.status === 401 || res.status === 403) { setError(`Access denied: ${d.reason || d.error || 'Unknown'}`); setLoading(false); return; }
+      if (!res.ok) throw new Error(d.error || `API returned ${res.status}`);
+      setData(d); setLoading(false);
+    } catch (e: any) { setError(e.message || 'Failed to load'); setLoading(false); }
+  }, []);
 
-      if (res.status === 401 || res.status === 403) {
-        setError(`Access denied: ${d.reason || d.error || 'Unknown'}`);
-        setLoading(false);
-        return;
-      }
-      if (!res.ok) {
-        throw new Error(d.error || `API returned ${res.status}`);
-      }
-      setData(d);
-      setLoading(false);
-    } catch (e: any) {
-      console.error('[AdminPage] Fetch error:', e);
-      setError(e.message || 'Failed to load');
-      setLoading(false);
-    }
-  };
+  useEffect(() => { if (token) fetchData(token); }, [token, fetchData]);
 
-  useEffect(() => {
-    if (token) fetchData();
-  }, [token]);
+  const logout = () => { localStorage.removeItem('ss_admin_token'); window.location.replace('/admin-login'); };
 
-  const logout = () => {
-    localStorage.removeItem('ss_admin_token');
-    window.location.replace('/admin-login');
-  };
-
-  if (!token) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        Checking session...
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        Loading dashboard...
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
-        <div className="text-center max-w-md">
-          <h1 className="text-2xl font-bold text-red-400 mb-2">Error</h1>
-          <p className="text-slate-400 mb-4">{error}</p>
-          <div className="flex gap-3 justify-center">
-            <button onClick={fetchData} className="px-6 py-2.5 rounded-lg bg-emerald-600 text-white">Retry</button>
-            <button onClick={logout} className="px-6 py-2.5 rounded-lg bg-slate-700 text-white">Back to Login</button>
-          </div>
+  if (!token) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">Loading...</div>;
+  if (loading && !data) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">Loading...</div>;
+  if (error) return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
+      <div className="text-center max-w-md">
+        <h1 className="text-2xl font-bold text-red-400 mb-2">Error</h1>
+        <p className="text-slate-400 mb-4">{error}</p>
+        <div className="flex gap-3 justify-center">
+          <button onClick={() => fetchData(token)} className="px-6 py-2.5 rounded-lg bg-emerald-600 text-white">Retry</button>
+          <button onClick={logout} className="px-6 py-2.5 rounded-lg bg-slate-700 text-white">Back to Login</button>
         </div>
       </div>
-    );
-  }
-
-  const stats = data?.stats || {};
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex">
@@ -100,25 +57,22 @@ export default function AdminPage() {
           <div className="flex items-center justify-between mb-8">
             <div><h1 className="text-2xl font-bold capitalize">{activeTab}</h1><p className="text-sm text-slate-400">ShadowSurface Admin</p></div>
             <div className="flex gap-3">
-              <button onClick={fetchData} className="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm">Refresh</button>
+              <button onClick={() => fetchData(token)} className="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm">Refresh</button>
               <button onClick={logout} className="px-4 py-2 rounded-lg bg-red-900/30 border border-red-800 text-red-300 text-sm">Logout</button>
             </div>
           </div>
-
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
               <DashboardStats data={data} />
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <PaymentRequests leads={data?.recentPayments?.slice(0,5)||[]} onRefresh={fetchData} />
-                <ScansTable scans={data?.recentScans?.slice(0,5)||[]} onRefresh={fetchData} />
+                <PaymentRequests leads={data?.recentPayments?.slice(0,5)||[]} onRefresh={() => fetchData(token)} />
+                <ScansTable scans={data?.recentScans?.slice(0,5)||[]} onRefresh={() => fetchData(token)} />
               </div>
             </div>
           )}
-
-          {activeTab === 'payments' && <PaymentRequests leads={data?.recentPayments||[]} onRefresh={fetchData} />}
-          {activeTab === 'users' && <UsersTable users={data?.recentUsers||[]} onRefresh={fetchData} />}
-          {activeTab === 'scans' && <ScansTable scans={data?.recentScans||[]} onRefresh={fetchData} />}
-
+          {activeTab === 'payments' && <PaymentRequests leads={data?.recentPayments||[]} onRefresh={() => fetchData(token)} />}
+          {activeTab === 'users' && <UsersTable users={data?.recentUsers||[]} onRefresh={() => fetchData(token)} />}
+          {activeTab === 'scans' && <ScansTable scans={data?.recentScans||[]} onRefresh={() => fetchData(token)} />}
           {activeTab === 'revenue' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
