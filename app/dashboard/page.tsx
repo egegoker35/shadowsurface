@@ -102,7 +102,7 @@ export default function DashboardPage() {
 
   const plan = data?.plan || 'free';
   const isFree = plan === 'free';
-  const allowedTypes = plan === 'enterprise' ? ['subdomain','port','cve','cloud','full'] : plan === 'professional' ? ['subdomain','port','cve','cloud','full'] : ['subdomain','port','cve'];
+  const allowedTypes = plan === 'enterprise' ? ['subdomain','port','cve','cloud','full','bulk'] : plan === 'professional' ? ['subdomain','port','cve','cloud','full'] : ['subdomain','port','cve'];
   const canBulk = plan === 'enterprise';
 
   return (
