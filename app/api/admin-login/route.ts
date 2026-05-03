@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { rateLimitByIP } from '@/lib/middleware/rateLimit';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -10,6 +11,12 @@ const JWT_SECRET = process.env.JWT_SECRET?.trim();
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const rl = await rateLimitByIP(ip, 5, 1800);
+    if (!rl.success) {
+      return NextResponse.json({ error: 'Too many attempts. Try again in 30 minutes.' }, { status: 429 });
+    }
+
     if (!JWT_SECRET || JWT_SECRET.length < 32) {
       return NextResponse.json({ error: 'Server misconfigured: JWT_SECRET missing' }, { status: 503 });
     }

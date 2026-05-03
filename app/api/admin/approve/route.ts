@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-export const runtime = "nodejs";
 import { prisma } from '@/lib/prisma';
 import { hashPassword } from '@/lib/auth';
+import { isAdmin, adminForbidden } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   try {
+    const check = isAdmin(req.headers);
+    if (!check.valid) return adminForbidden(check.reason);
+
     const { email, plan } = await req.json();
     if (!email || !plan) return NextResponse.json({ error: 'email and plan required' }, { status: 400 });
 
@@ -23,6 +27,7 @@ export async function POST(req: NextRequest) {
     await prisma.lead.updateMany({ where: { email: normalizedEmail }, data: { status: 'approved' } });
     return NextResponse.json({ success: true });
   } catch (e: any) {
+    console.error('[Admin Approve]', e);
     return NextResponse.json({ error: e.message || 'Failed' }, { status: 500 });
   }
 }

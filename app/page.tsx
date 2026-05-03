@@ -5,6 +5,10 @@ import Navbar from '@/components/Navbar';
 import SchemaOrg from '@/components/SchemaOrg';
 import FAQSchema from '@/components/FAQSchema';
 import DemoResult from '@/components/DemoResult';
+import LiveStats from '@/components/landing/LiveStats';
+import TrustBanner from '@/components/landing/TrustBanner';
+import TerminalTyping from '@/components/landing/TerminalTyping';
+import RiskPulse from '@/components/landing/RiskPulse';
 
 export default function LandingPage() {
   const [target, setTarget] = useState('');
@@ -14,7 +18,9 @@ export default function LandingPage() {
 
   const runDemo = async () => {
     if (!target) return;
-    setLoading(true); setError(''); setResult(null);
+    setLoading(true);
+    setError('');
+    setResult(null);
     try {
       const res = await fetch('/api/demo', {
         method: 'POST',
@@ -78,6 +84,9 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <LiveStats />
+      <TrustBanner />
+
       <section className="py-20 border-t border-slate-800/50">
         <div className="max-w-6xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
@@ -96,6 +105,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <TerminalTyping />
+      <RiskPulse />
 
       <section className="py-20 border-t border-slate-800/50">
         <div className="max-w-6xl mx-auto px-6">
