@@ -22,7 +22,8 @@ export async function POST(req: NextRequest) {
       console.error('[Register] Validation failed:', parsed.error.format());
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
     }
-    const { email, password, organizationName } = parsed.data;
+    const { email: rawEmail, password, organizationName } = parsed.data;
+    const email = rawEmail.toLowerCase().trim();
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return NextResponse.json({ error: 'Email already registered' }, { status: 409 });
     const org = await prisma.organization.create({ data: { name: organizationName, plan: 'free' } });

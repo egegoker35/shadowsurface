@@ -1,29 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import jwt from 'jsonwebtoken';
+import { isAdmin, adminForbidden } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-function isAdmin(headers: Headers): boolean {
-  const auth = headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return false;
-  const token = auth.slice(7);
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET?.trim() || '') as any;
-    return decoded.role === 'admin';
-  } catch { return false; }
-}
-
 export async function POST(req: NextRequest) {
   try {
-    if (!isAdmin(req.headers)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const check = isAdmin(req.headers);
+    if (!check.valid) return adminForbidden(check.reason);
+
     const { userId, role } = await req.json();
-    if (!userId || !role) return NextResponse.json({ error: 'userId and role required' }, { status: 400 });
-    if (!['user', 'admin'].includes(role)) return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    if (!userId || !role) {
+      return NextResponse.json({ error: 'userId and role required' }, { status: 400 });
+    }
+
+    const targetUser = await prisma.user.findUnique({ where: { id: userId } });
+    if (!targetUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (targetUser.email === 'egegoker35@gmail.com') {
+      return NextResponse.json({ error: 'Protected admin role cannot be changed' }, { status: 403 });
+    }
+
+    // Only allow demotion: admin -> user
+    // Promotion to admin is completely disabled per user directive
+    if (role !== 'user') {
+      return NextResponse.json({ error: 'Only demotion to user is allowed. Admin promotion is disabled.' }, { status: 403 });
+    }
+    if (targetUser.role !== 'admin') {
+      return NextResponse.json({ error: 'User is not an admin' }, { status: 400 });
+    }
+
     await prisma.user.update({ where: { id: userId }, data: { role } });
     return NextResponse.json({ success: true });
   } catch (e: any) {
+    console.error('[Admin Update Role]', e);
     return NextResponse.json({ error: e.message || 'Failed' }, { status: 500 });
   }
 }

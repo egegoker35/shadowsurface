@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const parsed = schema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
-    const { email, password } = parsed.data;
+    const { email: rawEmail, password } = parsed.data;
+    const email = rawEmail.toLowerCase().trim();
     const user = await prisma.user.findUnique({ where: { email }, include: { org: true } });
     if (!user) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     const valid = await verifyPassword(password, user.passwordHash);

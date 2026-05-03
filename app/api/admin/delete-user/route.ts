@@ -16,6 +16,12 @@ export async function DELETE(req: NextRequest) {
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (user.email === 'egegoker35@gmail.com') {
+      return NextResponse.json({ error: 'Protected admin cannot be deleted' }, { status: 403 });
+    }
+    if (user.role === 'admin') {
+      return NextResponse.json({ error: 'Cannot delete admin users' }, { status: 403 });
+    }
 
     await prisma.scan.deleteMany({ where: { orgId: user.orgId } });
     await prisma.user.delete({ where: { id: userId } });

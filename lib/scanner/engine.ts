@@ -169,22 +169,53 @@ async function checkSSL(subdomain: string): Promise<{ issuer?: string; subject?:
 }
 
 // ─── HTTP Request ──────────────────────────────────────────────────────────
-async function fetchHeaders(url: string, ms = 8000): Promise<{ status: number; headers: Record<string, string>; body: string }> {
-  return new Promise((resolve) => {
-    const client = url.startsWith('https:') ? httpsRequest : httpRequest;
-    const req = client(url, { method: 'GET', timeout: ms, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (res) => {
-      let body = '';
-      res.on('data', (c) => { body += c; if (body.length > 131072) res.destroy(); });
-      res.on('end', () => {
-        const headers: Record<string, string> = {};
-        for (const [k, v] of Object.entries(res.headers)) headers[k.toLowerCase()] = Array.isArray(v) ? v.join(', ') : String(v ?? '');
-        resolve({ status: res.statusCode || 0, headers, body: body.slice(0, 65536) });
-      });
+async function fetchHeaders(url: string, ms = 12000): Promise<{ status: number; headers: Record<string, string>; body: string }> {
+  const doFetch = (targetUrl: string, timeoutMs: number): Promise<{ status: number; headers: Record<string, string>; body: string }> => {
+    return new Promise((resolve) => {
+      const client = targetUrl.startsWith('https:') ? httpsRequest : httpRequest;
+      const req = client(
+        targetUrl,
+        {
+          method: 'GET',
+          timeout: timeoutMs,
+          rejectUnauthorized: false,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'identity',
+            'Connection': 'close',
+          },
+        },
+        (res) => {
+          if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+            let redirectUrl = res.headers.location;
+            if (redirectUrl.startsWith('/')) {
+              const parsed = new URL(targetUrl);
+              redirectUrl = `${parsed.protocol}//${parsed.host}${redirectUrl}`;
+            }
+            if (!redirectUrl.startsWith('http')) {
+              const parsed = new URL(targetUrl);
+              redirectUrl = `${parsed.protocol}//${parsed.host}/${redirectUrl}`;
+            }
+            resolve(doFetch(redirectUrl, Math.max(timeoutMs - 2000, 2000)));
+            return;
+          }
+          let body = '';
+          res.on('data', (c) => { body += c; if (body.length > 262144) res.destroy(); });
+          res.on('end', () => {
+            const headers: Record<string, string> = {};
+            for (const [k, v] of Object.entries(res.headers)) headers[k.toLowerCase()] = Array.isArray(v) ? v.join(', ') : String(v ?? '');
+            resolve({ status: res.statusCode || 0, headers, body: body.slice(0, 65536) });
+          });
+        }
+      );
+      req.on('error', () => resolve({ status: 0, headers: {}, body: '' }));
+      req.on('timeout', () => { req.destroy(); resolve({ status: 0, headers: {}, body: '' }); });
+      req.end();
     });
-    req.on('error', () => resolve({ status: 0, headers: {}, body: '' }));
-    req.on('timeout', () => { req.destroy(); resolve({ status: 0, headers: {}, body: '' }); });
-    req.end();
-  });
+  };
+  return doFetch(url, ms);
 }
 
 // ─── Subdomain Discovery ───────────────────────────────────────────────────
@@ -299,15 +330,27 @@ export class ShadowSurfaceEngine {
         for (const port of ports) { if (await tcpConnect(ip, port, 1500)) openPorts.push(port); }
         if (openPorts.length === 0) return null;
 
+        // Prioritize HTTPS ports for richer fingerprinting, then HTTP, then others
+        const priority = [443, 8443, 80, 8080];
+        openPorts.sort((a, b) => {
+          const pa = priority.indexOf(a);
+          const pb = priority.indexOf(b);
+          if (pa !== -1 && pb !== -1) return pa - pb;
+          if (pa !== -1) return -1;
+          if (pb !== -1) return 1;
+          return a - b;
+        });
+        const primaryPort = openPorts[0];
+
         const asset: DiscoveredAsset = {
-          id: genId(), domain: this.targetDomain, subdomain, ip, port: openPorts[0],
-          service: SERVICE_NAMES[openPorts[0]] || 'Unknown', banner: '', technology: null,
+          id: genId(), domain: this.targetDomain, subdomain, ip, port: primaryPort,
+          service: SERVICE_NAMES[primaryPort] || 'Unknown', banner: '', technology: null,
           version: null, cves: [], cloudProvider: null, riskScore: 0, findings: [],
           headers: {}, firstSeen: new Date().toISOString(),
         };
 
-        // Grab banner for first open port
-        const banner = await grabBanner(ip, openPorts[0], 2000);
+        // Grab banner for primary open port
+        const banner = await grabBanner(ip, primaryPort, 2000);
         asset.banner = banner;
 
         // Detect tech from banner
@@ -358,7 +401,13 @@ export class ShadowSurfaceEngine {
         const proto = asset.port === 443 || asset.port === 8443 ? 'https' : 'http';
         const url = `${proto}://${asset.subdomain || asset.ip}:${asset.port}`;
         try {
-          const { headers, body } = await fetchHeaders(url, 4000);
+          let { headers, body, status } = await fetchHeaders(url, 12000);
+          // Fallback: if HTTPS fails, try HTTP and vice versa
+          if (status === 0) {
+            const fallbackUrl = proto === 'https' ? url.replace('https://', 'http://') : url.replace('http://', 'https://');
+            const fb = await fetchHeaders(fallbackUrl, 8000);
+            if (fb.status !== 0) { headers = fb.headers; body = fb.body; status = fb.status; }
+          }
           asset.headers = headers;
           const server = headers['server'] || '';
           const powered = headers['x-powered-by'] || '';
@@ -477,7 +526,9 @@ export class ShadowSurfaceEngine {
             asset.findings.push({ type: 'insecure_cookie', severity: 'medium', description: 'Cookie missing Secure/HttpOnly flags' });
           }
 
-        } catch {}
+        } catch {
+          asset.findings.push({ type: 'unreachable', severity: 'info', description: 'Web asset unreachable or connection refused during analysis' });
+        }
       }));
     }
     return assets;
