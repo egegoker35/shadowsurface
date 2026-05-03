@@ -1,13 +1,13 @@
 import bcrypt from 'bcryptjs';
-import { SignJWT, jwtVerify } from 'jose';
+import jwt from 'jsonwebtoken';
 import { prisma } from './prisma';
 
-function getSecret(): Uint8Array {
+function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET?.trim();
   if (!secret || secret.length < 32) {
     throw new Error('JWT_SECRET must be set and at least 32 characters long');
   }
-  return new TextEncoder().encode(secret);
+  return secret;
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -19,21 +19,12 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export function createToken(payload: object, expiresIn: string | number = '7d'): string {
-  const secret = getSecret();
-  const exp = typeof expiresIn === 'number' ? expiresIn : undefined;
-  const jwt = new SignJWT(payload as any)
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt();
-  if (exp) jwt.setExpirationTime(Math.floor(Date.now() / 1000) + exp);
-  else jwt.setExpirationTime(expiresIn as string);
-  return jwt.sign(secret);
+  return jwt.sign(payload, getJwtSecret(), { expiresIn } as jwt.SignOptions);
 }
 
 export function verifyToken<T>(token: string): T | null {
   try {
-    const secret = getSecret();
-    const { payload } = jwtVerify(token, secret, { clockTolerance: 60 });
-    return payload as T;
+    return jwt.verify(token, getJwtSecret()) as T;
   } catch (e: any) {
     console.error('[verifyToken] Error:', e.message);
     return null;
