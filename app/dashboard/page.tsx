@@ -55,6 +55,30 @@ export default function DashboardPage() {
   }, [scans, fetchScans, fetchDashboard]);
 
   // Detect scan completion and show toast
+  // Poll for new notifications
+  useEffect(() => {
+    if (!token) return;
+    const pollNotifications = async () => {
+      try {
+        const res = await fetch("/api/notifications", { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) return;
+        const data = await res.json();
+        const unread = data.items?.filter((n: any) => !n.read) || [];
+        if (unread.length > 0) {
+          for (const n of unread.slice(0, 3)) {
+            const id = Math.random().toString(36).substring(2, 8);
+            setToasts((t) => [...t, { id, type: n.type === "error" ? "error" : "success", message: n.message }]);
+            setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 6000);
+          }
+          await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } });
+        }
+      } catch {}
+    };
+    pollNotifications();
+    const interval = setInterval(pollNotifications, 8000);
+    return () => clearInterval(interval);
+  }, [token]);
+
   useEffect(() => {
     if (prevScansRef.current.length === 0) { prevScansRef.current = scans; return; }
     const prevRunning = new Set(prevScansRef.current.filter((s:any)=>s.status==='running'||s.status==='pending').map((s:any)=>s.id));
