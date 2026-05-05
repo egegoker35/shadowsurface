@@ -1258,17 +1258,67 @@ export class ShadowSurfaceEngine {
           const title = body.match(/<title>([^<]*)<\/title>/i)?.[1] || '';
           asset.title = title;
 
-          // WAF/CDN
-          if (headers['cf-ray']) asset.waf = 'Cloudflare';
-          else if (headers['x-akamai-transformed']) asset.waf = 'Akamai';
-          else if (headers['x-amzn-requestid']) asset.waf = 'AWS CloudFront';
-          else if (headers['x-sucuri-id']) asset.waf = 'Sucuri';
-          else if (server.toLowerCase().includes('cloudflare')) asset.waf = 'Cloudflare';
-          else if (body.includes('cdn-cgi')) asset.waf = 'Cloudflare';
-          else if (body.includes('sucuri')) asset.waf = 'Sucuri';
-          else if (body.includes('__cf_bm')) asset.waf = 'Cloudflare';
-          else if (headers['x-waf-event']) asset.waf = 'Generic WAF';
-          else if (headers['x-cdn']) asset.waf = headers['x-cdn'];
+          // WAF/CDN Detection — expanded signature database
+          const h = headers;
+          const b = body.toLowerCase();
+          const srv = server.toLowerCase();
+
+          if (h['cf-ray'] || h['cf-cache-status'] || h['cf-polished'] || h['cf-request-id'] ||
+              srv.includes('cloudflare') || b.includes('cdn-cgi') || b.includes('__cf_bm') ||
+              b.includes('cf-browser-verification') || b.includes('cf-challenge') ||
+              b.includes('cf-im-under-attack') || b.includes('__cf_chl_jschl_tk__') ||
+              b.includes('challenge-form') || h['expect-ct']?.includes('cloudflare') ||
+              h['report-to']?.includes('cloudflare') || h['nel']?.includes('cloudflare') ||
+              srv.includes('cloudflare-nginx')) {
+            asset.waf = 'Cloudflare';
+          }
+          else if (h['x-akamai-transformed'] || h['x-akamai-request-id'] || h['x-arl'] ||
+                   srv.includes('akamai') || h['x-cache']?.includes('akamai')) {
+            asset.waf = 'Akamai';
+          }
+          else if (h['x-amzn-requestid'] || h['x-amz-cf-id'] || h['x-amz-cf-pop'] ||
+                   h['x-cache']?.includes('cloudfront') || srv.includes('cloudfront')) {
+            asset.waf = 'AWS CloudFront';
+          }
+          else if (h['x-sucuri-id'] || b.includes('sucuri') || h['x-sucuri-cache'] ||
+                   h['x-sucuri-blocking']) {
+            asset.waf = 'Sucuri';
+          }
+          else if (h['x-waf-event'] || h['x-waf-status'] || h['x-firewall']) {
+            asset.waf = 'Generic WAF';
+          }
+          else if (h['x-cdn']) {
+            asset.waf = h['x-cdn'];
+          }
+          else if (h['x-fastly-request-id'] || h['x-served-by']?.includes('cache') ||
+                   srv.includes('fastly')) {
+            asset.waf = 'Fastly';
+          }
+          else if (h['x-azure-ref'] || h['x-msedge-ref'] || srv.includes('azure')) {
+            asset.waf = 'Azure CDN';
+          }
+          else if (h['x-vercel-id'] || h['x-vercel-cache'] || srv.includes('vercel')) {
+            asset.waf = 'Vercel';
+          }
+          else if (h['x-nf-request-id'] || h['x-netlify-cache'] || srv.includes('netlify')) {
+            asset.waf = 'Netlify';
+          }
+          else if (h['x-heroku-request-id'] || h['via']?.includes('vegur') || srv.includes('heroku')) {
+            asset.waf = 'Heroku';
+          }
+          else if (h['x-github-request-id'] || srv.includes('github')) {
+            asset.waf = 'GitHub Pages';
+          }
+          else if (h['x-instart-request-id'] || srv.includes('instart')) {
+            asset.waf = 'Instart';
+          }
+          else if (h['x-iinfo'] || h['x-cdn']?.includes('incapsula') || b.includes('incapsula') ||
+                   srv.includes('incapsula')) {
+            asset.waf = 'Imperva (Incapsula)';
+          }
+          else if (h['x-cache']?.includes('hit') && !asset.waf) {
+            asset.waf = 'CDN (generic)';
+          }
 
           // Tech detection
           if (server) { asset.technology = extractTech(server) || asset.technology; asset.version = extractVersion(server) || asset.version; }
