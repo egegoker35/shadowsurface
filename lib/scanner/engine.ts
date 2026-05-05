@@ -636,8 +636,12 @@ const TECH_PATTERNS: [RegExp, string, string?][] = [
   [/X-Served-By:\s*cache/i, 'Fastly', ''],
   [/Via:\s*1\.1\s*vegur/i, 'Heroku', ''],
   [/Server:\s*lighttpd[\/\s]*(\d+\.\d+\.?\d*)/i, 'lighttpd', '1'],
+  [/Server:\s*LiteSpeed/i, 'LiteSpeed', ''],
   [/Server:\s*openresty/i, 'OpenResty', ''],
   [/Server:\s*Tomcat[\/\s]*(\d+\.\d+)/i, 'Tomcat', '1'],
+  [/Server:\s*LiteSpeed[\/\s]*(\d+\.\d+\.?\d*)/i, 'LiteSpeed', '1'],
+  [/X-Powered-By:\s*PHP[\/\s]*(\d+\.\d+\.?\d*)/i, 'PHP', '1'],
+  [/Server:\s*Litespeed/i, 'LiteSpeed', ''],
   [/X-Powered-By:\s*Express/i, 'Express', ''],
   [/X-Powered-By:\s*Next\.js/i, 'Next.js', ''],
   [/X-Powered-By:\s*Django/i, 'Django', ''],
@@ -1384,35 +1388,49 @@ export class ShadowSurfaceEngine {
     return analyzeDNS(this.targetDomain);
   }
 
+  dedupeFindings(assets: DiscoveredAsset[]) {
+    for (const asset of assets) {
+      const seen = new Set<string>();
+      asset.findings = asset.findings.filter((f) => {
+        const key = `${f.type}|${f.port || ''}|${f.description}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+  }
+
   calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[]) {
     for (const asset of assets) {
       let score = 0;
-      // CVE score
-      if (asset.cves.length > 0) score += asset.cves.length * 30;
-      // Web vulns
+      // CVE score (capped at 60)
+      if (asset.cves.length > 0) score += Math.min(asset.cves.length * 25, 60);
+      // Web vulns (capped at 40)
       if (asset.webVulns) {
+        let webScore = 0;
         for (const v of asset.webVulns) {
-          if (v.severity === 'critical') score += 40;
-          else if (v.severity === 'high') score += 25;
-          else if (v.severity === 'medium') score += 12;
-          else if (v.severity === 'low') score += 5;
+          if (v.severity === 'critical') webScore += 25;
+          else if (v.severity === 'high') webScore += 15;
+          else if (v.severity === 'medium') webScore += 8;
+          else if (v.severity === 'low') webScore += 3;
         }
+        score += Math.min(webScore, 40);
       }
-      // Findings
+      // Findings (exclude info/open_port, capped at 50)
+      let findingScore = 0;
       for (const f of asset.findings) {
+        if (f.type === 'open_port' || f.severity === 'info') continue;
         const sev = f.severity || '';
-        if (sev === 'critical') score += 35;
-        else if (sev === 'high') score += 20;
-        else if (sev === 'medium') score += 10;
-        else if (sev === 'low') score += 4;
+        if (sev === 'critical') findingScore += 20;
+        else if (sev === 'high') findingScore += 12;
+        else if (sev === 'medium') findingScore += 6;
+        else if (sev === 'low') findingScore += 2;
       }
+      score += Math.min(findingScore, 50);
       // SSL penalty
-      if (asset.sslGrade && ['F','T','X'].includes(asset.sslGrade)) score += 20;
-      else if (asset.sslGrade === 'D' || asset.sslGrade === 'E') score += 10;
-      else if (asset.sslGrade === 'C') score += 5;
-
-      // Exposed service bonus
-      if (asset.findings.some((f) => f.type === 'exposed_service' && f.severity === 'critical')) score += 15;
+      if (asset.sslGrade && ['F','T','X'].includes(asset.sslGrade)) score += 15;
+      else if (asset.sslGrade === 'D' || asset.sslGrade === 'E') score += 8;
+      else if (asset.sslGrade === 'C') score += 3;
 
       asset.riskScore = Math.min(Math.round(score), 100);
     }
@@ -1501,6 +1519,7 @@ export class ShadowSurfaceEngine {
     const [subdomainIps, dnsInfo] = await Promise.all([this.enumerateSubdomains(), this.scanDNS()]);
     const assets = await this.scanPortsOnAssets(subdomainIps, TOP_PORTS.slice(0, portLimit));
     await this.analyzeWebAssets(assets, cveLimit);
+    this.dedupeFindings(assets);
     this.calculateRiskScores(assets, []);
     const crit = assets.filter((a) => a.riskScore >= 70).length;
     const totalCves = assets.reduce((sum, a) => sum + a.cves.length, 0);
@@ -1550,6 +1569,7 @@ export class ShadowSurfaceEngine {
     const assets = await this.scanPortsOnAssets(subdomainIps, TOP_PORTS.slice(0, portLimit));
     const cloudAssets = await this.scanCloudInfrastructure();
     await this.analyzeWebAssets(assets, cveLimit);
+    this.dedupeFindings(assets);
     this.calculateRiskScores(assets, cloudAssets);
     const duration = (Date.now() - start) / 1000;
     const crit = assets.filter((a) => a.riskScore >= 70).length + cloudAssets.filter((a) => a.severity === 'critical').length;
