@@ -1796,9 +1796,13 @@ async function analyzeSSLInfo(headers: Record<string, string>, url: string): Pro
       });
       if (cert && cert.subject) {
         info.certSubject = typeof cert.subject === 'string' ? cert.subject : JSON.stringify(cert.subject);
+        info.subject = info.certSubject;
         info.certIssuer = typeof cert.issuer === 'string' ? cert.issuer : JSON.stringify(cert.issuer);
+        info.issuer = info.certIssuer;
         info.certValidFrom = cert.valid_from || '';
+        info.validFrom = info.certValidFrom;
         info.certValidTo = cert.valid_to || '';
+        info.validTo = info.certValidTo;
         info.certFingerprint = cert.fingerprint ? cert.fingerprint.replace(/:/g,'') : undefined;
         if (cert.subjectaltname) {
           info.certSANs = cert.subjectaltname.split(',').map((s: string) => s.trim().replace(/^DNS:/i,''));
@@ -1806,6 +1810,7 @@ async function analyzeSSLInfo(headers: Record<string, string>, url: string): Pro
         if (cert.valid_to) {
           const toDate = new Date(cert.valid_to);
           info.certDaysLeft = Math.max(0, Math.ceil((toDate.getTime() - Date.now())/(1000*60*60*24)));
+          info.daysRemaining = info.certDaysLeft;
           info.certExpired = info.certDaysLeft <= 0;
         }
         if (cert.issuer && cert.subject) {
