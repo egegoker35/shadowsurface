@@ -55,7 +55,9 @@ export default function ScanDetailPage() {
   const exec = scan.executiveSummary || {};
   const stats = scan.statistics || {};
   const durationVal = typeof scan.durationSeconds === 'number' && !isNaN(scan.durationSeconds) ? scan.durationSeconds : 0;
-  const allFindings = (scan.assets || []).flatMap((a: any) => (a.findings || []).map((f: any) => ({ ...f, asset: a.subdomain, port: a.port })));
+  const portFindings = (scan.assets || []).flatMap((a: any) => (a.findings || []).map((f: any) => ({ ...f, asset: a.subdomain, port: a.port })));
+  const webVulns = (scan.assets || []).flatMap((a: any) => (a.webVulns || []).map((w: any) => ({ ...w, asset: a.subdomain, port: a.port, source: 'web' })));
+  const allFindings = [...portFindings, ...webVulns];
   const criticalFindings = allFindings.filter((f: any) => f.severity === 'critical');
   const highFindings = allFindings.filter((f: any) => f.severity === 'high');
   const mediumFindings = allFindings.filter((f: any) => f.severity === 'medium');
