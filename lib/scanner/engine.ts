@@ -1,6 +1,7 @@
 import { resolve4, resolveMx, resolveTxt, resolveNs, resolveSoa, resolveCname } from 'dns/promises';
 import { request as httpRequest } from 'http';
 import { request as httpsRequest } from 'https';
+import { connect as tlsConnect } from 'tls';
 import { URL } from 'url';
 import type { DiscoveredAsset, CloudAsset, ScanResult, Finding, WebVuln, WebVulnType, SSLInfo, DNSRecord } from './types';
 
@@ -1523,6 +1524,7 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
   const lowerBody = body.toLowerCase();
   const lowerHeaders = Object.fromEntries(Object.entries(headers).map(([k,v]) => [k.toLowerCase(), String(v)]));
   const respHdrs = headers;
+  const hasBody = body && body.length > 0;
 
   // SQLi Detection (error-based + blind patterns)
   const sqliPatterns = [
@@ -1671,7 +1673,7 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
   // Missing Security Headers
   for (const h of SECURITY_HEADERS) {
     if (!headers[h.toLowerCase()] && !headers[h]) {
-      const severity: 'medium' | 'low' = h === 'Strict-Transport-Security' ? 'medium' : 'low';
+      const severity: 'high' | 'medium' | 'low' = h === 'Strict-Transport-Security' ? 'high' : h === 'Content-Security-Policy' ? 'high' : h === 'X-Frame-Options' ? 'medium' : h === 'X-Content-Type-Options' ? 'medium' : 'low';
       vulns.push({ type: 'missing_header', severity, url: baseUrl, description: `Missing security header: ${h}`, evidence: 'Header not present in response', confidence: 'confirmed' });
     }
   }
@@ -1749,7 +1751,8 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
 }
 
 // ─── SSL / TLS Analyzer ─────────────────────────────────────────────────────
-function analyzeSSLInfo(headers: Record<string, string>, url: string): SSLInfo {
+
+async function analyzeSSLInfo(headers: Record<string, string>, url: string): Promise<SSLInfo> {
   const info: SSLInfo = {};
   const hsts = headers['strict-transport-security'] || '';
   info.hsts = !!hsts;
@@ -1776,6 +1779,49 @@ function analyzeSSLInfo(headers: Record<string, string>, url: string): SSLInfo {
   info.selfSigned = /self signed/i.test(headers['subject'] || '');
   info.valid = true;
   info.tlsVersion = info.tls13 ? 'TLSv1.3' : info.tls12 ? 'TLSv1.2' : info.tls11 ? 'TLSv1.1' : info.tls10 ? 'TLSv1.0' : 'Unknown';
+
+  // Real TLS certificate fetch
+  if (url.startsWith('https')) {
+    try {
+      const u = new URL(url);
+      let tlsSocket: any;
+      const cert = await new Promise<any>((resolve) => {
+        tlsSocket = tlsConnect({ host: u.hostname, port: parseInt(u.port||'443'), rejectUnauthorized: false, servername: u.hostname, timeout: 8000 }, () => {
+          const peer = tlsSocket.getPeerCertificate(true);
+          tlsSocket.end();
+          resolve(peer || null);
+        });
+        tlsSocket.on('error', () => { try { tlsSocket.end(); } catch {} resolve(null); });
+        tlsSocket.setTimeout(8000, () => { try { tlsSocket.destroy(); } catch {} resolve(null); });
+      });
+      if (cert && cert.subject) {
+        info.certSubject = typeof cert.subject === 'string' ? cert.subject : JSON.stringify(cert.subject);
+        info.certIssuer = typeof cert.issuer === 'string' ? cert.issuer : JSON.stringify(cert.issuer);
+        info.certValidFrom = cert.valid_from || '';
+        info.certValidTo = cert.valid_to || '';
+        info.certFingerprint = cert.fingerprint ? cert.fingerprint.replace(/:/g,'') : undefined;
+        if (cert.subjectaltname) {
+          info.certSANs = cert.subjectaltname.split(',').map((s: string) => s.trim().replace(/^DNS:/i,''));
+        }
+        if (cert.valid_to) {
+          const toDate = new Date(cert.valid_to);
+          info.certDaysLeft = Math.max(0, Math.ceil((toDate.getTime() - Date.now())/(1000*60*60*24)));
+          info.certExpired = info.certDaysLeft <= 0;
+        }
+        if (cert.issuer && cert.subject) {
+          const issuerCN = typeof cert.issuer === 'object' ? (cert.issuer.CN || JSON.stringify(cert.issuer)) : cert.issuer;
+          const subjectCN = typeof cert.subject === 'object' ? (cert.subject.CN || JSON.stringify(cert.subject)) : cert.subject;
+          info.selfSigned = issuerCN === subjectCN;
+        }
+        const proto = tlsSocket?.getCipher?.()?.version || '';
+        if (proto.includes('1.3')) { info.tls13 = true; info.tlsVersion = 'TLSv1.3'; }
+        else if (proto.includes('1.2')) { info.tls12 = true; info.tlsVersion = 'TLSv1.2'; }
+        else if (proto.includes('1.1')) { info.tls11 = true; info.tlsVersion = 'TLSv1.1'; }
+        else if (proto.includes('1.0')) { info.tls10 = true; info.tlsVersion = 'TLSv1.0'; }
+      }
+    } catch {}
+  }
+
   return info;
 }
 
@@ -1948,7 +1994,7 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                     const techsWeb = detectTechnologies(web.headers, web.body);
                     cves.push(...mapCVEs(techsWeb).filter(c=>!cves.some(ex=>ex.id===c.id)));
                     waf = detectWAF(web.headers, web.body);
-                    sslInfo = analyzeSSLInfo(web.headers, web.redirectUrls[web.redirectUrls.length-1] || `http${port===443||port===8443?'s':''}://${ip}:${port}`);
+                    sslInfo = await analyzeSSLInfo(web.headers, web.redirectUrls[web.redirectUrls.length-1] || `http${port===443||port===8443?'s':''}://${ip}:${port}`);
                     sslGrade = gradeSSL(sslInfo);
                   } catch {}
                 }
@@ -1980,31 +2026,37 @@ function calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[
   for (const a of assets) {
     let score = 0;
     const cvssMax = a.cvssMax || 0;
-    const exploitBonus = a.exploitAvailable ? 15 : 0;
+    const exploitBonus = a.exploitAvailable ? 25 : 0;
     // Base score from criticality
-    score += Math.min(cvssMax * 1.2, 50);
-    score += Math.min(a.cves.length * 3, 20);
+    score += Math.min(cvssMax * 2.0, 60);
+    score += Math.min(a.cves.length * 5, 35);
     score += exploitBonus;
+    // Port-based penalties
+    if (EXPOSABLE_DB_PORTS.has(a.port)) score += 20;
+    if (DANGEROUS_PORTS.has(a.port)) score += 15;
+    if ([21,23,3389,5900].includes(a.port)) score += 18;
     // Web vulnerabilities
     let webScore = 0;
     for (const w of (a.webVulns||[])) {
-      if (w.severity === 'critical') webScore += 12;
-      else if (w.severity === 'high') webScore += 8;
-      else if (w.severity === 'medium') webScore += 4;
-      else webScore += 1;
+      if (w.severity === 'critical') webScore += 20;
+      else if (w.severity === 'high') webScore += 12;
+      else if (w.severity === 'medium') webScore += 6;
+      else webScore += 2;
     }
-    score += Math.min(webScore, 30);
+    score += Math.min(webScore, 45);
     // Findings (dangerous services, exposed DBs, default creds, missing headers, etc.)
     const critFindings = a.findings.filter(f=>f.severity==='critical').length;
     const highFindings = a.findings.filter(f=>f.severity==='high').length;
     const medFindings = a.findings.filter(f=>f.severity==='medium').length;
-    score += Math.min(critFindings*15 + highFindings*8 + medFindings*3, 35);
+    score += Math.min(critFindings*25 + highFindings*15 + medFindings*5, 50);
     // SSL penalty
-    const sslPenalty = a.sslGrade==='F' ? 12 : a.sslGrade==='E' ? 10 : a.sslGrade==='D' ? 6 : a.sslGrade==='C' ? 3 : a.sslGrade==='T'?12 : a.sslGrade==='X'?12 : 0;
+    const sslPenalty = a.sslGrade==='F' ? 20 : a.sslGrade==='E' ? 15 : a.sslGrade==='D' ? 10 : a.sslGrade==='C' ? 5 : a.sslGrade==='T'?20 : a.sslGrade==='X'?20 : 0;
     score += sslPenalty;
     // WAF bonus (protection reduces risk slightly)
-    if (a.waf) score -= 5;
+    if (a.waf) score -= 8;
     a.riskScore = Math.min(Math.max(Math.round(score), 0), 100);
+    // Ensure minimum risk for any internet-exposed service
+    if (a.port && a.port !== 0 && a.riskScore < 8) a.riskScore = 8;
   }
   for (const c of cloudAssets) {
     c.riskScore = Math.min(Math.max(c.riskScore, 0), 100);
@@ -2126,7 +2178,9 @@ export class ScannerEngine {
     const assets = await scanPortsOnAssets(subdomains, TOP_PORTS.slice(0, portLimit));
     this.scanResult.assets=assets; this.scanResult.durationSeconds=(Date.now()-start)/1000;
     this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:0, highRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount:assets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount:assets.filter(a=>a.riskScore<15).length, infoCount:0, totalCVEs:assets.reduce((s,a)=>s+a.cves.length,0), totalWebVulns:assets.reduce((s,a)=>s+(a.webVulns?.length||0),0), sslIssues:assets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length, totalExploits:assets.filter(a=>a.exploitAvailable).length, weakSSLCount:assets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length, missingHeaderCount:assets.reduce((s,a)=>s+(a.webVulns?.filter(w=>w.type==='missing_header').length||0),0), exposedDBCount:assets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length, exposedAdminCount:0 };
-    this.scanResult.executiveSummary={ overallRisk:'LOW', riskScore:0, criticalFindings:0, attackSurfaceSize:assets.length, recommendations:['Run full scan for CVE and cloud checks'], threatActors:['None identified'], complianceStatus:{owaspCompliant:true,pciDssCompliant:true,gdprCompliant:true}, mitreTactics:['TA0043-Reconnaissance'] };
+    const maxPortRisk = Math.max(...assets.map(a=>a.riskScore),0);
+    const portThreats = assets.filter(a=>a.findings.length>0 || (a.webVulns && a.webVulns.length>0)).length;
+    this.scanResult.executiveSummary={ overallRisk:assets.some(a=>a.riskScore>=70)?'CRITICAL':assets.some(a=>a.riskScore>=40)?'HIGH':assets.some(a=>a.riskScore>=15)?'MEDIUM':'LOW', riskScore:maxPortRisk, criticalFindings:0, attackSurfaceSize:assets.length, recommendations:['Run full scan for CVE and cloud checks'], threatActors:portThreats>0?['Opportunistic attackers','Reconnaissance groups']:['None identified'], complianceStatus:{owaspCompliant:portThreats===0,pciDssCompliant:portThreats===0,gdprCompliant:portThreats===0}, mitreTactics:['TA0043-Reconnaissance'] };
     return this.scanResult;
   }
 

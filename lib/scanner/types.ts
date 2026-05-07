@@ -78,6 +78,14 @@ export interface SSLInfo {
   tls11?: boolean;
   tls10?: boolean;
   weakProtocols?: string[];
+  certSubject?: string;
+  certIssuer?: string;
+  certValidFrom?: string;
+  certValidTo?: string;
+  certDaysLeft?: number;
+  certExpired?: boolean;
+  certFingerprint?: string;
+  certSANs?: string[];
 }
 
 export interface DNSRecord {
