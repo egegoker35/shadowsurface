@@ -1,6 +1,6 @@
 import { redis } from '@/lib/redis';
 import { prisma } from '@/lib/prisma';
-import { ShadowSurfaceEngine } from '@/lib/scanner/engine';
+import { ScannerEngine } from '@/lib/scanner/engine';
 import { runDemoScan } from '@/lib/scanner/demoScanner';
 
 const MAX_RETRIES = 3;
@@ -57,7 +57,7 @@ async function processJob(raw: string, attempt = 1) {
       console.error(`[Worker] Failed to mark scan running: ${e.message}`);
     }
 
-    const engine = new ShadowSurfaceEngine(payload.target);
+    const engine = new ScannerEngine(payload.target);
     const result = await Promise.race([
       engine.runFullScan(100),
       new Promise<never>((_, reject) =>

@@ -28,9 +28,6 @@ export default function Sidebar({ active, onChange }: { active: string; onChange
           >
             <span className={`text-xs ${active === tab.id ? 'text-emerald-400' : 'text-slate-600'}`}>{tab.icon}</span>
             {tab.label}
-            {tab.id === 'payments' && active !== 'payments' && (
-              <span className="ml-auto w-2 h-2 rounded-full bg-amber-500" />
-            )}
           </button>
         ))}
       </nav>

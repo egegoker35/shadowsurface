@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
-import { ShadowSurfaceEngine } from '@/lib/scanner/engine';
+import { ScannerEngine } from '@/lib/scanner/engine';
 import { rateLimitByUser } from '@/lib/middleware/rateLimit';
 import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput } from '@/lib/middleware/security';
 import { z } from 'zod';
@@ -20,7 +20,7 @@ const createSchema = z.object({
   scanType: z.string().optional(),
 });
 
-function runScanWithTimeout(engine: ShadowSurfaceEngine, scanType: string, ms = 1800000, portLimit = 50): Promise<any> {
+function runScanWithTimeout(engine: ScannerEngine, scanType: string, ms = 1800000, portLimit = 50): Promise<any> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Scan timed out after 30 minutes')), ms);
     engine.runScan(scanType, portLimit).then((result) => {
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
       data: { target: rawTarget, scanType, status: 'running', orgId: user.orgId, createdById: user.id },
     });
 
-    const engine = new ShadowSurfaceEngine(target);
+    const engine = new ScannerEngine(target);
     runScanWithTimeout(engine, scanType, 1800000, config.portLimit).then(async (result: any) => {
       try {
         await prisma.scan.update({

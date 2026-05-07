@@ -6,43 +6,10 @@ export interface Finding {
   description: string;
   evidence?: string;
   cvss?: number;
-  cwe?: string;
-  owasp?: string;
-  remediation?: string;
-  references?: string[];
-  exploitAvailable?: boolean;
 }
 
-export type WebVulnType =
-  | 'sqli'
-  | 'xss'
-  | 'lfi'
-  | 'rfi'
-  | 'open_redirect'
-  | 'cors'
-  | 'csrf'
-  | 'idor'
-  | 'info_disclosure'
-  | 'weak_auth'
-  | 'backup_file'
-  | 'sensitive_file'
-  | 'xxe'
-  | 'ssrf'
-  | 'rce'
-  | 'command_injection'
-  | 'file_upload'
-  | 'path_traversal'
-  | 'missing_header'
-  | 'cookie_issue'
-  | 'insecure_method'
-  | 'api_exposure'
-  | 'directory_listing'
-  | 'brute_force'
-  | 'wordpress_issue'
-  | 'graphql_issue';
-
 export interface WebVuln {
-  type: WebVulnType;
+  type: 'sqli' | 'xss' | 'lfi' | 'rfi' | 'open_redirect' | 'cors' | 'csrf' | 'idor' | 'info_disclosure' | 'weak_auth' | 'backup_file' | 'sensitive_file';
   severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
   url: string;
   parameter?: string;
@@ -66,22 +33,10 @@ export interface SSLInfo {
   hsts?: boolean;
   certificateTransparency?: boolean;
   sni?: boolean;
-  beastPoodle?: boolean;
-  heartbleed?: boolean;
-  logjam?: boolean;
-  crime?: boolean;
-  breach?: boolean;
-  renegotiationSecure?: boolean;
-  ocspStapling?: boolean;
-  tls13?: boolean;
-  tls12?: boolean;
-  tls11?: boolean;
-  tls10?: boolean;
-  weakProtocols?: string[];
 }
 
 export interface DNSRecord {
-  type: 'A' | 'AAAA' | 'MX' | 'TXT' | 'NS' | 'SOA' | 'CNAME' | 'PTR' | 'SRV' | 'CAA';
+  type: 'A' | 'AAAA' | 'MX' | 'TXT' | 'NS' | 'SOA' | 'CNAME' | 'PTR' | 'SRV';
   value: string;
   priority?: number;
 }
@@ -110,21 +65,11 @@ export interface DiscoveredAsset {
   title?: string;
   redirects?: string[];
   firstSeen: string;
-  osFingerprint?: string;
-  uptime?: string;
-  traceroute?: string[];
-  complianceStatus?: {
-    owasp?: string[];
-    pciDss?: string[];
-    gdpr?: string[];
-  };
-  exploitAvailable?: boolean;
-  cvssMax?: number;
 }
 
 export interface CloudAsset {
   id: string;
-  provider: 'aws' | 'gcp' | 'azure' | 'digitalocean' | 'firebase' | 'heroku' | 'oracle' | 'ibm' | 'alibaba';
+  provider: 'aws' | 'gcp' | 'azure' | 'digitalocean' | 'firebase' | 'heroku';
   serviceType: string;
   resourceId: string;
   url: string;
@@ -132,7 +77,6 @@ export interface CloudAsset {
   misconfigurations: Finding[];
   riskScore: number;
   severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
-  exposureLevel?: 'public' | 'authenticated' | 'private';
 }
 
 export interface ScanResult {
@@ -155,11 +99,6 @@ export interface ScanResult {
     totalCVEs: number;
     totalWebVulns: number;
     sslIssues: number;
-    totalExploits: number;
-    weakSSLCount: number;
-    missingHeaderCount: number;
-    exposedDBCount: number;
-    exposedAdminCount: number;
   };
   executiveSummary: {
     overallRisk: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
@@ -168,12 +107,6 @@ export interface ScanResult {
     attackSurfaceSize: number;
     recommendations: string[];
     threatActors: string[];
-    mitreTactics?: string[];
-    complianceStatus?: {
-      owaspCompliant: boolean;
-      pciDssCompliant: boolean;
-      gdprCompliant: boolean;
-    };
   };
   dnsAnalysis?: {
     records: DNSRecord[];
@@ -181,8 +114,5 @@ export interface ScanResult {
     dmarcPolicy?: string;
     dkimPresent?: boolean;
     dnssec?: boolean;
-    caa?: string[];
-    subdomainTakeover?: string[];
-    zoneTransfer?: boolean;
   };
 }
