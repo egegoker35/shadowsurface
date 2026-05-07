@@ -1466,8 +1466,8 @@ function detectTechnologies(headers: Record<string, string>, body: string): Arra
     let version: string | undefined;
     for (const pat of tech.patterns) {
       if (pat.type === 'header') {
-        const headerValue = headers[pat.key.toLowerCase()] || '';
-        if (pat.value.test(headerValue)) { matched = true; if (pat.versionRegex) { const m = headerValue.match(pat.versionRegex); if (m) version = m[1]; }}
+        const headerValue = headers[pat.key.toLowerCase()];
+        if (headerValue !== undefined && pat.value.test(headerValue)) { matched = true; if (pat.versionRegex) { const m = headerValue.match(pat.versionRegex); if (m) version = m[1]; }}
       } else if (pat.type === 'body') {
         if (pat.value.test(body)) { matched = true; if (pat.versionRegex) { const m = body.match(pat.versionRegex); if (m) version = m[1]; }}
       } else if (pat.type === 'meta') {
