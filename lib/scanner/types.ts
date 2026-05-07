@@ -39,7 +39,8 @@ export type WebVulnType =
   | 'directory_listing'
   | 'brute_force'
   | 'wordpress_issue'
-  | 'graphql_issue';
+  | 'graphql_issue'
+  | 'exposed_admin';
 
 export interface WebVuln {
   type: WebVulnType;

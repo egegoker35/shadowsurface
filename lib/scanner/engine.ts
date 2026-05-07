@@ -1365,8 +1365,7 @@ const CVE_DB: CVEEntry[] = [
 // ─── Security Headers Checklist ───────────────────────────────────────────
 const SECURITY_HEADERS = ['Strict-Transport-Security','Content-Security-Policy','X-Frame-Options','X-Content-Type-Options','Referrer-Policy','Permissions-Policy','Cross-Origin-Embedder-Policy','Cross-Origin-Opener-Policy','Cross-Origin-Resource-Policy'];
 
-// ─── Subdomain Wordlist (Extended) ──────────────────────────────────────────
-const SUBDOMAIN_WORDLIST = [ 'www','mail','ftp','localhost','webmail','smtp','pop','ns1','webdisk','ns2','cpanel','whm','autodiscover','autoconfig','ns3','m','imap','test','ns','blog','pop3','dev','www2','admin','forum','news','vpn','ns4','www1','irc','backup','mx','email','apps','shop','api','staging','pay','svn','cp','cdn','crm','mx1','mx2','forums','portal','video','sip','dns2','api1','dns1','www3','dns','mail1','www4','mysql','mail2','support','mx3','wiki','web2','ns5','access','mail3','dns3','demo','smtp2','web1','ssl','ns6','awstats','git','www5','email2','upload','login','en','mx4','mail4','stats','web3','gitlab','monitor','member','cms','data','mx5','docs','vpn2','secure','dashboard','preview','old','beta','mobile','remote','mdm','cloud','files','ldap','exchange','chat','home','app','confluence','jira','grafana','prometheus','jenkins','nexus','registry','docker','k8s','kube','kubernetes','rancher','consul','vault','nomad','traefik','nginx','haproxy','varnish','redis','postgres','mysql','mongo','elasticsearch','kafka','rabbitmq','zookeeper','cassandra','couchdb','neo4j','influxdb','thanos','loki','jaeger','zipkin','sentry','elastic','kibana','logstash','filebeat','metricbeat','packetbeat','heartbeat','auditbeat','apm','newrelic','datadog','splunk','zabbix','nagios','icinga','thanos','loki','jaeger','zipkin','sentry','elastic','kibana','logstash','staging2','staging3','test1','test2','test3','dev1','dev2','dev3','uat','qa','preprod','prod','production','sandbox','integration','development','build','ci','cd','release','deploy','rollback','hotfix','feature','branch','tag','commit','merge','pullrequest','pr','issue','ticket','bug','fix','patch','update','upgrade','migration','backup2','backup3','mirror','replica','slave','master','primary','secondary','tertiary','active','passive','standby','failover','cluster','node','node1','node2','node3','worker','worker1','worker2','worker3','agent','agent1','agent2','agent3','executor','scheduler','orchestrator','controller','manager','leader','follower','candidate','observer','client','server','frontend','backend','api2','api3','api4','graphql','rest','rpc','grpc','websocket','socket','socketio','sse','events','hooks','webhook','callback','proxy','proxies','gateway','api-gateway','edge','cdn2','cdn3','fastly','akamai','cloudflare','aws','gcp','azure','do','digitalocean','linode','vultr','hetzner','ovh','scaleway','upcloud','exoscale','packet','equinix','ibmcloud','softlayer','bluemix','heroku2','now','vercel2','netlify2','firebaseapp','appspot','cloudfunctions','lambda','ec2','ecs','eks','fargate','beanstalk','opsworks','cloudformation','terraform','ansible','puppet','chef','salt','vagrant','packer','vault2','consul2','nomad2','boundary','waypoint','serf','terraform-cloud','atlantis','spacelift','env0','scalr','infracost','tfsec','checkov','terragrunt','terraformer','pulumi','crossplane','cdk','cdktf','serverless','sam','chalice','zappa','apex','architect','framework','begin','surge','gh-pages','neocities','glitch','repl','replit','codepen','jsfiddle','stackblitz','gitpod','codespaces','coder','theia','eclipse-che','eclipse','jetbrains','idea','pycharm','webstorm','phpstorm','rubymine','goland','clion','rider','datagrip','appcode','studio','android-studio','xcode','visual-studio','vscode','sublime','atom','notepad++','vim','emacs','nano','micro','helix','neovim','nvim','kakoune','spacemacs','doom','prelude','evil','org','markdown','asciidoc','rst','latex','tex','mathjax','katex','mermaid','plantuml','drawio','diagrams','excalidraw','lucidchart','figma','sketch','adobe','photoshop','illustrator','indesign','aftereffects','premiere','audition','lightroom','xd','acrobat','spark','rush','dimension','fresco','animate','character','bridge','media','encoder','prelude','speedgrade','story','fuse','gaming','play','game','games','casino','bet','poker','bingo','lottery','sport','sports','esport','esports','tournament','league','match','team','player','coach','referee','umpire','judge','score','stats2','analytics2','metrics','telemetry','tracing','profiling','debug','debugger','logs','logging','logz','papertrail','logentries','loggly','splunk2','sumo','elk','elasticstack','beats','apm2','rum','synthetics','uptime','heartbeat2','watcher','alerting','monitoring2','observability','grafana2','prometheus2','thanos2','cortex','loki2','tempo','jaeger2','zipkin2','signoz','hypertrace','skywalking','pinpoint','instana','dynatrace','appdynamics','newrelic2','datadog2','honeycomb','lightstep','opencensus','opentelemetry','otel','collector','exporter','receiver','processor','instrumentation','sdk','auto','manual','metric2','histogram','counter','gauge','summary','span','trace2','baggage','context','propagator','sampler','resource','attribute','event','link','status','kind','parent','child','root','service-name','service-version','service-instance-id','deployment-environment','host-name','host-id','host-type','cloud-provider','cloud-account-id','cloud-region','cloud-availability-zone','cloud-platform','k8s-cluster-name','k8s-namespace-name','ks8-pod-name','k8s-pod-uid','k8s-node-name','k8s-container-name','k8s-replicaset-name','k8s-deployment-name','k8s-statefulset-name','k8s-daemonset-name','k8s-job-name','k8s-cronjob-name','k8s-service-name','container-id','container-name','container-image-name','container-image-tag','faas-name','faas-id','faas-version','faas-instance','process-pid','process-executable-name','process-executable-path','process-command-line','process-command','process-command-args','process-owner','os-type','os-description','os-name','os-version','os-build-id','kernel-release','kernel-version','kernel-arch','runtime-name','runtime-version','runtime-description','device-id','device-model-identifier','device-model-name','browser-brands','browser-platform','browser-mobile','browser-language','user-agent-original','webengine-name','webengine-version','webengine-description' ];
+
 
 // ─── WAF / CDN Detection Patterns ───────────────────────────────────────────
 const WAF_PATTERNS: Record<string, { headers: string[]; body: RegExp[]; anyHeaderRegex?: RegExp }> = {
@@ -1751,6 +1750,407 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
   return vulns;
 }
 
+// ─── Active Path Fuzzer (World-Class) ─────────────────────────────────────
+const COMMON_PATHS: string[] = [
+  '/','/admin','/login','/wp-admin','/wp-login.php','/administrator','/phpmyadmin','/api','/graphql','/swagger-ui.html','/v2/api-docs','/api/v1','/api/v2',
+  '/.env','/.git/config','/.svn/entries','/.htaccess','/config.php','/config.json','/web.config','/robots.txt','/sitemap.xml',
+  '/backup','/bak','/old','/test','/dev','/staging','/debug','/console','/actuator','/health','/metrics','/prometheus',
+  '/server-status','/server-info','/phpinfo.php','/info.php','/test.php','/admin.php','/login.php','/api.php',
+  '/wp-content/plugins','/wp-content/themes','/wp-includes','/xmlrpc.php','/readme.html','/license.txt',
+  '/adminer.php','/myadmin','/pma','/database','/db','/sql','/mssql','/mysql','/oracle','/postgres',
+  '/jenkins','/jmx-console','/manager/html','/solr','/elasticsearch','/kibana','/grafana','/swagger','/api-docs',
+  '/.DS_Store','/crossdomain.xml','/clientaccesspolicy.xml','/wsdl','/soap','/cgi-bin','/fcgi-bin',
+  '/uploads','/upload','/files','/file','/media','/static','/assets','/public','/private','/secure',
+  '/api/swagger.json','/api/v1/swagger.json','/api/swagger.yaml','/swagger.json','/swagger.yaml',
+  '/api/users','/api/auth','/api/login','/api/register','/api/admin','/api/accounts',
+  '/.well-known/security.txt','/.well-known/openid-configuration','/.well-known/ai-plugin.json',
+  '/wp-json/wp/v2','/wp-json','/rest','/rest/v1','/oauth','/oauth2','/auth','/token','/jwt',
+  '/dashboard','/panel','/control','/manage','/management','/adminpanel','/cpanel','/webmail','/roundcube',
+  '/zabbix','/nagios','/cacti','/munin','/ganglia','/newrelic','/appdynamics','/dynatrace',
+  '/.aws','/.azure','/.gcp','/.docker','/docker','/docker-compose.yml','/Dockerfile','/k8s','/kubernetes',
+  '/.github','/.gitlab-ci.yml','/Jenkinsfile','/Makefile','/package.json','/composer.json','/requirements.txt',
+  '/trace.axd','/elmah.axd','/errors','/error','/exception','/stacktrace','/logs','/log',
+  '/_all_dbs','/_utils','/_config','/_plugins','/_cluster','/_nodes','/_aliases',
+  '/HNAP1','/version.txt','/firmware','/cgi-bin/status','/setup','/install','/wizard',
+  '/s3','/gcs','/azure','/blob','/storage','/cdn','/assets','/static','/public',
+  '/api/graphql','/graphiql','/playground','/altair','/voyager','/graphql/schema',
+  '/wp-content/debug.log','/wp-content/uploads','/wp-content/backup','/wp-content/cache',
+  '/.sql','/.tar.gz','/.zip','/.rar','/.7z','/.backup','/.bak','/.old','/.orig','/.swp',
+  '/.env.local','/.env.production','/.env.development','/.env.staging','/.env.test',
+  '/api/v3','/api/v4','/api/internal','/api/private','/api/secret','/api/internal/v1',
+  '/socket.io','/sockjs-node','/__webpack_hmr','/hot-update.json','/livereload',
+  '/debug/vars','/debug/pprof','/debug/requests','/debug/events','/debug/log',
+  '/api/healthz','/api/readyz','/api/livez','/healthz','/readyz','/livez',
+];
+
+async function probePaths(baseUrl: string, timeout=8000): Promise<WebVuln[]> {
+  const vulns: WebVuln[] = [];
+  const foundPaths: string[] = [];
+  const u = new URL(baseUrl);
+  const proto = u.protocol;
+  const tests = COMMON_PATHS.slice(0,40); // limit for serverless performance
+  await Promise.all(tests.map(async (p) => {
+    try {
+      const testUrl = `${proto}//${u.host}${p}`;
+      const res = await fetchURL(testUrl, 'GET', { 'Connection': 'close' }, undefined, timeout);
+      if (res.status >= 200 && res.status < 400) {
+        foundPaths.push(testUrl);
+        const bodyLower = res.body.toLowerCase();
+        if (p === '/.env' && (res.body.includes('DB_HOST') || res.body.includes('API_KEY') || res.body.includes('SECRET'))) {
+          vulns.push({ type: 'info_disclosure', severity: 'critical', url: testUrl, description: 'Environment file (.env) exposed — contains secrets/credentials', evidence: res.body.slice(0,200), confidence: 'confirmed' });
+        }
+        if (p === '/.git/config' && res.body.includes('[core]')) {
+          vulns.push({ type: 'info_disclosure', severity: 'critical', url: testUrl, description: 'Git repository exposed — source code and history accessible', evidence: res.body.slice(0,200), confidence: 'confirmed' });
+        }
+        if (p === '/config.php' || p === '/config.json' || p === '/web.config') {
+          if (res.body.includes('password') || res.body.includes('key') || res.body.includes('secret') || res.body.includes('host')) {
+            vulns.push({ type: 'info_disclosure', severity: 'critical', url: testUrl, description: `Config file ${p} exposed with sensitive data`, evidence: res.body.slice(0,200), confidence: 'confirmed' });
+          }
+        }
+        if (p === '/phpmyadmin' || p === '/myadmin' || p === '/pma' || p === '/adminer.php') {
+          if (res.body.includes('phpMyAdmin') || res.body.includes('Adminer') || res.body.includes('login')) {
+            vulns.push({ type: 'exposed_admin', severity: 'high', url: testUrl, description: `Database admin panel exposed: ${p}`, evidence: `Status ${res.status}`, confidence: 'confirmed' });
+          }
+        }
+        if (p === '/wp-admin' && res.status !== 404 && (res.body.includes('wp-login') || res.body.includes('wordpress'))) {
+          vulns.push({ type: 'exposed_admin', severity: 'high', url: testUrl, description: 'WordPress admin panel exposed', evidence: `/wp-login accessible`, confidence: 'confirmed' });
+        }
+        if ((p === '/swagger-ui.html' || p === '/swagger.json' || p === '/v2/api-docs') && (res.body.includes('swagger') || res.body.includes('openapi'))) {
+          vulns.push({ type: 'api_exposure', severity: 'high', url: testUrl, description: 'API documentation (Swagger/OpenAPI) publicly exposed', evidence: p, confidence: 'confirmed' });
+        }
+        if (p === '/graphql' && (res.body.includes('graphql') || res.body.includes('playground') || res.body.includes('__schema'))) {
+          vulns.push({ type: 'graphql_issue', severity: 'high', url: testUrl, description: 'GraphQL endpoint/introspection exposed', evidence: p, confidence: 'confirmed' });
+        }
+        if (p === '/actuator' || p === '/health' || p === '/metrics') {
+          if (res.body.includes('status') || res.body.includes('UP') || res.body.includes('health') || res.body.includes('jvm')) {
+            vulns.push({ type: 'api_exposure', severity: 'medium', url: testUrl, description: 'Spring Boot actuator endpoint exposed — may leak internal state', evidence: p, confidence: 'confirmed' });
+          }
+        }
+        if (p === '/debug/vars' || p === '/debug/pprof') {
+          if (res.status === 200) {
+            vulns.push({ type: 'api_exposure', severity: 'high', url: testUrl, description: 'Go debug/pprof or expvar endpoint exposed — memory dumps and profiling accessible', evidence: p, confidence: 'confirmed' });
+          }
+        }
+        if (p === '/server-status' && res.body.includes('Apache Server Status')) {
+          vulns.push({ type: 'info_disclosure', severity: 'medium', url: testUrl, description: 'Apache server-status page exposed — reveals request details and internal IPs', evidence: p, confidence: 'confirmed' });
+        }
+        if ((p === '/trace.axd' || p === '/elmah.axd') && res.status !== 404) {
+          vulns.push({ type: 'info_disclosure', severity: 'high', url: testUrl, description: 'ASP.NET trace/ELMAH error log exposed — may contain sensitive request data', evidence: p, confidence: 'confirmed' });
+        }
+      }
+    } catch {}
+  }));
+  if (foundPaths.length > 5 && !u.pathname.includes('wp-')) {
+    vulns.push({ type: 'directory_listing', severity: 'medium', url: baseUrl, description: `${foundPaths.length} sensitive paths responded successfully — broad attack surface`, evidence: foundPaths.slice(0,5).join(', ') + '...', confidence: 'confirmed' });
+  }
+  return vulns;
+}
+
+// ─── Active Parameter Injection Tester ──────────────────────────────────────
+async function testParameterInjection(baseUrl: string, headers: Record<string, string>, body: string, status: number, timeout=8000): Promise<WebVuln[]> {
+  const vulns: WebVuln[] = [];
+  const u = new URL(baseUrl);
+  const base = `${u.protocol}//${u.host}${u.pathname}`;
+  if (status >= 400 && status !== 404) return vulns; // skip error pages
+
+  // Active SQLi probe: send quote and apostrophe to common param names
+  const sqlPayloads = ["'", "\"", "'--", "';", "\"\"", "' OR '1'='1", "1' AND 1=1--", "1' AND 1=2--"];
+  const commonParams = ['id','page','user','search','q','query','s','cat','category','product','item','news','article','post','type','filter','sort','order','limit','offset','ref','token','key','code','name','email','username','password','file','path','url','redirect','return','callback','action','do','cmd','exec','run','view','preview','format','output','lang','locale','currency','amount','price','quantity','sku','ean','upc','isbn','issn','doi','ref_id','referrer','source','medium','campaign','term','content','gclid','fbclid','utm_source','utm_medium','utm_campaign','utm_term','utm_content'];
+  const paramBatch = commonParams.slice(0,18);
+  await Promise.all(paramBatch.map(async (param) => {
+    for (const payload of sqlPayloads.slice(0,2)) { // limit for performance
+      try {
+        const testUrl = `${base}?${param}=${encodeURIComponent(payload)}`;
+        const res = await fetchURL(testUrl, 'GET', { 'Connection': 'close' }, undefined, timeout);
+        const rb = res.body.toLowerCase();
+        if ((/sql syntax|mysql|postgresql|oracle|sqlite|mssql|db2|sybase|unclosed quotation|syntax error|warning.*mysql|valid mysql|pg_query|sqlite3|unexpected end of command|dynamic sql error/i.test(rb)) && res.status >= 200 && res.status < 500) {
+          vulns.push({ type: 'sqli', severity: 'critical', url: testUrl, description: `SQL injection confirmed — parameter "${param}" triggers database error with payload "${payload}"`, evidence: res.body.slice(0,200), confidence: 'confirmed' });
+          return; // per-param, one finding enough
+        }
+      } catch {}
+    }
+  }));
+
+  // Active XSS probe: reflected payload detection
+  const xssPayloads = ['<testxss>', '\"><testxss>', "'><testxss>", "<img src=x onerror=alert(1)>"];
+  const xssParams = ['q','search','query','s','term','name','message','comment','subject','body','content','text','title','desc','description','label','tag','keyword','redirect','return','url','link','href','src','path','file','callback'];
+  await Promise.all(xssParams.slice(0,12).map(async (param) => {
+    for (const payload of xssPayloads.slice(0,2)) {
+      try {
+        const testUrl = `${base}?${param}=${encodeURIComponent(payload)}`;
+        const res = await fetchURL(testUrl, 'GET', { 'Connection': 'close' }, undefined, timeout);
+        if (res.body.includes(payload) || res.body.includes(payload.replace(/"/g,'&quot;')) || res.body.includes(payload.replace(/</g,'&lt;'))) {
+          if (!vulns.some(v => v.type === 'xss' && v.url === base)) {
+            vulns.push({ type: 'xss', severity: 'high', url: testUrl, description: `Reflected XSS confirmed — parameter "${param}" reflects input without encoding: "${payload}"`, evidence: res.body.slice(0,200), confidence: 'confirmed' });
+          }
+          return;
+        }
+      } catch {}
+    }
+  }));
+
+  // Active Command Injection probe
+  const cmdPayloads = [';id', '|id', '&id', '`id`', '$(id)', ';whoami', '|whoami'];
+  const cmdParams = ['host','ip','cmd','exec','command','run','ping','target','url','path','file','domain','address','name','input'];
+  await Promise.all(cmdParams.slice(0,8).map(async (param) => {
+    for (const payload of cmdPayloads.slice(0,2)) {
+      try {
+        const testUrl = `${base}?${param}=${encodeURIComponent(payload)}`;
+        const res = await fetchURL(testUrl, 'GET', { 'Connection': 'close' }, undefined, timeout);
+        if (/uid=\d+\(|uid=\d+\s+gid=\d+|www-data|root|daemon|bin\/bash|usr\/bin|windows nt|microsoft windows/i.test(res.body)) {
+          vulns.push({ type: 'rce', severity: 'critical', url: testUrl, description: `Command injection confirmed — parameter "${param}" executes system commands with "${payload}"`, evidence: res.body.slice(0,200), confidence: 'confirmed' });
+          return;
+        }
+      } catch {}
+    }
+  }));
+
+  // Active SSRF probe
+  const ssrfPayloads = ['http://169.254.169.254/latest/meta-data/', 'http://localhost/', 'http://127.0.0.1/', 'file:///etc/passwd'];
+  const ssrfParams = ['url','path','file','image','avatar','logo','photo','doc','download','redirect','return','callback','next','target','link','href','src','uri','host','domain','site','page','web','api','endpoint','service','proxy','fetch','load','import','include','require','source','origin','referer','request'];
+  await Promise.all(ssrfParams.slice(0,10).map(async (param) => {
+    for (const payload of ssrfPayloads.slice(0,2)) {
+      try {
+        const testUrl = `${base}?${param}=${encodeURIComponent(payload)}`;
+        const res = await fetchURL(testUrl, 'GET', { 'Connection': 'close' }, undefined, timeout);
+        if (res.body.includes('ami-id') || res.body.includes('instance-id') || res.body.includes('local-ipv4') || res.body.includes('root:x:') || res.status === 200 && /localhost|127\.0\.0\.1|internal/.test(res.body)) {
+          vulns.push({ type: 'ssrf', severity: 'critical', url: testUrl, description: `SSRF confirmed — parameter "${param}" fetches internal resource: "${payload}"`, evidence: res.body.slice(0,200), confidence: 'confirmed' });
+          return;
+        }
+      } catch {}
+    }
+  }));
+
+  // Open Redirect probe
+  const redirectPayloads = ['https://evil.com', '//evil.com', '/\\evil.com', 'http://evil.com', 'https://www.google.com'];
+  const redirectParams = ['redirect','return','next','url','link','target','goto','return_url','callback','continue','forward','dest','destination','redir','uri','path','to','from','source','ref','referrer'];
+  await Promise.all(redirectParams.slice(0,10).map(async (param) => {
+    for (const payload of redirectPayloads) {
+      try {
+        const testUrl = `${base}?${param}=${encodeURIComponent(payload)}`;
+        const res = await fetchURL(testUrl, 'GET', { 'Connection': 'close' }, undefined, timeout);
+        const loc = res.headers['location'] || '';
+        if (loc.includes('evil.com') || loc.includes('google.com') && !loc.includes(u.hostname)) {
+          vulns.push({ type: 'open_redirect', severity: 'high', url: testUrl, description: `Open redirect confirmed — parameter "${param}" redirects to external domain without validation`, evidence: `Location: ${loc}`, confidence: 'confirmed' });
+          return;
+        }
+      } catch {}
+    }
+  }));
+
+  return vulns;
+}
+
+// ─── CMS / Framework Prober ─────────────────────────────────────────────────
+async function probeCMS(url: string, body: string, headers: Record<string, string>, timeout=8000): Promise<{ techs: {name:string,version?:string}[]; vulns: WebVuln[] }> {
+  const techs: {name:string,version?:string}[] = [];
+  const vulns: WebVuln[] = [];
+  const u = new URL(url);
+  const proto = `${u.protocol}//${u.host}`;
+
+  // WordPress deep probe
+  if (body.includes('/wp-content/') || body.includes('/wp-includes/') || headers['x-powered-by']?.includes('WordPress') || body.includes('wp-json')) {
+    techs.push({ name: 'WordPress' });
+    try {
+      const r = await fetchURL(`${proto}/wp-includes/css/dist/block-library/style.min.css?ver=`, 'GET', undefined, undefined, timeout);
+      const m = r.body.match(/ver=(\d+\.\d+\.?\d*)/);
+      if (m) { techs[techs.length-1].version = m[1]; }
+    } catch {}
+    try {
+      const r2 = await fetchURL(`${proto}/readme.html`, 'GET', undefined, undefined, timeout);
+      const m2 = r2.body.match(/WordPress\s+(\d+\.\d+\.?\d*)/i);
+      if (m2) { techs[techs.length-1].version = m2[1]; }
+    } catch {}
+    vulns.push({ type: 'wordpress_issue', severity: 'info', url, description: 'WordPress detected — verify plugins/themes are updated and XML-RPC is restricted', evidence: 'wp-content/wp-includes paths found', confidence: 'confirmed' });
+  }
+
+  // Drupal deep probe
+  if (body.includes('/sites/default/') || headers['x-generator']?.includes('Drupal') || body.includes('drupal')) {
+    techs.push({ name: 'Drupal' });
+    try {
+      const r = await fetchURL(`${proto}/CHANGELOG.txt`, 'GET', undefined, undefined, timeout);
+      const m = r.body.match(/Drupal\s+(\d+\.\d+\.?\d*)/i);
+      if (m) techs[techs.length-1].version = m[1];
+    } catch {}
+  }
+
+  // Joomla deep probe
+  if (body.includes('/media/jui') || body.includes('/templates/') || headers['x-generator']?.includes('Joomla')) {
+    techs.push({ name: 'Joomla' });
+    try {
+      const r = await fetchURL(`${proto}/administrator/manifests/files/joomla.xml`, 'GET', undefined, undefined, timeout);
+      const m = r.body.match(/<version>(\d+\.\d+\.?\d*)<\/version>/i);
+      if (m) techs[techs.length-1].version = m[1];
+    } catch {}
+  }
+
+  // Magento probe
+  if (body.includes('/magento/') || body.includes('/skin/frontend/') || headers['x-magento-vary']) {
+    techs.push({ name: 'Magento' });
+    try {
+      const r = await fetchURL(`${proto}/magento_version`, 'GET', undefined, undefined, timeout);
+      const m = r.body.match(/Magento\s+(\d+\.\d+\.?\d*)/i);
+      if (m) techs[techs.length-1].version = m[1];
+    } catch {}
+  }
+
+  // Laravel probe
+  if (headers['x-powered-by']?.includes('Laravel') || body.includes('csrf-token') && body.includes('app-url') || body.includes('laravel_session')) {
+    techs.push({ name: 'Laravel' });
+    try {
+      const r = await fetchURL(`${proto}/_debugbar/open`, 'GET', undefined, undefined, timeout);
+      if (r.status === 200) {
+        vulns.push({ type: 'api_exposure', severity: 'high', url: `${proto}/_debugbar/open`, description: 'Laravel debugbar exposed — may leak environment variables, SQL queries, and session data', evidence: '200 OK on /_debugbar/open', confidence: 'confirmed' });
+      }
+    } catch {}
+  }
+
+  // Django probe
+  if (headers['wsgi']?.includes('Django') || body.includes('csrftoken') || body.includes('__debug__')) {
+    techs.push({ name: 'Django' });
+    try {
+      const r = await fetchURL(`${proto}/static/admin/`, 'GET', undefined, undefined, timeout);
+      if (r.status === 200) {
+        const m = r.body.match(/Django\s+(\d+\.\d+\.?\d*)/i);
+        if (m) techs[techs.length-1].version = m[1];
+      }
+    } catch {}
+  }
+
+  // Spring Boot probe
+  if (body.includes('Whitelabel Error Page') || headers['x-application-context']) {
+    techs.push({ name: 'Spring Boot' });
+  }
+
+  // Ruby on Rails probe
+  if (body.includes('csrf-param') && body.includes('authenticity_token') || headers['x-runtime']) {
+    techs.push({ name: 'Ruby on Rails' });
+    try {
+      const r = await fetchURL(`${proto}/assets/rails.png`, 'GET', undefined, undefined, timeout);
+      if (r.status === 200) techs.push({ name: 'Ruby on Rails' });
+    } catch {}
+  }
+
+  return { techs, vulns };
+}
+
+// ─── Subdomain Brute-Force Wordlist ─────────────────────────────────────────
+const SUBDOMAIN_WORDLIST: string[] = [
+  'www','mail','ftp','localhost','webmail','smtp','pop','ns1','webdisk','ns2','cpanel','whm',
+  'autodiscover','autoconfig','m','imap','test','ns','blog','pop3','dev','www2','admin','forum',
+  'news','vpn','ns3','mail2','new','mysql','old','lists','support','mobile','mx','static','docs',
+  'beta','shop','search','images','mail1','www1','api','secure','demo','cp','calendar','wiki','web',
+  'media','email','help','www3','office','mssql','mysql','db','administrator','upload','exchange',
+  'app','intranet','staging','development','test2','test1','owa','newsletter','monitoring','git',
+  'chat','login','webmail2','www4','web2','web1','ns4','remote','connect','mx1','mail3','server',
+  'services','host','www5','sip','dns','ftp2','cloud','mx2','mail4','citrix','extranet','web3',
+  'www6','webconf','ldap','dashboard','staging2','preview','uat','preprod','prod','production',
+  'live','www7','web4','www8','web5','www9','web6','www10','web7','sip2','video','conference',
+  'meet','teams','share','files','storage','cdn','assets','static1','static2','img','images1',
+  'images2','photo','photos','gallery','portal','sso','auth','identity','oauth','idp','sts',
+  'gateway','proxy','firewall','router','switch','lb','loadbalancer','cdn1','cdn2','edge','cache',
+  'origin','source','mirror','backup','archive','logs','log','monitor','prometheus','grafana',
+  'graphite','zabbix','nagios','icinga','cacti','splunk','elk','kibana','elastic','search',
+  'solr','lucene','redis','memcached','rabbitmq','kafka','mqtt','websocket','ws','socket',
+  'api1','api2','api3','v1','v2','v3','version','rest','graphql','graphiql','playground',
+  'swagger','docs','documentation','helpdesk','support','ticket','crm','erp','sap','salesforce',
+  'jira','confluence','bitbucket','stash','gitlab','github','git','svn','repo','repository',
+  'ci','cd','jenkins','bamboo','teamcity','travis','circleci','build','deploy','release',
+  'artifactory','nexus','maven','npm','pypi','docker','registry','harbor','kubernetes','k8s',
+  'openshift','rancher','nomad','consul','vault','terraform','pulumi','ansible','puppet','chef',
+  'salt','cfengine','fabric','deploy','release','staging','canary','blue','green','dark',
+  'launch','experiment','ab','test','qa','qc','audit','compliance','governance','risk',
+  'security','sec','soc','siem','ids','ips','waf','firewall','av','edr','mdr','xdr',
+  'threat','intel','cti','osint','recon','pentest','redteam','blueteam','purple','war','game',
+  'training','learn','edu','academy','university','school','college','campus','student',
+  'alumni','faculty','staff','hr','payroll','benefits','insurance','finance','accounting',
+  'budget','tax','legal','compliance','gdpr','hipaa','pci','iso','soc2','nist','fedramp',
+  'dod','gov','government','municipal','city','county','state','federal','national','public',
+  'private','internal','external','dmz','trust','untrust','guest','partner','vendor','supplier',
+  'contractor','temp','intern','volunteer','member','user','customer','client','prospect',
+  'lead','contact','account','organization','company','corp','inc','llc','ltd','gmbh','sa',
+  'srl','spa','bv','nv','plc','pty','as','ab','oy','kg','co','com','net','org','info','biz',
+  'us','eu','asia','africa','au','br','ca','cn','de','es','fr','in','it','jp','kr','mx','nl',
+  'ru','se','sg','tr','uk','za','global','intl','world','earth','planet','universe','space',
+  'mars','moon','sun','star','galaxy','nebula','cosmos','quantum','nano','micro','macro',
+  'mega','giga','tera','peta','exa','zetta','yotta','bronto','geo','terra','hydro','aero',
+  'bio','chem','phys','math','med','health','care','hospital','clinic','pharmacy','lab',
+  'research','science','tech','technology','innovation','future','next','now','today',
+  'tomorrow','yesterday','history','legacy','heritage','tradition','culture','art','design',
+  'creative','studio','agency','firm','practice','consulting','advisory','strategy','plan',
+  'project','program','portfolio','product','service','solution','platform','system','infra',
+  'infrastructure','architecture','engineering','dev','development','develop','code','coder',
+  'coding','hack','hacker','hackathon','bug','debug','fix','patch','update','upgrade','version',
+  'release','snapshot','build','compile','deploy','ship','deliver','launch','go','start',
+  'stop','pause','resume','restart','reboot','shutdown','power','energy','renewable','solar',
+  'wind','hydro','geo','thermal','nuclear','fusion','fission','atom','molecule','cell',
+  'gene','dna','rna','protein','enzyme','bacteria','virus','immune','vaccine','medicine',
+  'therapy','treatment','cure','heal','recover','rehab','wellness','fitness','gym','sport',
+  'game','play','fun','joy','happy','smile','love','peace','hope','dream','vision','mission',
+  'goal','target','aim','objective','purpose','meaning','value','worth','price','cost',
+  'budget','spend','save','invest','return','profit','loss','revenue','income','expense',
+  'asset','liability','equity','capital','fund','finance','bank','credit','debit','loan',
+  'mortgage','insurance','policy','claim','risk','reward','bonus','commission','salary',
+  'wage','pay','payment','invoice','bill','receipt','transaction','transfer','wire','swift',
+  'iban','bic','routing','account','wallet','purse','pocket','cash','check','cheque','draft',
+  'money','currency','dollar','euro','yen','pound','franc','rupee','rand','real','peso',
+  'won','dinar','rial','dirham','ruble','yuan','baht','ringgit','rupiah','dong','kip',
+  'kyat','riel','taka','rupee','lanka','nepal','bhutan','maldives','seychelles','mauritius',
+  'madagascar','comoros','mayotte','reunion','martinique','guadeloupe','guyane','polynesia',
+  'caledonia','wallis','futuna','pitcairn','tokelau','niue','cook','samoa','tonga','tuvalu',
+  'nauru','kiribati','palau','marshall','micronesia','guam','northern','mariana','saipan',
+  'tinian','rota','wake','midway','johnston','kingman','palmyra','baker','howland','jarvis',
+  'navassa','bajo','nuevo','serranilla','quitasueno','roncador','serrana','cayos','cays',
+  'islands','isles','keys','cays','reefs','atolls','banks','shoals','seamount','guyot',
+  'ridge','trench','canyon','valley','plain','plateau','mountain','peak','summit','crest',
+  'pinnacle','apex','vertex','zenith','acme','culmination','climax','apex','apogee','perigee',
+  'aphelion','perihelion','apsis','node','focus','center','core','heart','hub','nexus','link',
+  'bond','tie','connection','relation','association','affiliation','alliance','coalition',
+  'union','league','federation','confederation','commonwealth','republic','democracy',
+  'monarchy','oligarchy','aristocracy','plutocracy','theocracy','technocracy','meritocracy',
+  'autocracy','dictatorship','tyranny','despotism','totalitarianism','authoritarianism',
+  'fascism','nazism','communism','socialism','capitalism','liberalism','conservatism',
+  'progressivism','radicalism','extremism','terrorism','militancy','insurgency','rebellion',
+  'revolution','uprising','mutiny','coup','putsch','junta','regime','government','state',
+  'nation','country','land','realm','domain','territory','region','area','zone','sector',
+  'district','quarter','precinct','beat','patrol','guard','watch','sentry','picket','post',
+  'station','base','camp','barracks','fort','fortress','castle','citadel','stronghold',
+  'bunker','shelter','haven','refuge','sanctuary','asylum','retreat','resort','spa','hotel',
+  'motel','inn','lodge','hostel','pension','bed','breakfast','bnb','airbnb','rental','lease',
+  'tenant','landlord','owner','proprietor','manager','superintendent','janitor','custodian',
+  'guardian','keeper','warden','ranger','warden','steward','butler','maid','servant','valet',
+  'chauffeur','driver','pilot','captain','skipper','navigator','guide','leader','chief',
+  'head','boss','director','executive','officer','official','functionary','bureaucrat',
+  'clerk','secretary','assistant','aide','adjutant','aide-de-camp','attaché','envoy',
+  'emissary','delegate','representative','agent','proxy','substitute','replacement',
+  'stand-in','understudy','reserve','backup','spare','extra','surplus','excess','overflow',
+  'overrun','glut','surfeit','abundance','plenty','profusion','wealth','rich','opulent',
+  'lavish','extravagant','luxurious','sumptuous','magnificent','splendid','grand','imposing',
+  'impressive','striking','dramatic','theatrical','spectacular','sensational','amazing',
+  'astonishing','astounding','stunning','staggering','shocking','startling','surprising',
+  'unexpected','unforeseen','unanticipated','unpredicted','unlooked-for','out of the blue',
+];
+
+// ─── Enhanced Subdomain Enumeration ───────────────────────────────────────
+async function enumerateSubdomainsBrute(target: string): Promise<Record<string, string[]>> {
+  const results: Record<string, string[]> = {};
+  const base = target.replace(/^www\./, '');
+  const batch = SUBDOMAIN_WORDLIST.slice(0,60); // limit for serverless
+  await Promise.all(batch.map(async (sub) => {
+    const host = `${sub}.${base}`;
+    try {
+      const ips = await resolve4(host);
+      if (ips && ips.length > 0) results[host] = ips;
+    } catch {}
+  }));
+  // Always include the base domain
+  try {
+    const ips = await resolve4(base);
+    if (ips && ips.length > 0) results[base] = ips;
+  } catch {}
+  return results;
+}
+
 // ─── SSL / TLS Analyzer ─────────────────────────────────────────────────────
 
 async function analyzeSSLInfo(headers: Record<string, string>, url: string): Promise<SSLInfo> {
@@ -1997,6 +2397,12 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                     web = await fetchURL(`${proto}://${sub}:${port}`, 'GET', undefined, undefined, timeout);
                     const finalUrl = web.redirectUrls[web.redirectUrls.length-1] || `${proto}://${sub}:${port}`;
                     webVulns = await detectWebVulnsAdvanced(finalUrl, web.headers, web.body, web.status);
+                    // Active path fuzzing
+                    try { const pathVulns = await probePaths(finalUrl, timeout); webVulns.push(...pathVulns); } catch {}
+                    // Active parameter injection testing
+                    try { const injectVulns = await testParameterInjection(finalUrl, web.headers, web.body, web.status, timeout); webVulns.push(...injectVulns); } catch {}
+                    // CMS / framework deep probe
+                    try { const cmsRes = await probeCMS(finalUrl, web.body, web.headers, timeout); if (cmsRes.techs.length) { techs.push(...cmsRes.techs.map(t => ({...t, category: 'CMS'}))); cves.push(...mapCVEs(cmsRes.techs.map(t => ({...t, category: 'CMS'}))).filter(c=>!cves.some(ex=>ex.id===c.id))); } webVulns.push(...cmsRes.vulns); } catch {}
                     const techsWeb = detectTechnologies(web.headers, web.body);
                     cves.push(...mapCVEs(techsWeb).filter(c=>!cves.some(ex=>ex.id===c.id)));
                     waf = detectWAF(web.headers, web.body);
