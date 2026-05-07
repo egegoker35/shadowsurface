@@ -1447,11 +1447,12 @@ function fetchURL(url: string, method: string = 'GET', headers?: Record<string, 
   });
 }
 
-function bannerGrab(host: string, port: number, timeout = 10000, payload?: string): Promise<string> {
+function bannerGrab(host: string, port: number, timeout = 10000, payload?: string, hostHeader?: string): Promise<string> {
   return new Promise((resolve) => {
     const isHttps = port === 443 || port === 8443;
     const client = isHttps ? httpsRequest : httpRequest;
-    const req = client({ hostname: host, port, path: '/', method: 'GET', headers: { 'Host': host, 'User-Agent': 'ShadowSurface/3.0', 'Connection': 'close' } }, (res) => { let data=''; res.on('data',c=>data+=c); res.on('end',()=>resolve(data.slice(0,512))); res.on('error',()=>resolve('')); });
+    const h = hostHeader || host;
+    const req = client({ hostname: host, port, path: '/', method: 'GET', headers: { 'Host': h, 'User-Agent': 'ShadowSurface/3.0', 'Connection': 'close' } }, (res) => { let data=''; res.on('data',c=>data+=c); res.on('end',()=>resolve(data.slice(0,512))); res.on('error',()=>resolve('')); });
     req.setTimeout(timeout, () => { req.destroy(); resolve(''); });
     req.on('error', () => resolve(''));
     req.end();
@@ -1977,7 +1978,7 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
         for (let p=0; p<pList.length; p+=portBatch) {
           await Promise.all(pList.slice(p, p+portBatch).map(async (port) => {
             try {
-              const banner = await bannerGrab(ip, port, timeout);
+              const banner = await bannerGrab(ip, port, timeout, undefined, sub);
               const isAlwaysCheck = [80,443,8080,8443,3000,5000,8000,9000].includes(port);
               if (banner || isAlwaysCheck) {
                 const svc = SERVICE_NAMES[port] || 'unknown';
@@ -1995,12 +1996,14 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                 let web: any = null;
                 if (port===80 || port===443 || port===8080 || port===8443 || /HTTP|Web|Proxy/i.test(svc)) {
                   try {
-                    web = await fetchURL(`http${port===443||port===8443?'s':''}://${ip}:${port}`, 'GET', undefined, undefined, timeout);
-                    webVulns = await detectWebVulnsAdvanced(web.redirectUrls[web.redirectUrls.length-1] || `http${port===443||port===8443?'s':''}://${ip}:${port}`, web.headers, web.body, web.status);
+                    const proto = port===443||port===8443 ? 'https' : 'http';
+                    web = await fetchURL(`${proto}://${sub}:${port}`, 'GET', undefined, undefined, timeout);
+                    const finalUrl = web.redirectUrls[web.redirectUrls.length-1] || `${proto}://${sub}:${port}`;
+                    webVulns = await detectWebVulnsAdvanced(finalUrl, web.headers, web.body, web.status);
                     const techsWeb = detectTechnologies(web.headers, web.body);
                     cves.push(...mapCVEs(techsWeb).filter(c=>!cves.some(ex=>ex.id===c.id)));
                     waf = detectWAF(web.headers, web.body);
-                    sslInfo = await analyzeSSLInfo(web.headers, web.redirectUrls[web.redirectUrls.length-1] || `http${port===443||port===8443?'s':''}://${ip}:${port}`);
+                    sslInfo = await analyzeSSLInfo(web.headers, finalUrl);
                     sslGrade = gradeSSL(sslInfo);
                   } catch {}
                 }
