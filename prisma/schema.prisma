@@ -50,8 +50,8 @@ model Scan {
   durationSeconds Float?
   orgId         String
   org           Organization @relation(fields: [orgId], references: [id])
-  createdById   String
-  createdBy     User     @relation("CreatedBy", fields: [createdById], references: [id])
+  createdById   String?
+  createdBy     User?    @relation("CreatedBy", fields: [createdById], references: [id])
   assets        Asset[]
   cloudAssets   CloudAsset[]
   createdAt     DateTime @default(now())
