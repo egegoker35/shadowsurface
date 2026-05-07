@@ -1987,9 +1987,10 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                 let sslInfo: SSLInfo | null = null;
                 let sslGrade: DiscoveredAsset['sslGrade'] = undefined;
                 let waf: string | null = null;
+                let web: any = null;
                 if (port===80 || port===443 || port===8080 || port===8443 || /HTTP|Web|Proxy/i.test(svc)) {
                   try {
-                    const web = await fetchURL(`http${port===443||port===8443?'s':''}://${ip}:${port}`, 'GET', undefined, undefined, timeout);
+                    web = await fetchURL(`http${port===443||port===8443?'s':''}://${ip}:${port}`, 'GET', undefined, undefined, timeout);
                     webVulns = await detectWebVulnsAdvanced(web.redirectUrls[web.redirectUrls.length-1] || `http${port===443||port===8443?'s':''}://${ip}:${port}`, web.headers, web.body, web.status);
                     const techsWeb = detectTechnologies(web.headers, web.body);
                     cves.push(...mapCVEs(techsWeb).filter(c=>!cves.some(ex=>ex.id===c.id)));
@@ -2000,11 +2001,14 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                 }
                 const techsBanner = detectTechnologies({'server':banner}, banner);
                 cves.push(...mapCVEs(techsBanner).filter(c=>!cves.some(ex=>ex.id===c.id)));
+                // Smart tech fallback: use service name as technology if nothing detected, and always record web headers for SSL display
+                const techName = techs[0]?.name || techsBanner[0]?.name || svc || 'Unknown';
+                const techVer = techs[0]?.version || techsBanner[0]?.version || null;
                 const asset: DiscoveredAsset = {
-                  id: genId(), domain: sub, subdomain: sub, ip, port, service: svc, banner, technology: techs[0]?.name||techsBanner[0]?.name||null,
-                  version: techs[0]?.version||techsBanner[0]?.version||null,
+                  id: genId(), domain: sub, subdomain: sub, ip, port, service: svc, banner, technology: techName,
+                  version: techVer,
                   cves: cves.map(c=>c.id), cveConfidence: cves.length>0 ? 'high' : 'low',
-                  cloudProvider: null, riskScore: 0, findings, headers: {}, sslInfo, sslGrade, waf,
+                  cloudProvider: null, riskScore: 0, findings, headers: (web && web.headers) ? web.headers : { server: banner.slice(0,80) }, sslInfo, sslGrade, waf,
                   webVulns, firstSeen: new Date().toISOString(),
                   complianceStatus: { owasp:[], pciDss:[], gdpr:[] },
                   cvssMax: cves.length ? Math.max(...cves.map(c=>c.cvss)) : 0,
