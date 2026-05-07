@@ -144,7 +144,7 @@ const SERVICE_NAMES: Record<number, string> = {
   4689:'DynSite',4700:'NetXMS',4711:'Trickster',4725:'snap',4730:'OTR',4745:'AppServer',4750:'BMC',
   4751:'BMC2',4752:'BMC3',4786:'Cisco-SmartInstall',4789:'QuickBooks',4800:'Icona',4801:'Icona2',
   4802:'Icona3',4827:'HTCP',4848:'Acronis',4878:'Sonar',4885:'ABBS',4899:'Radmin',4900:'MUSE',
-  5000:'UPnP',5001:'SSL',5002:'Radio',5003:'FileMaker',5004:'AVT',5005:'AVT2',5006:'WMS',5007:'WMS2',
+  5000:'HTTP',5001:'SSL',5002:'Radio',5003:'FileMaker',5004:'AVT',5005:'AVT2',5006:'WMS',5007:'WMS2',
   5008:'WMS3',5009:'Airport',5037:'ADB-Android',5038:'Couchbase',5044:'Logstash',5050:'MMCC',5051:'ITA',
   5054:'RLM',5060:'SIP',5061:'SIP-SSL',5093:'SentLM',5094:'SentLM2',5104:'Fusion',5105:'Fusion2',
   5108:'VPMS',5145:'Rmonitor',5150:'ATMP',5151:'ESRI-SDE',5152:'ESRI-SDE-ICMP',5154:'BMC-PATROL',
@@ -172,16 +172,16 @@ const SERVICE_NAMES: Record<number, string> = {
   7778:'CBT2',7779:'CBT3',7780:'CBT4',7781:'CBT5',7787:'CBT6',7788:'CBT7',7789:'CBT8',7790:'CBT9',
   7791:'CBT10',7794:'CBT11',7800:'ASR',7801:'ASR2',7802:'ASR3',7831:'Rugrat',7869:'Mobile',7878:'Mobile2',
   7879:'Mobile3',7880:'Mobile4',7902:'Mobile5',7911:'Mobile6',7920:'Mobile7',7921:'Mobile8',7937:'NSRMP',
-  7938:'NSRMP2',7998:'IRTP',7999:'IRTP2',8000:'HTTP-Alt',8001:'VCOM',8002:'Teradata',8007:'Ajile',
+  7938:'NSRMP2',7998:'IRTP',7999:'IRTP2',8000:'HTTP',8001:'VCOM',8002:'Teradata',8007:'Ajile',
   8008:'HTTP',8009:'AJP',8010:'LogiCAD',8011:'LogiCAD2',8021:'Z-Wave',8022:'OA',8031:'ProEd',8042:'FSP',
-  8045:'Daytime-Alt',8080:'HTTP-Proxy',8081:'HTTP-Alt2',8082:'HTTP-Alt3',8083:'HTTP-Alt4',8084:'HTTP-Alt5',
-  8085:'HTTP-Alt6',8086:'InfluxDB',8087:'InfluxDB-HTTP',8088:'Splunk',8089:'Splunk2',8090:'HTTP-Alt7',
+  8045:'Daytime-Alt',8080:'HTTP',8081:'HTTP',8082:'HTTP',8083:'HTTP',8084:'HTTP',
+  8085:'HTTP',8086:'InfluxDB',8087:'InfluxDB-HTTP',8088:'Splunk',8089:'Splunk2',8090:'HTTP-Alt7',
   8091:'Couchbase',8092:'Couchbase2',8093:'Couchbase3',8094:'Couchbase4',8095:'Couchbase5',8096:'Couchbase6',
   8097:'Couchbase7',8098:'Couchbase8',8099:'Couchbase9',8100:'Xprint',8110:'Claris',8111:'Claris2',
   8112:'Deluge',8118:'Privoxy',8123:'Polipo',8130:'IND',8131:'IND2',8139:'Puppet',8140:'Puppet-Master',
   8161:'ActiveMQ',8181:'HTTP-Alt8',8192:'SARAD',8193:'SARAD2',8194:'SARAD3',8200:'Trivnet',8222:'VMware-Auth',
   8254:'VMware2',8290:'Bloomberg',8291:'Bloomberg2',8292:'Bloomberg3',8300:'Transmitter',8333:'Bitcoin',
-  8383:'M2M',8400:'CVD',8402:'Abars',8443:'HTTPS-Alt',8500:'FLO',8501:'FLO2',8600:'Surveillance',
+  8383:'M2M',8400:'CVD',8402:'Abars',8443:'HTTPS',8500:'FLO',8501:'FLO2',8600:'Surveillance',
   8649:'CDDB',8686:'Sun-Answerbook',8787:'MsgCLNT',8800:'Sun-Web',8834:'O2-Online',9000:'CSlistener',
   9001:'ETL',9002:'ETL2',9003:'ETL3',9042:'Cassandra-CQL',9043:'Cassandra-Thrift',9060:'CardWeb',
   9071:'CardWeb2',9080:'WebSphere',9081:'WebSphere2',9090:'WebSM',9091:'WebSM2',9092:'WebSM3',
@@ -1759,14 +1759,11 @@ async function analyzeSSLInfo(headers: Record<string, string>, url: string): Pro
   info.hsts = !!hsts;
   info.certificateTransparency = !!(headers['expect-ct'] || headers['cf-ray']);
   info.ocspStapling = !!(headers['x-ocsp-response'] || headers['status-request']);
-  info.tls13 = /TLSv1\.3|1\.3/i.test(headers['tls-version'] || '');
-  info.tls12 = /TLSv1\.2|1\.2/i.test(headers['tls-version'] || '');
-  info.tls11 = /TLSv1\.1|1\.1/i.test(headers['tls-version'] || '');
-  info.tls10 = /TLSv1\.0|1\.0|SSLv3|SSLv2/i.test(headers['tls-version'] || '');
+  info.tls13 = false;
+  info.tls12 = false;
+  info.tls11 = false;
+  info.tls10 = false;
   info.weakProtocols = [];
-  if (info.tls10) info.weakProtocols.push('TLS 1.0');
-  if (info.tls11) info.weakProtocols.push('TLS 1.1');
-  if (info.tls13) info.weakProtocols.push('TLS 1.3');
   const cipher = headers['x-cipher-suite'] || headers['cipher-suite'] || '';
   const weakCiphers = /RC4|DES|3DES|MD5|NULL|EXPORT|anon/i.test(cipher);
   info.weakCipher = weakCiphers;
@@ -2044,38 +2041,39 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
 function calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[]) {
   for (const a of assets) {
     let score = 0;
+    // Baseline: internet-exposed service
+    score += 1;
+    score += a.port && a.port < 1024 ? 1 : 0;
+    // CVE impact
     const cvssMax = a.cvssMax || 0;
-    const exploitBonus = a.exploitAvailable ? 25 : 0;
-    // Base score from criticality
-    score += Math.min(cvssMax * 2.0, 60);
-    score += Math.min(a.cves.length * 5, 35);
+    const exploitBonus = a.exploitAvailable ? (cvssMax >= 9 ? 10 : cvssMax >= 7 ? 6 : cvssMax >= 5 ? 3 : 1) : 0;
+    score += Math.min(a.cves.length * 1, 8);
+    score += Math.min(cvssMax * 1.2, 25);
     score += exploitBonus;
-    // Port-based penalties
-    if (EXPOSABLE_DB_PORTS.has(a.port)) score += 20;
-    if (DANGEROUS_PORTS.has(a.port)) score += 15;
-    if ([21,23,3389,5900].includes(a.port)) score += 18;
+    // Port-based penalties (realistic)
+    if (EXPOSABLE_DB_PORTS.has(a.port)) score += 25;
+    if (DANGEROUS_PORTS.has(a.port)) score += 18;
+    if ([21,23,3389,5900].includes(a.port)) score += 14;
     // Web vulnerabilities
     let webScore = 0;
     for (const w of (a.webVulns||[])) {
-      if (w.severity === 'critical') webScore += 20;
-      else if (w.severity === 'high') webScore += 12;
-      else if (w.severity === 'medium') webScore += 6;
-      else webScore += 2;
+      if (w.severity === 'critical') webScore += 12;
+      else if (w.severity === 'high') webScore += 6;
+      else if (w.severity === 'medium') webScore += 2;
+      else webScore += 1;
     }
-    score += Math.min(webScore, 45);
-    // Findings (dangerous services, exposed DBs, default creds, missing headers, etc.)
+    score += Math.min(webScore, 30);
+    // Findings
     const critFindings = a.findings.filter(f=>f.severity==='critical').length;
     const highFindings = a.findings.filter(f=>f.severity==='high').length;
     const medFindings = a.findings.filter(f=>f.severity==='medium').length;
-    score += Math.min(critFindings*25 + highFindings*15 + medFindings*5, 50);
+    score += Math.min(critFindings*15 + highFindings*8 + medFindings*2, 25);
     // SSL penalty
-    const sslPenalty = a.sslGrade==='F' ? 20 : a.sslGrade==='E' ? 15 : a.sslGrade==='D' ? 10 : a.sslGrade==='C' ? 5 : a.sslGrade==='T'?20 : a.sslGrade==='X'?20 : 0;
+    const sslPenalty = a.sslGrade==='F' ? 12 : a.sslGrade==='E' ? 8 : a.sslGrade==='D' ? 5 : a.sslGrade==='C' ? 2 : a.sslGrade==='T'?12 : a.sslGrade==='X'?12 : 0;
     score += sslPenalty;
-    // WAF bonus (protection reduces risk slightly)
-    if (a.waf) score -= 8;
+    // WAF bonus
+    if (a.waf) score -= 4;
     a.riskScore = Math.min(Math.max(Math.round(score), 0), 100);
-    // Ensure minimum risk for any internet-exposed service
-    if (a.port && a.port !== 0 && a.riskScore < 8) a.riskScore = 8;
   }
   for (const c of cloudAssets) {
     c.riskScore = Math.min(Math.max(c.riskScore, 0), 100);
