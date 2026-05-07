@@ -2180,6 +2180,8 @@ export class ScannerEngine {
     const start = Date.now();
     const subdomains = await this.enumerateSubdomains();
     const assets = await scanPortsOnAssets(subdomains, TOP_PORTS.slice(0, portLimit));
+    dedupeFindings(assets);
+    calculateRiskScores(assets, []);
     this.scanResult.assets=assets; this.scanResult.durationSeconds=(Date.now()-start)/1000;
     this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:0, highRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount:assets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount:assets.filter(a=>a.riskScore<15).length, infoCount:0, totalCVEs:assets.reduce((s,a)=>s+a.cves.length,0), totalWebVulns:assets.reduce((s,a)=>s+(a.webVulns?.length||0),0), sslIssues:assets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length, totalExploits:assets.filter(a=>a.exploitAvailable).length, weakSSLCount:assets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length, missingHeaderCount:assets.reduce((s,a)=>s+(a.webVulns?.filter(w=>w.type==='missing_header').length||0),0), exposedDBCount:assets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length, exposedAdminCount:0 };
     const maxPortRisk = Math.max(...assets.map(a=>a.riskScore),0);
