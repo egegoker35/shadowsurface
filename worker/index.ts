@@ -5,7 +5,7 @@ import { runDemoScan } from '@/lib/scanner/demoScanner';
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 5000;
-const SCAN_HARD_TIMEOUT_MS = 300000; // 5 minutes max per scan
+const SCAN_HARD_TIMEOUT_MS = 3600000; // 1 hour max per scan
 const MAX_CONCURRENT_SCANS = 2;
 
 let activeScans = 0;

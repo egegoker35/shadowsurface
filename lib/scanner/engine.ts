@@ -1417,7 +1417,7 @@ const CLOUD_PATTERNS = {
 
 
 // ─── Helper Functions ───────────────────────────────────────────────────────
-function fetchURL(url: string, method: string = 'GET', headers?: Record<string, string>, body?: string, timeout = 15000): Promise<{ status: number; headers: Record<string, string>; body: string; redirectUrls: string[] }> {
+function fetchURL(url: string, method: string = 'GET', headers?: Record<string, string>, body?: string, timeout = 30000): Promise<{ status: number; headers: Record<string, string>; body: string; redirectUrls: string[] }> {
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
     const isHttps = parsed.protocol === 'https:';
@@ -1446,7 +1446,7 @@ function fetchURL(url: string, method: string = 'GET', headers?: Record<string, 
   });
 }
 
-function bannerGrab(host: string, port: number, timeout = 5000, payload?: string): Promise<string> {
+function bannerGrab(host: string, port: number, timeout = 10000, payload?: string): Promise<string> {
   return new Promise((resolve) => {
     const isHttps = port === 443 || port === 8443;
     const client = isHttps ? httpsRequest : httpRequest;
@@ -1913,58 +1913,61 @@ async function scanCloud(domain: string): Promise<CloudAsset[]> {
 }
 
 // ─── Port Scanner ─────────────────────────────────────────────────────────
-async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: number[], timeout=5000): Promise<DiscoveredAsset[]> {
+async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: number[], timeout=15000): Promise<DiscoveredAsset[]> {
   const assets: DiscoveredAsset[] = [];
   const entries = Object.entries(subdomains);
   const chunkSize = 8;
+  const portBatch = 32;
   for (let i=0; i<entries.length; i+=chunkSize) {
     const chunk = entries.slice(i, i+chunkSize);
     await Promise.all(chunk.map(async ([sub, ips]) => {
       for (const ip of ips) {
-        for (const port of ports.slice(0,100)) {
-          try {
-            const banner = await bannerGrab(ip, port, timeout);
-            if (banner || [80,443,8080,8443,3000,5000,8000,9000].includes(port)) {
-              const svc = SERVICE_NAMES[port] || 'unknown';
-              const techs = detectTechnologies({}, banner);
-              const cves = mapCVEs(techs);
-              const findings: Finding[] = [];
-              if (DANGEROUS_PORTS.has(port)) findings.push({ type:'dangerous_service', severity:'high', port, service:svc, description:`${svc} exposed on port ${port}`, evidence:banner.slice(0,120)});
-              if (EXPOSABLE_DB_PORTS.has(port)) findings.push({ type:'exposed_database', severity:'critical', port, service:svc, description:`Database ${svc} exposed on port ${port}`, evidence:banner.slice(0,120)});
-              const creds = DEFAULT_CREDS[svc];
-              if (creds) findings.push({ type:'default_creds', severity:'critical', port, service:svc, description:`${svc} may have default credentials: ${creds.slice(0,3).join(', ')}...`, evidence:creds.slice(0,3).join(', ')});
-              // Try HTTP fetch for web services
-              let webVulns: WebVuln[] = [];
-              let sslInfo: SSLInfo | null = null;
-              let sslGrade: DiscoveredAsset['sslGrade'] = undefined;
-              let waf: string | null = null;
-              if (port===80 || port===443 || port===8080 || port===8443 || /HTTP|Web|Proxy/i.test(svc)) {
-                try {
-                  const web = await fetchURL(`http${port===443||port===8443?'s':''}://${ip}:${port}`, 'GET', undefined, undefined, timeout);
-                  webVulns = await detectWebVulnsAdvanced(web.redirectUrls[web.redirectUrls.length-1] || `http${port===443||port===8443?'s':''}://${ip}:${port}`, web.headers, web.body, web.status);
-                  const techsWeb = detectTechnologies(web.headers, web.body);
-                  cves.push(...mapCVEs(techsWeb).filter(c=>!cves.some(ex=>ex.id===c.id)));
-                  waf = detectWAF(web.headers, web.body);
-                  sslInfo = analyzeSSLInfo(web.headers, web.redirectUrls[web.redirectUrls.length-1] || `http${port===443||port===8443?'s':''}://${ip}:${port}`);
-                  sslGrade = gradeSSL(sslInfo);
-                } catch {}
+        const pList = ports.slice(0,100);
+        for (let p=0; p<pList.length; p+=portBatch) {
+          await Promise.all(pList.slice(p, p+portBatch).map(async (port) => {
+            try {
+              const banner = await bannerGrab(ip, port, timeout);
+              const isAlwaysCheck = [80,443,8080,8443,3000,5000,8000,9000].includes(port);
+              if (banner || isAlwaysCheck) {
+                const svc = SERVICE_NAMES[port] || 'unknown';
+                const techs = detectTechnologies({}, banner);
+                const cves = mapCVEs(techs);
+                const findings: Finding[] = [];
+                if (DANGEROUS_PORTS.has(port)) findings.push({ type:'dangerous_service', severity:'high', port, service:svc, description:`${svc} exposed on port ${port}`, evidence:banner.slice(0,120)});
+                if (EXPOSABLE_DB_PORTS.has(port)) findings.push({ type:'exposed_database', severity:'critical', port, service:svc, description:`Database ${svc} exposed on port ${port}`, evidence:banner.slice(0,120)});
+                const creds = DEFAULT_CREDS[svc];
+                if (creds) findings.push({ type:'default_creds', severity:'critical', port, service:svc, description:`${svc} may have default credentials: ${creds.slice(0,3).join(', ')}...`, evidence:creds.slice(0,3).join(', ')});
+                let webVulns: WebVuln[] = [];
+                let sslInfo: SSLInfo | null = null;
+                let sslGrade: DiscoveredAsset['sslGrade'] = undefined;
+                let waf: string | null = null;
+                if (port===80 || port===443 || port===8080 || port===8443 || /HTTP|Web|Proxy/i.test(svc)) {
+                  try {
+                    const web = await fetchURL(`http${port===443||port===8443?'s':''}://${ip}:${port}`, 'GET', undefined, undefined, timeout);
+                    webVulns = await detectWebVulnsAdvanced(web.redirectUrls[web.redirectUrls.length-1] || `http${port===443||port===8443?'s':''}://${ip}:${port}`, web.headers, web.body, web.status);
+                    const techsWeb = detectTechnologies(web.headers, web.body);
+                    cves.push(...mapCVEs(techsWeb).filter(c=>!cves.some(ex=>ex.id===c.id)));
+                    waf = detectWAF(web.headers, web.body);
+                    sslInfo = analyzeSSLInfo(web.headers, web.redirectUrls[web.redirectUrls.length-1] || `http${port===443||port===8443?'s':''}://${ip}:${port}`);
+                    sslGrade = gradeSSL(sslInfo);
+                  } catch {}
+                }
+                const techsBanner = detectTechnologies({'server':banner}, banner);
+                cves.push(...mapCVEs(techsBanner).filter(c=>!cves.some(ex=>ex.id===c.id)));
+                const asset: DiscoveredAsset = {
+                  id: genId(), domain: sub, subdomain: sub, ip, port, service: svc, banner, technology: techs[0]?.name||techsBanner[0]?.name||null,
+                  version: techs[0]?.version||techsBanner[0]?.version||null,
+                  cves: cves.map(c=>c.id), cveConfidence: cves.length>0 ? 'high' : 'low',
+                  cloudProvider: null, riskScore: 0, findings, headers: {}, sslInfo, sslGrade, waf,
+                  webVulns, firstSeen: new Date().toISOString(),
+                  complianceStatus: { owasp:[], pciDss:[], gdpr:[] },
+                  cvssMax: cves.length ? Math.max(...cves.map(c=>c.cvss)) : 0,
+                  exploitAvailable: cves.some(c=>c.exploitAvailable),
+                };
+                assets.push(asset);
               }
-              // Banner-based technology detection
-              const techsBanner = detectTechnologies({'server':banner}, banner);
-              cves.push(...mapCVEs(techsBanner).filter(c=>!cves.some(ex=>ex.id===c.id)));
-              const asset: DiscoveredAsset = {
-                id: genId(), domain: sub, subdomain: sub, ip, port, service: svc, banner, technology: techs[0]?.name||techsBanner[0]?.name||null,
-                version: techs[0]?.version||techsBanner[0]?.version||null,
-                cves: cves.map(c=>c.id), cveConfidence: cves.length>0 ? 'high' : 'low',
-                cloudProvider: null, riskScore: 0, findings, headers: {}, sslInfo, sslGrade, waf,
-                webVulns, firstSeen: new Date().toISOString(),
-                complianceStatus: { owasp:[], pciDss:[], gdpr:[] },
-                cvssMax: cves.length ? Math.max(...cves.map(c=>c.cvss)) : 0,
-                exploitAvailable: cves.some(c=>c.exploitAvailable),
-              };
-              assets.push(asset);
-            }
-          } catch {}
+            } catch {}
+          }));
         }
       }
     }));
