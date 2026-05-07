@@ -1961,7 +1961,13 @@ async function scanCloud(domain: string): Promise<CloudAsset[]> {
       }
     } catch {}
   }
-  return assets;
+  // Dedupe assets by subdomain+port (same subdomain via multiple IPs creates duplicates)
+  const assetMap = new Map<string, DiscoveredAsset>();
+  for (const a of assets) {
+    const key = `${a.subdomain}:${a.port}`;
+    if (!assetMap.has(key)) assetMap.set(key, a);
+  }
+  return Array.from(assetMap.values());
 }
 
 // ─── Port Scanner ─────────────────────────────────────────────────────────
@@ -2004,7 +2010,8 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                     cves.push(...mapCVEs(techsWeb).filter(c=>!cves.some(ex=>ex.id===c.id)));
                     waf = detectWAF(web.headers, web.body);
                     sslInfo = await analyzeSSLInfo(web.headers, finalUrl);
-                    sslGrade = gradeSSL(sslInfo);
+                    if (!sslInfo?.certSubject && !sslInfo?.subject) sslInfo = null;
+                    sslGrade = sslInfo ? gradeSSL(sslInfo) : undefined;
                   } catch {}
                 }
                 const techsBanner = detectTechnologies({'server':banner}, banner);
