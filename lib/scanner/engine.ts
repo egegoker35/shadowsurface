@@ -1961,13 +1961,7 @@ async function scanCloud(domain: string): Promise<CloudAsset[]> {
       }
     } catch {}
   }
-  // Dedupe assets by subdomain+port (same subdomain via multiple IPs creates duplicates)
-  const assetMap = new Map<string, DiscoveredAsset>();
-  for (const a of assets) {
-    const key = `${a.subdomain}:${a.port}`;
-    if (!assetMap.has(key)) assetMap.set(key, a);
-  }
-  return Array.from(assetMap.values());
+  return assets;
 }
 
 // ─── Port Scanner ─────────────────────────────────────────────────────────
@@ -2037,7 +2031,13 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
       }
     }));
   }
-  return assets;
+  // Dedupe assets by subdomain+port (same subdomain via multiple IPs creates duplicates)
+  const assetMap = new Map<string, DiscoveredAsset>();
+  for (const a of assets) {
+    const key = `${a.subdomain}:${a.port}`;
+    if (!assetMap.has(key)) assetMap.set(key, a);
+  }
+  return Array.from(assetMap.values());
 }
 
 // ─── Risk Scoring Engine (CVSS-based + Exploitability) ────────────────────
