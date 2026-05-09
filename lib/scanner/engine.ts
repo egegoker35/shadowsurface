@@ -1181,6 +1181,16 @@ const TECH_PATTERNS: Array<{ name: string; category: string; patterns: Array<{ t
 // ─── CVE Database (200+ critical/high CVEs) ───────────────────────────────
 interface CVEEntry { id: string; techRegex: RegExp; cvss: number; exploitAvailable: boolean; cwe: string; description: string; }
 const CVE_DB: CVEEntry[] = [
+  // PHP critical CVEs
+  {id:'CVE-2019-11043',techRegex:/PHP\s+7\.[0-3]\.\d{1,2}/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'PHP-FPM RCE via env_path_info underflow'},
+  {id:'CVE-2019-13224',techRegex:/PHP\s+7\.[0-3]\.\d{1,2}/,cvss:9.8,exploitAvailable:true,cwe:'CWE-787',description:'PHP oniguruma heap overflow (use-after-free)'},
+  {id:'CVE-2020-7062',techRegex:/PHP\s+7\.2\.[0-2][0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-125',description:'PHP get_headers buffer overflow'},
+  {id:'CVE-2019-11041',techRegex:/PHP\s+7\.2\.[0-2][0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-190',description:'PHP exif integer overflow leading to heap overflow'},
+  {id:'CVE-2018-19518',techRegex:/PHP\s+5\.[4-6]|PHP\s+7\.[0-2]\.\d{1,2}/,cvss:8.1,exploitAvailable:true,cwe:'CWE-78',description:'PHP imap_open remote command execution'},
+  // cPanel/WHM CVEs
+  {id:'CVE-2022-44877',techRegex:/cPanel|WHM/,cvss:6.1,exploitAvailable:true,cwe:'CWE-79',description:'cPanel & WHM stored XSS'},
+  {id:'CVE-2021-20486',techRegex:/cPanel|WHM/,cvss:7.8,exploitAvailable:true,cwe:'CWE-269',description:'cPanel privilege escalation via arbitrary file write'},
+  {id:'CVE-2020-10124',techRegex:/cPanel|WHM/,cvss:8.1,exploitAvailable:true,cwe:'CWE-89',description:'cPanel SQL injection in API'},
   {id:'CVE-2021-41773',techRegex:/Apache\/2\.4\.4[0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-22',description:'Apache 2.4.49 path traversal and RCE'},
   {id:'CVE-2021-42013',techRegex:/Apache\/2\.4\.50/,cvss:9.8,exploitAvailable:true,cwe:'CWE-22',description:'Apache 2.4.50 path traversal and RCE'},
   {id:'CVE-2017-9805',techRegex:/Struts/,cvss:8.1,exploitAvailable:true,cwe:'CWE-502',description:'Apache Struts REST plugin XStream RCE'},
@@ -2526,6 +2536,10 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                 }
                 const techsBanner = detectTechnologies(probe.headers, probe.body);
                 cves.push(...mapCVEs(techsBanner).filter(c=>!cves.some(ex=>ex.id===c.id)));
+                // If service is still generic HTTP/HTTPS, use detected technology
+                if ((svc === 'HTTP' || svc === 'HTTPS' || svc === 'unknown') && techs[0]?.name) {
+                  svc = techs[0].name;
+                }
                 // Smart fallback: use Server header, banner tech, or service name as technology
                 const techName = techs[0]?.name || techsBanner[0]?.name || svc || 'Unknown';
                 const techVer = techs[0]?.version || techsBanner[0]?.version || svcVersion || null;
@@ -2616,10 +2630,10 @@ function calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[
     score += sslPenalty;
     // WAF bonus
     if (a.waf) score -= 6;
-    a.riskScore = Math.min(Math.max(Math.round(score), 0), 100);
+    a.riskScore = Math.min(Math.max(Math.round(score), 0), 95);
   }
   for (const c of cloudAssets) {
-    c.riskScore = Math.min(Math.max(c.riskScore, 0), 100);
+    c.riskScore = Math.min(Math.max(c.riskScore, 0), 95);
   }
 }
 
@@ -2895,7 +2909,7 @@ export class ScannerEngine {
     this.scanResult.completedAt=new Date().toISOString();
     this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:cloudAssets.length, criticalFindings:crit, highRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount:assets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount:assets.filter(a=>a.riskScore<15).length, infoCount:assets.reduce((s,a)=>s+a.findings.filter(f=>f.severity==='info').length,0), totalCVEs:totalCves, totalWebVulns, sslIssues, totalExploits, weakSSLCount, missingHeaderCount, exposedDBCount, exposedAdminCount };
     const {actors, mitreTactics} = generateThreatActors(assets);
-    this.scanResult.executiveSummary={ overallRisk:crit>0?'CRITICAL':assets.some(a=>a.riskScore>=70)?'HIGH':assets.some(a=>a.riskScore>=40)?'MEDIUM':'LOW', riskScore:Math.min(Math.max(...assets.map(a=>a.riskScore), ...cloudAssets.map(a=>a.riskScore),0),100), criticalFindings:crit, attackSurfaceSize:Object.keys(subdomains).length+cloudAssets.length, recommendations: generateRecommendations(assets,cloudAssets,dnsInfo), threatActors:actors, complianceStatus:complianceCheck(assets), mitreTactics };
+    this.scanResult.executiveSummary={ overallRisk:crit>0?'CRITICAL':assets.some(a=>a.riskScore>=70)?'HIGH':assets.some(a=>a.riskScore>=40)?'MEDIUM':'LOW', riskScore:Math.min(Math.max(...assets.map(a=>a.riskScore), ...cloudAssets.map(a=>a.riskScore),0),95), criticalFindings:crit, attackSurfaceSize:Object.keys(subdomains).length+cloudAssets.length, recommendations: generateRecommendations(assets,cloudAssets,dnsInfo), threatActors:actors, complianceStatus:complianceCheck(assets), mitreTactics };
     this.scanResult.dnsAnalysis = dnsInfo;
     return this.scanResult;
   }
