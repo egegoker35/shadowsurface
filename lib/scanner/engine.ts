@@ -31,7 +31,7 @@ const TOP_PORTS: number[] = [
 
 const DANGEROUS_PORTS = new Set([
   21,23,25,53,69,79,111,135,139,161,445,512,513,514,515,520,1090,1433,1434,1521,2049,2375,2376,3128,
-  3306,3389,4444,5000,5432,5672,5900,5984,5985,6379,6443,7001,7474,8000,8080,8081,8443,9200,27017,27018,27019
+  3306,3389,4444,5432,5672,5900,5984,5985,6379,6443,7001,7474,8443,9200,27017,27018,27019
 ]);
 // ─── Service Name Database ────────────────────────────────────────────────
 const SERVICE_NAMES: Record<number, string> = {
@@ -2431,7 +2431,8 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
               const banner = await bannerGrab(ip, port, timeout, undefined, sub);
               const isAlwaysCheck = [80,443,8080,8443,3000,5000,8000,9000].includes(port);
               if (banner || isAlwaysCheck) {
-                const svc = SERVICE_NAMES[port] || 'unknown';
+                let svc = SERVICE_NAMES[port] || 'unknown';
+                let svcVersion: string | null = null;
                 const techs = detectTechnologies({}, banner);
                 const cves = mapCVEs(techs);
                 const findings: Finding[] = [];
@@ -2462,13 +2463,19 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                     sslInfo = await analyzeSSLInfo(web.headers, finalUrl);
                     if (!sslInfo?.certSubject && !sslInfo?.subject) sslInfo = null;
                     sslGrade = sslInfo ? gradeSSL(sslInfo) : undefined;
+                    // Override service name with real Server header when available
+                    const serverHdr = web.headers['server'] || web.headers['Server'] || '';
+                    if (serverHdr) {
+                      const m = serverHdr.match(/^([A-Za-z][A-Za-z0-9._\-]+)(?:\/(\d[\d.]+))?/i);
+                      if (m) { svc = m[1]; svcVersion = m[2] || null; }
+                    }
                   } catch {}
                 }
                 const techsBanner = detectTechnologies({'server':banner}, banner);
                 cves.push(...mapCVEs(techsBanner).filter(c=>!cves.some(ex=>ex.id===c.id)));
-                // Smart tech fallback: use service name as technology if nothing detected, and always record web headers for SSL display
+                // Smart fallback: use Server header, banner tech, or service name as technology
                 const techName = techs[0]?.name || techsBanner[0]?.name || svc || 'Unknown';
-                const techVer = techs[0]?.version || techsBanner[0]?.version || null;
+                const techVer = techs[0]?.version || techsBanner[0]?.version || svcVersion || null;
                 const asset: DiscoveredAsset = {
                   id: genId(), domain: sub, subdomain: sub, ip, port, service: svc, banner, technology: techName,
                   version: techVer,
@@ -2501,13 +2508,19 @@ function calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[
   for (const a of assets) {
     let score = 0;
     // Baseline: internet-exposed service
-    score += 1;
-    score += a.port && a.port < 1024 ? 1 : 0;
+    score += 2;
+    score += a.port && a.port < 1024 ? 2 : 1;
+    // Banner/technology enrichment bonus
+    if (a.banner && a.banner.length > 5) score += 3;
+    if (a.technology && a.technology !== 'Unknown' && a.technology !== 'HTTP' && a.technology !== 'HTTPS') score += 4;
+    if (a.version) score += 2;
+    // Non-standard web port = slightly more suspicious
+    if ([3000,5000,8000,8080,8081,9000,9090].includes(a.port)) score += 3;
     // CVE impact
     const cvssMax = a.cvssMax || 0;
     const exploitBonus = a.exploitAvailable ? (cvssMax >= 9 ? 10 : cvssMax >= 7 ? 6 : cvssMax >= 5 ? 3 : 1) : 0;
-    score += Math.min(a.cves.length * 1, 8);
-    score += Math.min(cvssMax * 1.2, 25);
+    score += Math.min(a.cves.length * 1.5, 12);
+    score += Math.min(cvssMax * 1.5, 30);
     score += exploitBonus;
     // Port-based penalties (realistic)
     if (EXPOSABLE_DB_PORTS.has(a.port)) score += 25;
