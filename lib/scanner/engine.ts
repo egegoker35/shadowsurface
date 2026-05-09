@@ -1446,14 +1446,23 @@ function fetchURL(url: string, method: string = 'GET', headers?: Record<string, 
   });
 }
 
-function bannerGrab(host: string, port: number, timeout = 10000, payload?: string, hostHeader?: string): Promise<string> {
+interface ProbeResult { body: string; headers: Record<string,string> }
+function bannerGrab(host: string, port: number, timeout = 10000, payload?: string, hostHeader?: string): Promise<ProbeResult> {
   return new Promise((resolve) => {
     const isHttps = port === 443 || port === 8443;
     const client = isHttps ? httpsRequest : httpRequest;
     const h = hostHeader || host;
-    const req = client({ hostname: host, port, path: '/', method: 'GET', headers: { 'Host': h, 'User-Agent': 'ShadowSurface/3.0', 'Connection': 'close' } }, (res) => { let data=''; res.on('data',c=>data+=c); res.on('end',()=>resolve(data.slice(0,512))); res.on('error',()=>resolve('')); });
-    req.setTimeout(timeout, () => { req.destroy(); resolve(''); });
-    req.on('error', () => resolve(''));
+    const hdrs: Record<string,string> = {};
+    const req = client({ hostname: host, port, path: '/', method: 'GET', headers: { 'Host': h, 'User-Agent': 'ShadowSurface/3.0', 'Connection': 'close' } }, (res) => { 
+      let data=''; 
+      const rh = res.headers || {};
+      for (const [k,v] of Object.entries(rh)) { hdrs[k.toLowerCase()] = Array.isArray(v) ? v.join(', ') : String(v); }
+      res.on('data',c=>data+=c); 
+      res.on('end',()=>resolve({body: data.slice(0,1024), headers: hdrs})); 
+      res.on('error',()=>resolve({body:'', headers: hdrs})); 
+    });
+    req.setTimeout(timeout, () => { req.destroy(); resolve({body:'', headers: hdrs}); });
+    req.on('error', () => resolve({body:'', headers: hdrs}));
     req.end();
   });
 }
@@ -2404,8 +2413,8 @@ async function scanCloud(domain: string): Promise<CloudAsset[]> {
   for (const port of [2375,2376,6443]) {
     try {
       const banner = await bannerGrab(domain, port, 5000);
-      if (banner.includes('Docker') || banner.includes('docker') || banner.includes('Kubernetes') || banner.includes('k8s') || banner.includes('etcd')) {
-        const svc = banner.includes('Kubernetes') || banner.includes('k8s') ? 'Kubernetes API' : banner.includes('etcd') ? 'etcd' : 'Docker Daemon';
+      if (banner.body.includes('Docker') || banner.body.includes('docker') || banner.body.includes('Kubernetes') || banner.body.includes('k8s') || banner.body.includes('etcd')) {
+        const svc = banner.body.includes('Kubernetes') || banner.body.includes('k8s') ? 'Kubernetes API' : banner.body.includes('etcd') ? 'etcd' : 'Docker Daemon';
         const provider: CloudAsset['provider'] = 'aws';
         assets.push({ id: genId(), provider, serviceType: svc, resourceId: `${domain}:${port}`, url: `http://${domain}:${port}`, permissions: ['Connect'], misconfigurations: [{ type: 'cloud_misconfig', severity: 'critical', description: `${svc} exposed on port ${port} without proper network controls` }], riskScore: 90, severity: 'critical', exposureLevel: 'public' });
       }
@@ -2428,16 +2437,37 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
         for (let p=0; p<pList.length; p+=portBatch) {
           await Promise.all(pList.slice(p, p+portBatch).map(async (port) => {
             try {
-              const banner = await bannerGrab(ip, port, timeout, undefined, sub);
-              const isAlwaysCheck = [80,443,8080,8443,3000,5000,8000,9000].includes(port);
-              if (banner || isAlwaysCheck) {
+              const probe = await bannerGrab(ip, port, timeout, undefined, sub);
+              const isWebPort = [80,443,8080,8443,3000,5000,8000,9000].includes(port);
+              let hasConnection = !!(probe.body || Object.keys(probe.headers).length > 0);
+              // For web ports, also try fetchURL if bannerGrab returned nothing
+              if (!hasConnection && isWebPort) {
+                try {
+                  const proto = port===443||port===8443 ? 'https' : 'http';
+                  const webFallback = await fetchURL(`${proto}://${sub}:${port}`, 'GET', undefined, undefined, Math.min(timeout, 12000));
+                  if (webFallback.status > 0) {
+                    hasConnection = true;
+                    probe.body = webFallback.body;
+                    probe.headers = webFallback.headers;
+                  }
+                } catch {}
+              }
+              if (!hasConnection) return;
+              if (hasConnection) {
                 let svc = SERVICE_NAMES[port] || 'unknown';
                 let svcVersion: string | null = null;
-                const techs = detectTechnologies({}, banner);
+                // Parse Server header from bannerGrab
+                const serverHdr = probe.headers['server'] || '';
+                if (serverHdr) {
+                  const m = serverHdr.match(/^([A-Za-z][A-Za-z0-9._\-]+)(?:\/(\d[\d.]+))?/i);
+                  if (m) { svc = m[1]; svcVersion = m[2] || null; }
+                }
+                // Parse X-Powered-By as technology
+                const techs = detectTechnologies(probe.headers, probe.body);
                 const cves = mapCVEs(techs);
                 const findings: Finding[] = [];
-                if (DANGEROUS_PORTS.has(port)) findings.push({ type:'dangerous_service', severity:'high', port, service:svc, description:`${svc} exposed on port ${port}`, evidence:banner.slice(0,120)});
-                if (EXPOSABLE_DB_PORTS.has(port)) findings.push({ type:'exposed_database', severity:'critical', port, service:svc, description:`Database ${svc} exposed on port ${port}`, evidence:banner.slice(0,120)});
+                if (DANGEROUS_PORTS.has(port)) findings.push({ type:'dangerous_service', severity:'high', port, service:svc, description:`${svc} exposed on port ${port}`, evidence: probe.body.slice(0,120)});
+                if (EXPOSABLE_DB_PORTS.has(port)) findings.push({ type:'exposed_database', severity:'critical', port, service:svc, description:`Database ${svc} exposed on port ${port}`, evidence: probe.body.slice(0,120)});
                 const creds = DEFAULT_CREDS[svc];
                 if (creds) findings.push({ type:'default_creds', severity:'critical', port, service:svc, description:`${svc} may have default credentials: ${creds.slice(0,3).join(', ')}...`, evidence:creds.slice(0,3).join(', ')});
                 let webVulns: WebVuln[] = [];
@@ -2464,23 +2494,46 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                     if (!sslInfo?.certSubject && !sslInfo?.subject) sslInfo = null;
                     sslGrade = sslInfo ? gradeSSL(sslInfo) : undefined;
                     // Override service name with real Server header when available
-                    const serverHdr = web.headers['server'] || web.headers['Server'] || '';
-                    if (serverHdr) {
-                      const m = serverHdr.match(/^([A-Za-z][A-Za-z0-9._\-]+)(?:\/(\d[\d.]+))?/i);
+                    const serverHdrWeb = web.headers['server'] || '';
+                    if (serverHdrWeb) {
+                      const m = serverHdrWeb.match(/^([A-Za-z][A-Za-z0-9._\-]+)(?:\/(\d[\d.]+))?/i);
                       if (m) { svc = m[1]; svcVersion = m[2] || null; }
                     }
+                    // Security header findings
+                    const secHeaders = web.headers;
+                    if (!secHeaders['strict-transport-security']) findings.push({ type:'missing_header', severity:'medium', port, service:svc, description:'HSTS header missing', evidence:'No Strict-Transport-Security header' });
+                    if (!secHeaders['content-security-policy']) findings.push({ type:'missing_header', severity:'medium', port, service:svc, description:'CSP header missing', evidence:'No Content-Security-Policy header' });
+                    if (!secHeaders['x-frame-options']) findings.push({ type:'missing_header', severity:'medium', port, service:svc, description:'X-Frame-Options header missing (clickjacking)', evidence:'No X-Frame-Options header' });
+                    if (!secHeaders['x-content-type-options']) findings.push({ type:'missing_header', severity:'low', port, service:svc, description:'X-Content-Type-Options header missing', evidence:'No X-Content-Type-Options header' });
+                    if (!secHeaders['referrer-policy']) findings.push({ type:'missing_header', severity:'info', port, service:svc, description:'Referrer-Policy header missing', evidence:'No Referrer-Policy header' });
+                    if (!secHeaders['permissions-policy']) findings.push({ type:'missing_header', severity:'info', port, service:svc, description:'Permissions-Policy header missing', evidence:'No Permissions-Policy header' });
+                    if (serverHdrWeb && /\d/.test(serverHdrWeb)) findings.push({ type:'info_disclosure', severity:'low', port, service:svc, description:'Server header exposes version information', evidence: serverHdrWeb.slice(0,60) });
+                    // SSL findings from analyzeSSLInfo
+                    if (sslInfo) {
+                      if (!sslInfo.hsts) findings.push({ type:'ssl_weakness', severity:'medium', port, service:svc, description:'HSTS not enforced on HTTPS connection', evidence:'No Strict-Transport-Security' });
+                      if (sslInfo.tls10 || sslInfo.tls11 || sslInfo.weakCipher || sslInfo.beastPoodle) findings.push({ type:'ssl_weakness', severity:'critical', port, service:svc, description:'Weak TLS protocol or cipher suite detected', evidence: `TLS=${sslInfo.tlsVersion}, weakCipher=${sslInfo.weakCipher}` });
+                      if (sslInfo.certExpired || sslInfo.selfSigned) findings.push({ type:'ssl_weakness', severity:'high', port, service:svc, description:'Certificate expired or self-signed', evidence: `expired=${sslInfo.certExpired}, selfSigned=${sslInfo.selfSigned}` });
+                    }
                   } catch {}
+                } else if (isWebPort) {
+                  // Even if fetchURL failed, create findings from bannerGrab headers
+                  const ph = probe.headers;
+                  if (ph['strict-transport-security'] === undefined && (port===443||port===8443)) findings.push({ type:'missing_header', severity:'medium', port, service:svc, description:'HSTS header missing', evidence:'No Strict-Transport-Security in probe' });
+                  if (ph['x-frame-options'] === undefined) findings.push({ type:'missing_header', severity:'medium', port, service:svc, description:'X-Frame-Options header missing', evidence:'No X-Frame-Options in probe' });
+                  if (ph['content-security-policy'] === undefined) findings.push({ type:'missing_header', severity:'medium', port, service:svc, description:'CSP header missing', evidence:'No Content-Security-Policy in probe' });
+                  if (ph['x-content-type-options'] === undefined) findings.push({ type:'missing_header', severity:'low', port, service:svc, description:'X-Content-Type-Options header missing', evidence:'No X-Content-Type-Options in probe' });
+                  if ((ph['server'] || '').match(/\d/)) findings.push({ type:'info_disclosure', severity:'low', port, service:svc, description:'Server header exposes version', evidence: (ph['server']||'').slice(0,60) });
                 }
-                const techsBanner = detectTechnologies({'server':banner}, banner);
+                const techsBanner = detectTechnologies(probe.headers, probe.body);
                 cves.push(...mapCVEs(techsBanner).filter(c=>!cves.some(ex=>ex.id===c.id)));
                 // Smart fallback: use Server header, banner tech, or service name as technology
                 const techName = techs[0]?.name || techsBanner[0]?.name || svc || 'Unknown';
                 const techVer = techs[0]?.version || techsBanner[0]?.version || svcVersion || null;
                 const asset: DiscoveredAsset = {
-                  id: genId(), domain: sub, subdomain: sub, ip, port, service: svc, banner, technology: techName,
+                  id: genId(), domain: sub, subdomain: sub, ip, port, service: svc, banner: probe.body, technology: techName,
                   version: techVer,
                   cves: cves.map(c=>c.id), cveConfidence: cves.length>0 ? 'high' : 'low',
-                  cloudProvider: null, riskScore: 0, findings, headers: (web && web.headers) ? web.headers : { server: banner.slice(0,80) }, sslInfo, sslGrade, waf,
+                  cloudProvider: null, riskScore: 0, findings, headers: (web && web.headers) ? web.headers : { server: (probe.headers['server'] || probe.body.slice(0,80)) }, sslInfo, sslGrade, waf,
                   webVulns, firstSeen: new Date().toISOString(),
                   complianceStatus: { owasp:[], pciDss:[], gdpr:[] },
                   cvssMax: cves.length ? Math.max(...cves.map(c=>c.cvss)) : 0,
@@ -2508,43 +2561,52 @@ function calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[
   for (const a of assets) {
     let score = 0;
     // Baseline: internet-exposed service
-    score += 2;
-    score += a.port && a.port < 1024 ? 2 : 1;
+    score += 5;
+    score += a.port && a.port < 1024 ? 4 : 2;
     // Banner/technology enrichment bonus
-    if (a.banner && a.banner.length > 5) score += 3;
-    if (a.technology && a.technology !== 'Unknown' && a.technology !== 'HTTP' && a.technology !== 'HTTPS') score += 4;
-    if (a.version) score += 2;
-    // Non-standard web port = slightly more suspicious
-    if ([3000,5000,8000,8080,8081,9000,9090].includes(a.port)) score += 3;
+    if (a.banner && a.banner.length > 5) score += 4;
+    if (a.technology && a.technology !== 'Unknown' && a.technology !== 'HTTP' && a.technology !== 'HTTPS') score += 6;
+    if (a.version) score += 4;
+    // Non-standard web port
+    if ([3000,5000,8000,8080,8081,9000,9090].includes(a.port)) score += 5;
     // CVE impact
     const cvssMax = a.cvssMax || 0;
-    const exploitBonus = a.exploitAvailable ? (cvssMax >= 9 ? 10 : cvssMax >= 7 ? 6 : cvssMax >= 5 ? 3 : 1) : 0;
-    score += Math.min(a.cves.length * 1.5, 12);
-    score += Math.min(cvssMax * 1.5, 30);
+    const exploitBonus = a.exploitAvailable ? (cvssMax >= 9 ? 12 : cvssMax >= 7 ? 8 : cvssMax >= 5 ? 4 : 2) : 0;
+    score += Math.min(a.cves.length * 2, 16);
+    score += Math.min(cvssMax * 2, 35);
     score += exploitBonus;
-    // Port-based penalties (realistic)
-    if (EXPOSABLE_DB_PORTS.has(a.port)) score += 25;
-    if (DANGEROUS_PORTS.has(a.port)) score += 18;
-    if ([21,23,3389,5900].includes(a.port)) score += 14;
+    // Port-based penalties
+    if (EXPOSABLE_DB_PORTS.has(a.port)) score += 30;
+    if (DANGEROUS_PORTS.has(a.port)) score += 22;
+    if ([21,23,3389,5900].includes(a.port)) score += 18;
     // Web vulnerabilities
     let webScore = 0;
     for (const w of (a.webVulns||[])) {
-      if (w.severity === 'critical') webScore += 12;
-      else if (w.severity === 'high') webScore += 6;
-      else if (w.severity === 'medium') webScore += 2;
+      if (w.severity === 'critical') webScore += 14;
+      else if (w.severity === 'high') webScore += 8;
+      else if (w.severity === 'medium') webScore += 3;
       else webScore += 1;
     }
-    score += Math.min(webScore, 30);
+    score += Math.min(webScore, 35);
+    // Missing security headers penalty (aggressive)
+    const missingHeaders = a.findings.filter(f=>f.type==='missing_header').length;
+    score += Math.min(missingHeaders * 4, 25);
+    // SSL weakness penalty
+    const sslWeak = a.findings.filter(f=>f.type==='ssl_weakness').length;
+    score += Math.min(sslWeak * 12, 30);
+    // Info disclosure penalty
+    const infoDisc = a.findings.filter(f=>f.type==='info_disclosure').length;
+    score += infoDisc * 5;
     // Findings
     const critFindings = a.findings.filter(f=>f.severity==='critical').length;
     const highFindings = a.findings.filter(f=>f.severity==='high').length;
     const medFindings = a.findings.filter(f=>f.severity==='medium').length;
-    score += Math.min(critFindings*15 + highFindings*8 + medFindings*2, 25);
-    // SSL penalty
-    const sslPenalty = a.sslGrade==='F' ? 12 : a.sslGrade==='E' ? 8 : a.sslGrade==='D' ? 5 : a.sslGrade==='C' ? 2 : a.sslGrade==='T'?12 : a.sslGrade==='X'?12 : 0;
+    score += Math.min(critFindings*18 + highFindings*10 + medFindings*3, 35);
+    // SSL grade penalty
+    const sslPenalty = a.sslGrade==='F' ? 15 : a.sslGrade==='E' ? 10 : a.sslGrade==='D' ? 7 : a.sslGrade==='C' ? 4 : a.sslGrade==='T'?15 : a.sslGrade==='X'?15 : 0;
     score += sslPenalty;
     // WAF bonus
-    if (a.waf) score -= 4;
+    if (a.waf) score -= 5;
     a.riskScore = Math.min(Math.max(Math.round(score), 0), 100);
   }
   for (const c of cloudAssets) {
@@ -2714,6 +2776,19 @@ export class ScannerEngine {
     const start = Date.now();
     const [subdomains, dnsInfo] = await Promise.all([this.enumerateSubdomains(), analyzeDNS(this.target)]);
     const assets = await scanPortsOnAssets(subdomains, TOP_PORTS.slice(0, portLimit));
+    // Inject DNS weakness findings into the first asset (or create a primary domain asset)
+    if (assets.length > 0 && dnsInfo) {
+      const primary = assets[0];
+      if (dnsInfo.spfPolicy === 'none') primary.findings.push({ type:'dns_weakness', severity:'medium', description:'SPF record missing or set to none', evidence:'No SPF protection against email spoofing' });
+      if (dnsInfo.dmarcPolicy === 'none' || !dnsInfo.dmarcPolicy) primary.findings.push({ type:'dns_weakness', severity:'medium', description:'DMARC policy missing or too weak', evidence:`DMARC=${dnsInfo.dmarcPolicy||'none'}` });
+      if (!dnsInfo.dkimPresent) primary.findings.push({ type:'dns_weakness', severity:'medium', description:'DKIM not detected', evidence:'No DKIM record found' });
+      if (!dnsInfo.dnssec) primary.findings.push({ type:'dns_weakness', severity:'low', description:'DNSSEC not enabled', evidence:'No DNSSEC records detected' });
+      if (dnsInfo.subdomainTakeover && dnsInfo.subdomainTakeover.length > 0) {
+        for (const st of dnsInfo.subdomainTakeover) {
+          primary.findings.push({ type:'subdomain_takeover', severity:'critical', description:`Potential subdomain takeover: ${st}`, evidence:`Dangling CNAME: ${st}` });
+        }
+      }
+    }
     const cloudAssets = await scanCloud(this.target);
     for (const asset of assets) {
       const cves = mapCVEs([{name: asset.technology || '', version: asset.version || ''}]).filter(c=>!asset.cves.includes(c.id));
