@@ -2560,53 +2560,62 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
 function calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[]) {
   for (const a of assets) {
     let score = 0;
-    // Baseline: internet-exposed service
-    score += 5;
-    score += a.port && a.port < 1024 ? 4 : 2;
+    // Baseline: internet-exposed service on public IP
+    score += 12;
+    score += a.port && a.port < 1024 ? 6 : 3;
     // Banner/technology enrichment bonus
-    if (a.banner && a.banner.length > 5) score += 4;
-    if (a.technology && a.technology !== 'Unknown' && a.technology !== 'HTTP' && a.technology !== 'HTTPS') score += 6;
-    if (a.version) score += 4;
+    if (a.banner && a.banner.length > 5) score += 6;
+    if (a.technology && a.technology !== 'Unknown' && a.technology !== 'HTTP' && a.technology !== 'HTTPS') score += 10;
+    if (a.version) score += 8;
     // Non-standard web port
-    if ([3000,5000,8000,8080,8081,9000,9090].includes(a.port)) score += 5;
+    if ([3000,5000,8000,8080,8081,9000,9090].includes(a.port)) score += 8;
     // CVE impact
     const cvssMax = a.cvssMax || 0;
-    const exploitBonus = a.exploitAvailable ? (cvssMax >= 9 ? 12 : cvssMax >= 7 ? 8 : cvssMax >= 5 ? 4 : 2) : 0;
-    score += Math.min(a.cves.length * 2, 16);
-    score += Math.min(cvssMax * 2, 35);
+    const exploitBonus = a.exploitAvailable ? (cvssMax >= 9 ? 15 : cvssMax >= 7 ? 10 : cvssMax >= 5 ? 6 : 3) : 0;
+    score += Math.min(a.cves.length * 3, 24);
+    score += Math.min(cvssMax * 2.5, 45);
     score += exploitBonus;
     // Port-based penalties
-    if (EXPOSABLE_DB_PORTS.has(a.port)) score += 30;
-    if (DANGEROUS_PORTS.has(a.port)) score += 22;
-    if ([21,23,3389,5900].includes(a.port)) score += 18;
-    // Web vulnerabilities
+    if (EXPOSABLE_DB_PORTS.has(a.port)) score += 35;
+    if (DANGEROUS_PORTS.has(a.port)) score += 28;
+    if ([21,23,3389,5900].includes(a.port)) score += 22;
+    // Web vulnerabilities (active scan results)
     let webScore = 0;
     for (const w of (a.webVulns||[])) {
-      if (w.severity === 'critical') webScore += 14;
-      else if (w.severity === 'high') webScore += 8;
-      else if (w.severity === 'medium') webScore += 3;
-      else webScore += 1;
+      if (w.severity === 'critical') webScore += 20;
+      else if (w.severity === 'high') webScore += 12;
+      else if (w.severity === 'medium') webScore += 5;
+      else webScore += 2;
     }
-    score += Math.min(webScore, 35);
-    // Missing security headers penalty (aggressive)
+    score += Math.min(webScore, 45);
+    // Missing security headers penalty (consolidated = high severity usually)
     const missingHeaders = a.findings.filter(f=>f.type==='missing_header').length;
-    score += Math.min(missingHeaders * 4, 25);
-    // SSL weakness penalty
+    score += Math.min(missingHeaders * 18, 35);
+    // SSL weakness penalty (consolidated)
     const sslWeak = a.findings.filter(f=>f.type==='ssl_weakness').length;
-    score += Math.min(sslWeak * 12, 30);
+    score += Math.min(sslWeak * 20, 35);
     // Info disclosure penalty
     const infoDisc = a.findings.filter(f=>f.type==='info_disclosure').length;
-    score += infoDisc * 5;
-    // Findings
+    score += infoDisc * 18;
+    // Exposed admin panel
+    const exposedAdmin = a.findings.filter(f=>f.type==='exposed_admin').length;
+    score += exposedAdmin * 30;
+    // DNS weakness
+    const dnsWeak = a.findings.filter(f=>f.type==='dns_weakness').length;
+    score += dnsWeak * 12;
+    // Subdomain takeover
+    const subTake = a.findings.filter(f=>f.type==='subdomain_takeover').length;
+    score += subTake * 40;
+    // Findings severity direct sum
     const critFindings = a.findings.filter(f=>f.severity==='critical').length;
     const highFindings = a.findings.filter(f=>f.severity==='high').length;
     const medFindings = a.findings.filter(f=>f.severity==='medium').length;
-    score += Math.min(critFindings*18 + highFindings*10 + medFindings*3, 35);
+    score += Math.min(critFindings*25 + highFindings*15 + medFindings*6, 50);
     // SSL grade penalty
-    const sslPenalty = a.sslGrade==='F' ? 15 : a.sslGrade==='E' ? 10 : a.sslGrade==='D' ? 7 : a.sslGrade==='C' ? 4 : a.sslGrade==='T'?15 : a.sslGrade==='X'?15 : 0;
+    const sslPenalty = a.sslGrade==='F' ? 20 : a.sslGrade==='E' ? 14 : a.sslGrade==='D' ? 10 : a.sslGrade==='C' ? 5 : a.sslGrade==='T'?20 : a.sslGrade==='X'?20 : 0;
     score += sslPenalty;
     // WAF bonus
-    if (a.waf) score -= 5;
+    if (a.waf) score -= 6;
     a.riskScore = Math.min(Math.max(Math.round(score), 0), 100);
   }
   for (const c of cloudAssets) {
@@ -2628,6 +2637,77 @@ function dedupeFindings(assets: DiscoveredAsset[]) {
       if (seenWeb.has(key)) return false;
       seenWeb.add(key); return true;
     });
+  }
+}
+
+function consolidateFindings(assets: DiscoveredAsset[]) {
+  // Group assets by subdomain
+  const bySub = new Map<string, DiscoveredAsset[]>();
+  for (const a of assets) {
+    const list = bySub.get(a.subdomain) || [];
+    list.push(a);
+    bySub.set(a.subdomain, list);
+  }
+  for (const [sub, list] of Array.from(bySub.entries())) {
+    // Collect all missing headers across all ports for this subdomain
+    const missingHeaders = new Set<string>();
+    const hasWeb = list.some((a: DiscoveredAsset) => a.port === 80 || a.port === 443 || a.port === 8080 || a.port === 8443);
+    for (const a of list) {
+      for (const f of a.findings) {
+        if (f.type === 'missing_header' && f.description) {
+          const hdr = f.description.replace(/ header missing.*$/i, '').trim();
+          if (hdr) missingHeaders.add(hdr);
+        }
+      }
+    }
+    if (missingHeaders.size > 0 && hasWeb) {
+      // Remove individual missing_header findings from all assets of this subdomain
+      for (const a of list) {
+        a.findings = a.findings.filter((f: Finding) => f.type !== 'missing_header');
+      }
+      // Add a single consolidated finding to the first web asset of this subdomain
+      const firstWeb = list.find((a: DiscoveredAsset) => a.port === 80 || a.port === 443 || a.port === 8080 || a.port === 8443) || list[0];
+      firstWeb.findings.push({
+        type: 'missing_header',
+        severity: missingHeaders.size >= 4 ? 'high' : missingHeaders.size >= 2 ? 'medium' : 'low',
+        description: `Missing security headers: ${Array.from(missingHeaders).join(', ')}`,
+        evidence: `Missing ${missingHeaders.size} headers across ${list.length} ports`,
+      });
+    }
+    // Consolidate ssl_weakness similarly
+    const sslIssues = new Set<string>();
+    for (const a of list) {
+      for (const f of a.findings) {
+        if (f.type === 'ssl_weakness' && f.description) {
+          sslIssues.add(f.description);
+        }
+      }
+    }
+    if (sslIssues.size > 0) {
+      for (const a of list) a.findings = a.findings.filter((f: Finding) => f.type !== 'ssl_weakness');
+      const firstWeb = list.find((a: DiscoveredAsset) => a.port === 443 || a.port === 8443) || list[0];
+      firstWeb.findings.push({
+        type: 'ssl_weakness',
+        severity: Array.from(sslIssues).some((d: string) => d.includes('expired') || d.includes('self-signed') || d.includes('Weak TLS')) ? 'high' : 'medium',
+        description: `SSL/TLS issues detected: ${Array.from(sslIssues).slice(0,3).join('; ')}${sslIssues.size > 3 ? '...' : ''}`,
+        evidence: `${sslIssues.size} SSL/TLS weakness types`,
+      });
+    }
+    // Merge info_disclosure of same type
+    const infoFindings: Finding[] = [];
+    for (const a of list) {
+      infoFindings.push(...a.findings.filter((f: Finding) => f.type === 'info_disclosure'));
+    }
+    if (infoFindings.length > 1) {
+      for (const a of list) a.findings = a.findings.filter((f: Finding) => f.type !== 'info_disclosure');
+      const first = list[0];
+      first.findings.push({
+        type: 'info_disclosure',
+        severity: 'medium',
+        description: `Information disclosure issues (${infoFindings.length} occurrences)`,
+        evidence: infoFindings.map((f: Finding) => f.evidence).filter(Boolean).slice(0,3).join('; '),
+      });
+    }
   }
 }
 
@@ -2797,6 +2877,7 @@ export class ScannerEngine {
       asset.exploitAvailable = asset.exploitAvailable || cves.some(c=>c.exploitAvailable);
     }
     dedupeFindings(assets);
+    consolidateFindings(assets);
     calculateRiskScores(assets, cloudAssets);
     const duration = (Date.now()-start)/1000;
     const crit = assets.filter(a=>a.riskScore>=70).length + cloudAssets.filter(a=>a.severity==='critical').length;
