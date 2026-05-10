@@ -2448,22 +2448,8 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
           await Promise.all(pList.slice(p, p+portBatch).map(async (port) => {
             try {
               const probe = await bannerGrab(ip, port, timeout, undefined, sub);
-              const isWebPort = [80,443,8080,8443,3000,5000,8000,9000].includes(port);
-              let hasConnection = !!(probe.body || Object.keys(probe.headers).length > 0);
-              // For web ports, also try fetchURL if bannerGrab returned nothing
-              if (!hasConnection && isWebPort) {
-                try {
-                  const proto = port===443||port===8443 ? 'https' : 'http';
-                  const webFallback = await fetchURL(`${proto}://${sub}:${port}`, 'GET', undefined, undefined, Math.min(timeout, 12000));
-                  if (webFallback.status > 0) {
-                    hasConnection = true;
-                    probe.body = webFallback.body;
-                    probe.headers = webFallback.headers;
-                  }
-                } catch {}
-              }
+              const hasConnection = !!(probe.body || Object.keys(probe.headers).length > 0);
               if (!hasConnection) return;
-              if (hasConnection) {
                 let svc = SERVICE_NAMES[port] || 'unknown';
                 let svcVersion: string | null = null;
                 // Parse Server header from bannerGrab
@@ -2525,7 +2511,7 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                       if (sslInfo.certExpired || sslInfo.selfSigned) findings.push({ type:'ssl_weakness', severity:'high', port, service:svc, description:'Certificate expired or self-signed', evidence: `expired=${sslInfo.certExpired}, selfSigned=${sslInfo.selfSigned}` });
                     }
                   } catch {}
-                } else if (isWebPort) {
+                } else if ([80,443,8080,8443,3000,5000,8000,9000].includes(port)) {
                   // Even if fetchURL failed, create findings from bannerGrab headers
                   const ph = probe.headers;
                   if (ph['strict-transport-security'] === undefined && (port===443||port===8443)) findings.push({ type:'missing_header', severity:'medium', port, service:svc, description:'HSTS header missing', evidence:'No Strict-Transport-Security in probe' });
@@ -2554,7 +2540,6 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                   exploitAvailable: cves.some(c=>c.exploitAvailable),
                 };
                 assets.push(asset);
-              }
             } catch {}
           }));
         }
