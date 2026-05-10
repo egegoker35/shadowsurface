@@ -1427,33 +1427,20 @@ const CLOUD_PATTERNS = {
 
 
 // ─── Helper Functions ───────────────────────────────────────────────────────
-function fetchURL(url: string, method: string = 'GET', headers?: Record<string, string>, body?: string, timeout = 30000): Promise<{ status: number; headers: Record<string, string>; body: string; redirectUrls: string[] }> {
-  return new Promise((resolve, reject) => {
-    const parsed = new URL(url);
-    const isHttps = parsed.protocol === 'https:';
-    const client = isHttps ? httpsRequest : httpRequest;
-    const options = { hostname: parsed.hostname, port: parsed.port || (isHttps ? 443 : 80), path: parsed.pathname + parsed.search, method, headers: { 'User-Agent': 'ShadowSurface-Scanner/3.0 (+https://shadowsurface.app)', 'Accept': '*/*', ...(headers || {}) } };
-    let bodyStr = '';
-    let responseHeaders: Record<string, string> = {};
-    const redirectUrls: string[] = [];
-    const req = client(options, (res) => {
-      let status = res.statusCode || 0;
-      const rawHeaders = res.headers || {};
-      responseHeaders = Object.fromEntries(Object.entries(rawHeaders).map(([k,v]) => [k.toLowerCase(), String(v)]));
-      if ([301,302,307,308].includes(status) && rawHeaders.location) {
-        redirectUrls.push(rawHeaders.location);
-        const loc = rawHeaders.location.startsWith('http') ? rawHeaders.location : (isHttps ? 'https://' : 'http://') + parsed.host + rawHeaders.location;
-        fetchURL(loc, method, headers, body, timeout).then(resolve).catch(reject);
-        return;
-      }
-      res.on('data', (chunk) => bodyStr += chunk);
-      res.on('end', () => resolve({ status, headers: responseHeaders, body: bodyStr, redirectUrls }));
-    });
-    req.setTimeout(timeout, () => { req.destroy(); reject(new Error('timeout')); });
-    req.on('error', reject);
-    if (body) req.write(body);
-    req.end();
-  });
+async function fetchURL(url: string, method: string = 'GET', headers?: Record<string, string>, body?: string, timeout = 30000): Promise<{ status: number; headers: Record<string, string>; body: string; redirectUrls: string[] }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const res = await fetch(url, { method, headers: { 'User-Agent': 'ShadowSurface-Scanner/3.0 (+https://shadowsurface.app)', 'Accept': '*/*', ...(headers || {}) }, body: body || undefined, signal: controller.signal, redirect: 'follow' });
+    clearTimeout(timer);
+    const bodyText = await res.text();
+    const hdrs: Record<string, string> = {};
+    res.headers.forEach((v, k) => { hdrs[k.toLowerCase()] = v; });
+    return { status: res.status, headers: hdrs, body: bodyText, redirectUrls: [] };
+  } catch {
+    clearTimeout(timer);
+    return { status: 0, headers: {}, body: '', redirectUrls: [] };
+  }
 }
 
 interface ProbeResult { body: string; headers: Record<string,string> }
@@ -2250,17 +2237,20 @@ async function analyzeSSLInfo(headers: Record<string, string>, url: string): Pro
   info.valid = true;
   info.tlsVersion = info.tls13 ? 'TLSv1.3' : info.tls12 ? 'TLSv1.2' : info.tls11 ? 'TLSv1.1' : info.tls10 ? 'TLSv1.0' : 'Unknown';
 
-  // Real TLS certificate fetch via crt.sh API (fetch/serverless-safe)
+  // Real TLS certificate fetch via CertSpotter API (crt.sh often 502)
   if (url.startsWith('https')) {
     try {
       const u = new URL(url);
       const domain = u.hostname;
-      const crtRes = await fetch(`https://crt.sh/?q=${encodeURIComponent(domain)}&output=json`, { method: 'GET', signal: AbortSignal.timeout(8000) }).catch(() => null);
-      if (crtRes && crtRes.ok) {
-        const crtData = await crtRes.json().catch(() => []);
-        const entry = crtData[0];
+      const spotController = new AbortController();
+      const spotTimer = setTimeout(() => spotController.abort(), 8000);
+      const spotRes = await fetch(`https://api.certspotter.com/v1/issuances?domain=${encodeURIComponent(domain)}&expand=dns_names`, { method: 'GET', signal: spotController.signal }).catch(() => null);
+      clearTimeout(spotTimer);
+      if (spotRes && spotRes.ok) {
+        const spotData = await spotRes.json().catch(() => []) as any[];
+        const entry = spotData[0];
         if (entry) {
-          info.certSubject = entry.common_name || domain;
+          info.certSubject = entry.dns_names?.[0] || domain;
           info.subject = info.certSubject;
           info.certIssuer = entry.issuer_name || 'Unknown';
           info.issuer = info.certIssuer;
@@ -2272,11 +2262,10 @@ async function analyzeSSLInfo(headers: Record<string, string>, url: string): Pro
             const toDate = new Date(entry.not_after);
             info.certDaysLeft = Math.max(0, Math.ceil((toDate.getTime() - Date.now())/(1000*60*60*24)));
             info.daysRemaining = info.certDaysLeft;
-            info.certExpired = info.certDaysLeft <= 0;
+            info.certExpired = entry.revoked || false;
           }
+          info.certSANs = entry.dns_names || [];
           info.selfSigned = /self.?signed/i.test(info.certIssuer || '');
-          const nameValues = entry.name_value || '';
-          info.certSANs = nameValues.split('\n').map((s: string) => s.trim()).filter(Boolean);
           // TLS version heuristic: real modern certs imply TLSv1.2+
           info.tls12 = true;
           info.tlsVersion = 'TLSv1.2';
