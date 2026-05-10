@@ -2250,20 +2250,25 @@ async function analyzeSSLInfo(headers: Record<string, string>, url: string): Pro
   info.valid = true;
   info.tlsVersion = info.tls13 ? 'TLSv1.3' : info.tls12 ? 'TLSv1.2' : info.tls11 ? 'TLSv1.1' : info.tls10 ? 'TLSv1.0' : 'Unknown';
 
-  // Real TLS certificate fetch
+  // Real TLS certificate fetch via https.request (serverless-safe)
   if (url.startsWith('https')) {
     try {
       const u = new URL(url);
-      let tlsSocket: any;
-      const cert = await new Promise<any>((resolve) => {
-        tlsSocket = tlsConnect({ host: u.hostname, port: parseInt(u.port||'443'), rejectUnauthorized: false, servername: u.hostname, timeout: 8000 }, () => {
-          const peer = tlsSocket.getPeerCertificate(true);
-          tlsSocket.end();
-          resolve(peer || null);
+      const certData = await new Promise<{cert: any, cipher: any}>((resolve) => {
+        const req = httpsRequest({ hostname: u.hostname, port: parseInt(u.port||'443'), method: 'HEAD', timeout: 5000, rejectUnauthorized: false }, (res) => {
+          const tlsSocket = res.socket as any;
+          if (tlsSocket && tlsSocket.getPeerCertificate) {
+            resolve({ cert: tlsSocket.getPeerCertificate(true), cipher: tlsSocket.getCipher ? tlsSocket.getCipher() : null });
+          } else {
+            resolve({ cert: null, cipher: null });
+          }
+          res.resume();
         });
-        tlsSocket.on('error', () => { try { tlsSocket.end(); } catch {} resolve(null); });
-        tlsSocket.setTimeout(8000, () => { try { tlsSocket.destroy(); } catch {} resolve(null); });
+        req.on('error', () => resolve({ cert: null, cipher: null }));
+        req.on('timeout', () => { req.destroy(); resolve({ cert: null, cipher: null }); });
+        req.end();
       });
+      const cert = certData.cert;
       if (cert && cert.subject) {
         info.certSubject = typeof cert.subject === 'string' ? cert.subject : JSON.stringify(cert.subject);
         info.subject = info.certSubject;
@@ -2288,7 +2293,7 @@ async function analyzeSSLInfo(headers: Record<string, string>, url: string): Pro
           const subjectCN = typeof cert.subject === 'object' ? (cert.subject.CN || JSON.stringify(cert.subject)) : cert.subject;
           info.selfSigned = issuerCN === subjectCN;
         }
-        const proto = tlsSocket?.getCipher?.()?.version || '';
+        const proto = certData.cipher?.version || '';
         if (proto.includes('1.3')) { info.tls13 = true; info.tlsVersion = 'TLSv1.3'; }
         else if (proto.includes('1.2')) { info.tls12 = true; info.tlsVersion = 'TLSv1.2'; }
         else if (proto.includes('1.1')) { info.tls11 = true; info.tlsVersion = 'TLSv1.1'; }
