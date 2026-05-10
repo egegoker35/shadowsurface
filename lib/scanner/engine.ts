@@ -2237,38 +2237,35 @@ async function analyzeSSLInfo(headers: Record<string, string>, url: string): Pro
   info.valid = true;
   info.tlsVersion = info.tls13 ? 'TLSv1.3' : info.tls12 ? 'TLSv1.2' : info.tls11 ? 'TLSv1.1' : info.tls10 ? 'TLSv1.0' : 'Unknown';
 
-  // Real TLS certificate fetch via CertSpotter API (crt.sh often 502)
+  // Real TLS certificate fetch via local SSL check API (uses tlsConnect internally)
   if (url.startsWith('https')) {
     try {
       const u = new URL(url);
       const domain = u.hostname;
-      const spotController = new AbortController();
-      const spotTimer = setTimeout(() => spotController.abort(), 8000);
-      const spotRes = await fetch(`https://api.certspotter.com/v1/issuances?domain=${encodeURIComponent(domain)}&expand=dns_names`, { method: 'GET', signal: spotController.signal }).catch(() => null);
-      clearTimeout(spotTimer);
-      if (spotRes && spotRes.ok) {
-        const spotData = await spotRes.json().catch(() => []) as any[];
-        const entry = spotData[0];
-        if (entry) {
-          info.certSubject = entry.dns_names?.[0] || domain;
+      const port = parseInt(u.port || '443');
+      const sslRes = await fetch(`http://localhost:3000/api/ssl-check?host=${encodeURIComponent(domain)}&port=${port}`, { method: 'GET' }).catch(() => null);
+      if (sslRes && sslRes.ok) {
+        const data = await sslRes.json().catch(() => null);
+        if (data && !data.error) {
+          info.certSubject = data.subject || domain;
           info.subject = info.certSubject;
-          info.certIssuer = entry.issuer_name || 'Unknown';
+          info.certIssuer = data.issuer || 'Unknown';
           info.issuer = info.certIssuer;
-          info.certValidFrom = entry.not_before || '';
+          info.certValidFrom = data.validFrom || '';
           info.validFrom = info.certValidFrom;
-          info.certValidTo = entry.not_after || '';
+          info.certValidTo = data.validTo || '';
           info.validTo = info.certValidTo;
-          if (entry.not_after) {
-            const toDate = new Date(entry.not_after);
-            info.certDaysLeft = Math.max(0, Math.ceil((toDate.getTime() - Date.now())/(1000*60*60*24)));
-            info.daysRemaining = info.certDaysLeft;
-            info.certExpired = entry.revoked || false;
-          }
-          info.certSANs = entry.dns_names || [];
-          info.selfSigned = /self.?signed/i.test(info.certIssuer || '');
-          // TLS version heuristic: real modern certs imply TLSv1.2+
-          info.tls12 = true;
-          info.tlsVersion = 'TLSv1.2';
+          info.certDaysLeft = data.daysLeft;
+          info.daysRemaining = data.daysLeft;
+          info.certExpired = (data.daysLeft || 1) <= 0;
+          info.certSANs = data.san || [];
+          info.certFingerprint = data.fingerprint;
+          info.selfSigned = data.selfSigned || false;
+          info.tlsVersion = data.tlsVersion || 'TLSv1.2';
+          if (data.tlsVersion === 'TLSv1.3') { info.tls13 = true; info.tls12 = false; }
+          else if (data.tlsVersion === 'TLSv1.2') { info.tls12 = true; }
+          else if (data.tlsVersion === 'TLSv1.1') { info.tls11 = true; }
+          else if (data.tlsVersion === 'TLSv1.0') { info.tls10 = true; }
         }
       }
     } catch {}
