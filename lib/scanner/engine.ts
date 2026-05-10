@@ -2487,7 +2487,6 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                     cves.push(...mapCVEs(techsWeb).filter(c=>!cves.some(ex=>ex.id===c.id)));
                     waf = detectWAF(web.headers, web.body);
                     sslInfo = await analyzeSSLInfo(web.headers, finalUrl);
-                    if (!sslInfo?.certSubject && !sslInfo?.subject) sslInfo = null;
                     sslGrade = sslInfo ? gradeSSL(sslInfo) : undefined;
                     // Override service name with real Server header when available
                     const serverHdrWeb = web.headers['server'] || '';
@@ -2519,6 +2518,9 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                   if (ph['content-security-policy'] === undefined) findings.push({ type:'missing_header', severity:'medium', port, service:svc, description:'CSP header missing', evidence:'No Content-Security-Policy in probe' });
                   if (ph['x-content-type-options'] === undefined) findings.push({ type:'missing_header', severity:'low', port, service:svc, description:'X-Content-Type-Options header missing', evidence:'No X-Content-Type-Options in probe' });
                   if ((ph['server'] || '').match(/\d/)) findings.push({ type:'info_disclosure', severity:'low', port, service:svc, description:'Server header exposes version', evidence: (ph['server']||'').slice(0,60) });
+                  if (!sslInfo && (port===443||port===8443)) {
+                    try { sslInfo = await analyzeSSLInfo(probe.headers, 'https://'+sub+':'+port); sslGrade = gradeSSL(sslInfo); } catch {}
+                  }
                 }
                 const techsBanner = detectTechnologies(probe.headers, probe.body);
                 cves.push(...mapCVEs(techsBanner).filter(c=>!cves.some(ex=>ex.id===c.id)));
@@ -2527,6 +2529,11 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                   svc = techs[0].name;
                 }
                 // Smart fallback: use Server header, banner tech, or service name as technology
+                // Passive web vulnerability detection from body content
+                const bodyForPassive = (web && web.body) ? web.body : probe.body;
+                const headersForPassive = (web && web.headers) ? web.headers : probe.headers;
+                const protoForPassive = port===443||port===8443 ? 'https' : 'http';
+                findings.push(...detectPassiveWebVulns(bodyForPassive, headersForPassive, `${protoForPassive}://${sub}:${port}`, port));
                 const techName = techs[0]?.name || techsBanner[0]?.name || svc || 'Unknown';
                 const techVer = techs[0]?.version || techsBanner[0]?.version || svcVersion || null;
                 const asset: DiscoveredAsset = {
@@ -2620,6 +2627,59 @@ function calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[
   for (const c of cloudAssets) {
     c.riskScore = Math.min(Math.max(c.riskScore, 0), 95);
   }
+}
+
+function detectPassiveWebVulns(body: string, headers: Record<string,string>, url: string, port: number): Finding[] {
+  const findings: Finding[] = [];
+  const lowerBody = body.toLowerCase();
+  // Detect HTML forms (injection surface)
+  if (/<form[^>]*>/i.test(body)) {
+    const formCount = (body.match(/<form[^>]*>/gi) || []).length;
+    findings.push({ type:'info_disclosure', severity:'low', port, description:`${formCount} HTML form(s) detected - potential injection surface`, evidence:`Forms found at ${url}` });
+  }
+  // Detect input fields with name attributes
+  const inputNames = body.match(/<input[^>]*name=["']([^"']+)["']/gi) || [];
+  if (inputNames.length > 0) {
+    const names = inputNames.slice(0,5).map(s => s.replace(/.*name=["']([^"']+)["'].*/i,'$1'));
+    findings.push({ type:'info_disclosure', severity:'low', port, description:`Input parameters exposed: ${names.join(', ')}${inputNames.length>5?'...':''}`, evidence:`${inputNames.length} input fields` });
+  }
+  // Detect API endpoints in body
+  const apiPaths = body.match(/["']\/(api|graphql|swagger|rest|v1|v2|wp-json)\/[^"']*["']/gi) || [];
+  if (apiPaths.length > 0) {
+    findings.push({ type:'info_disclosure', severity:'low', port, description:`API endpoints detected in page source`, evidence:apiPaths.slice(0,3).join(', ') });
+  }
+  // Detect inline scripts (XSS surface)
+  const scriptTags = (body.match(/<script[^>]*>/gi) || []).length;
+  if (scriptTags > 0) {
+    findings.push({ type:'info_disclosure', severity:'low', port, description:`${scriptTags} inline/external script tag(s) detected`, evidence:`Scripts present - XSS attack surface` });
+  }
+  // Detect commented-out code / debug info
+  if (/<!--.*?debug|<!--.*?test|<!--.*?dev|<!--.*?localhost/i.test(body)) {
+    findings.push({ type:'info_disclosure', severity:'low', port, description:'HTML comments may contain debug/sensitive information', evidence:'Debug-related comments found' });
+  }
+  // Detect server/framework version leaks in body
+  const versionLeaks = body.match(/(Apache|nginx|IIS|Tomcat|Jetty|PHP|Python|Rails|Django|Express)\/[\d.]+/gi) || [];
+  if (versionLeaks.length > 0) {
+    findings.push({ type:'info_disclosure', severity:'low', port, description:`Technology version leaked in response body: ${versionLeaks.slice(0,2).join(', ')}`, evidence:versionLeaks.join(', ') });
+  }
+  // Detect potential IDOR patterns in URLs/links
+  const idorLinks = body.match(/href=["'][^"']*\/(user|account|profile|order|invoice|admin|api)\/\d+["']/gi) || [];
+  if (idorLinks.length > 0) {
+    findings.push({ type:'info_disclosure', severity:'medium', port, description:'Potential IDOR endpoints detected (numeric IDs in URLs)', evidence:idorLinks.slice(0,3).join(', ') });
+  }
+  // Missing X-Content-Type-Options (already covered in headers, but add from body MIME sniffing perspective)
+  if (!headers['x-content-type-options'] && !headers['content-type']?.includes('application/json')) {
+    findings.push({ type:'missing_header', severity:'low', port, description:'X-Content-Type-Options header missing (MIME sniffing risk)', evidence:'Allows browser MIME sniffing' });
+  }
+  // Missing Referrer-Policy
+  if (!headers['referrer-policy']) {
+    findings.push({ type:'missing_header', severity:'low', port, description:'Referrer-Policy header missing', evidence:'Sensitive referrer data may leak to third parties' });
+  }
+  // Missing Permissions-Policy
+  if (!headers['permissions-policy'] && !headers['feature-policy']) {
+    findings.push({ type:'missing_header', severity:'low', port, description:'Permissions-Policy header missing', evidence:'Browser features not restricted' });
+  }
+  return findings;
 }
 
 function dedupeFindings(assets: DiscoveredAsset[]) {
