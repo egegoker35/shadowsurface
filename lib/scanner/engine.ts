@@ -2667,18 +2667,6 @@ function detectPassiveWebVulns(body: string, headers: Record<string,string>, url
   if (idorLinks.length > 0) {
     findings.push({ type:'info_disclosure', severity:'medium', port, description:'Potential IDOR endpoints detected (numeric IDs in URLs)', evidence:idorLinks.slice(0,3).join(', ') });
   }
-  // Missing X-Content-Type-Options (already covered in headers, but add from body MIME sniffing perspective)
-  if (!headers['x-content-type-options'] && !headers['content-type']?.includes('application/json')) {
-    findings.push({ type:'missing_header', severity:'low', port, description:'X-Content-Type-Options header missing (MIME sniffing risk)', evidence:'Allows browser MIME sniffing' });
-  }
-  // Missing Referrer-Policy
-  if (!headers['referrer-policy']) {
-    findings.push({ type:'missing_header', severity:'low', port, description:'Referrer-Policy header missing', evidence:'Sensitive referrer data may leak to third parties' });
-  }
-  // Missing Permissions-Policy
-  if (!headers['permissions-policy'] && !headers['feature-policy']) {
-    findings.push({ type:'missing_header', severity:'low', port, description:'Permissions-Policy header missing', evidence:'Browser features not restricted' });
-  }
   return findings;
 }
 
