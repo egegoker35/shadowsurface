@@ -2237,36 +2237,46 @@ async function analyzeSSLInfo(headers: Record<string, string>, url: string): Pro
   info.valid = true;
   info.tlsVersion = info.tls13 ? 'TLSv1.3' : info.tls12 ? 'TLSv1.2' : info.tls11 ? 'TLSv1.1' : info.tls10 ? 'TLSv1.0' : 'Unknown';
 
-  // Real TLS certificate fetch via local SSL check API (uses tlsConnect internally)
+  // Real TLS certificate fetch via direct tlsConnect
   if (url.startsWith('https')) {
     try {
       const u = new URL(url);
-      const domain = u.hostname;
-      const port = parseInt(u.port || '443');
-      const sslRes = await fetch(`http://localhost:3000/api/ssl-check?host=${encodeURIComponent(domain)}&port=${port}`, { method: 'GET' }).catch(() => null);
-      if (sslRes && sslRes.ok) {
-        const data = await sslRes.json().catch(() => null);
-        if (data && !data.error) {
-          info.certSubject = data.subject || domain;
-          info.subject = info.certSubject;
-          info.certIssuer = data.issuer || 'Unknown';
-          info.issuer = info.certIssuer;
-          info.certValidFrom = data.validFrom || '';
-          info.validFrom = info.certValidFrom;
-          info.certValidTo = data.validTo || '';
-          info.validTo = info.certValidTo;
-          info.certDaysLeft = data.daysLeft;
-          info.daysRemaining = data.daysLeft;
-          info.certExpired = (data.daysLeft || 1) <= 0;
-          info.certSANs = data.san || [];
-          info.certFingerprint = data.fingerprint;
-          info.selfSigned = data.selfSigned || false;
-          info.tlsVersion = data.tlsVersion || 'TLSv1.2';
-          if (data.tlsVersion === 'TLSv1.3') { info.tls13 = true; info.tls12 = false; }
-          else if (data.tlsVersion === 'TLSv1.2') { info.tls12 = true; }
-          else if (data.tlsVersion === 'TLSv1.1') { info.tls11 = true; }
-          else if (data.tlsVersion === 'TLSv1.0') { info.tls10 = true; }
+      const certData = await new Promise<{cert: any, cipher: any}>((resolve) => {
+        const socket = tlsConnect({ host: u.hostname, port: parseInt(u.port||'443'), rejectUnauthorized: false, servername: u.hostname, timeout: 8000 }, () => {
+          const peer = socket.getPeerCertificate(true);
+          const ciph = socket.getCipher ? socket.getCipher() : null;
+          socket.end();
+          resolve({ cert: peer, cipher: ciph });
+        });
+        socket.on('error', () => { try { socket.end(); } catch {} resolve({ cert: null, cipher: null }); });
+        socket.setTimeout(8000, () => { try { socket.destroy(); } catch {} resolve({ cert: null, cipher: null }); });
+      });
+      const cert = certData.cert;
+      if (cert && cert.subject) {
+        info.certSubject = typeof cert.subject === 'string' ? cert.subject : JSON.stringify(cert.subject);
+        info.subject = info.certSubject;
+        info.certIssuer = typeof cert.issuer === 'string' ? cert.issuer : JSON.stringify(cert.issuer);
+        info.issuer = info.certIssuer;
+        info.certValidFrom = cert.valid_from || '';
+        info.validFrom = info.certValidFrom;
+        info.certValidTo = cert.valid_to || '';
+        info.validTo = info.certValidTo;
+        if (cert.valid_to) {
+          const toDate = new Date(cert.valid_to);
+          info.certDaysLeft = Math.max(0, Math.ceil((toDate.getTime() - Date.now())/(1000*60*60*24)));
+          info.daysRemaining = info.certDaysLeft;
+          info.certExpired = info.certDaysLeft <= 0;
         }
+        info.selfSigned = (typeof cert.issuer === 'object' ? cert.issuer.CN : cert.issuer) === (typeof cert.subject === 'object' ? cert.subject.CN : cert.subject);
+        info.certFingerprint = cert.fingerprint ? cert.fingerprint.replace(/:/g,'') : undefined;
+        if (cert.subjectaltname) {
+          info.certSANs = cert.subjectaltname.split(',').map((s: string) => s.trim().replace(/^DNS:/i,''));
+        }
+        const proto = certData.cipher?.version || '';
+        if (proto.includes('1.3')) { info.tls13 = true; info.tlsVersion = 'TLSv1.3'; }
+        else if (proto.includes('1.2')) { info.tls12 = true; info.tlsVersion = 'TLSv1.2'; }
+        else if (proto.includes('1.1')) { info.tls11 = true; info.tlsVersion = 'TLSv1.1'; }
+        else if (proto.includes('1.0')) { info.tls10 = true; info.tlsVersion = 'TLSv1.0'; }
       }
     } catch {}
   }
