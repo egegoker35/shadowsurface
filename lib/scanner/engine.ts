@@ -3,6 +3,9 @@ import { request as httpRequest } from 'http';
 import { request as httpsRequest } from 'https';
 import { connect as tlsConnect } from 'tls';
 import { URL } from 'url';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+const execAsync = promisify(exec);
 import type { DiscoveredAsset, CloudAsset, ScanResult, Finding, WebVuln, WebVulnType, SSLInfo, DNSRecord } from './types';
 
 const genId = () => Math.random().toString(36).substring(2, 14);
@@ -2237,50 +2240,55 @@ async function analyzeSSLInfo(headers: Record<string, string>, url: string): Pro
   info.valid = true;
   info.tlsVersion = info.tls13 ? 'TLSv1.3' : info.tls12 ? 'TLSv1.2' : info.tls11 ? 'TLSv1.1' : info.tls10 ? 'TLSv1.0' : 'Unknown';
 
-  // Real TLS certificate fetch via https.request (works through HTTP proxies)
+  // Real TLS certificate fetch via openssl CLI (bypasses HTTP proxies)
   if (url.startsWith('https')) {
     try {
       const u = new URL(url);
-      const certData = await new Promise<{cert: any, cipher: any}>((resolve) => {
-        const req = httpsRequest({ hostname: u.hostname, port: parseInt(u.port||'443'), method: 'HEAD', timeout: 8000, rejectUnauthorized: false }, (res) => {
-          const tlsSocket = res.socket as any;
-          if (tlsSocket && tlsSocket.getPeerCertificate) {
-            resolve({ cert: tlsSocket.getPeerCertificate(true), cipher: tlsSocket.getCipher ? tlsSocket.getCipher() : null });
-          } else {
-            resolve({ cert: null, cipher: null });
-          }
-          res.resume();
-        });
-        req.on('error', () => resolve({ cert: null, cipher: null }));
-        req.on('timeout', () => { req.destroy(); resolve({ cert: null, cipher: null }); });
-        req.end();
-      });
-      const cert = certData.cert;
-      if (cert && cert.subject) {
-        info.certSubject = typeof cert.subject === 'string' ? cert.subject : JSON.stringify(cert.subject);
-        info.subject = info.certSubject;
-        info.certIssuer = typeof cert.issuer === 'string' ? cert.issuer : JSON.stringify(cert.issuer);
-        info.issuer = info.certIssuer;
-        info.certValidFrom = cert.valid_from || '';
-        info.validFrom = info.certValidFrom;
-        info.certValidTo = cert.valid_to || '';
-        info.validTo = info.certValidTo;
-        if (cert.valid_to) {
-          const toDate = new Date(cert.valid_to);
-          info.certDaysLeft = Math.max(0, Math.ceil((toDate.getTime() - Date.now())/(1000*60*60*24)));
-          info.daysRemaining = info.certDaysLeft;
-          info.certExpired = info.certDaysLeft <= 0;
+      const host = u.hostname;
+      const port = parseInt(u.port || '443');
+
+      // Get cert details
+      const { stdout: certOut } = await execAsync(`echo | openssl s_client -connect ${host}:${port} -servername ${host} 2>/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName`, { timeout: 10000, maxBuffer: 1024 * 1024 });
+      const certLines = certOut.split('\n');
+      for (const line of certLines) {
+        if (line.startsWith('subject=')) {
+          info.certSubject = line.replace(/^subject=/, '').trim();
+          info.subject = info.certSubject;
         }
-        info.selfSigned = (typeof cert.issuer === 'object' ? cert.issuer.CN : cert.issuer) === (typeof cert.subject === 'object' ? cert.subject.CN : cert.subject);
-        info.certFingerprint = cert.fingerprint ? cert.fingerprint.replace(/:/g,'') : undefined;
-        if (cert.subjectaltname) {
-          info.certSANs = cert.subjectaltname.split(',').map((s: string) => s.trim().replace(/^DNS:/i,''));
+        if (line.startsWith('issuer=')) {
+          info.certIssuer = line.replace(/^issuer=/, '').trim();
+          info.issuer = info.certIssuer;
         }
-        const proto = certData.cipher?.version || '';
-        if (proto.includes('1.3')) { info.tls13 = true; info.tlsVersion = 'TLSv1.3'; }
-        else if (proto.includes('1.2')) { info.tls12 = true; info.tlsVersion = 'TLSv1.2'; }
-        else if (proto.includes('1.1')) { info.tls11 = true; info.tlsVersion = 'TLSv1.1'; }
-        else if (proto.includes('1.0')) { info.tls10 = true; info.tlsVersion = 'TLSv1.0'; }
+        if (line.startsWith('notBefore=')) {
+          info.certValidFrom = line.replace(/^notBefore=/, '').trim();
+          info.validFrom = info.certValidFrom;
+        }
+        if (line.startsWith('notAfter=')) {
+          info.certValidTo = line.replace(/^notAfter=/, '').trim();
+          info.validTo = info.certValidTo;
+        }
+        if (line.includes('DNS:')) {
+          const sans = line.split(',').map(s => s.trim().replace(/^DNS:/i, '')).filter(Boolean);
+          info.certSANs = sans;
+        }
+      }
+      if (info.certValidTo) {
+        const toDate = new Date(info.certValidTo);
+        info.certDaysLeft = Math.max(0, Math.ceil((toDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+        info.daysRemaining = info.certDaysLeft;
+        info.certExpired = info.certDaysLeft <= 0;
+      }
+      info.selfSigned = info.certSubject === info.certIssuer || (info.certIssuer || '').includes(info.certSubject || '');
+
+      // Get TLS version and cipher
+      const { stdout: tlsOut } = await execAsync(`echo | openssl s_client -connect ${host}:${port} -servername ${host} 2>/dev/null | grep -E "(Protocol|Cipher)" | head -2`, { timeout: 10000, maxBuffer: 1024 * 1024 });
+      const protoMatch = tlsOut.match(/Protocol:\s*(TLSv[\d.]+)/i);
+      if (protoMatch) {
+        info.tlsVersion = protoMatch[1];
+        if (info.tlsVersion === 'TLSv1.3') info.tls13 = true;
+        else if (info.tlsVersion === 'TLSv1.2') info.tls12 = true;
+        else if (info.tlsVersion === 'TLSv1.1') info.tls11 = true;
+        else if (info.tlsVersion === 'TLSv1.0') info.tls10 = true;
       }
     } catch {}
   }
