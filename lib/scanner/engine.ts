@@ -2237,19 +2237,23 @@ async function analyzeSSLInfo(headers: Record<string, string>, url: string): Pro
   info.valid = true;
   info.tlsVersion = info.tls13 ? 'TLSv1.3' : info.tls12 ? 'TLSv1.2' : info.tls11 ? 'TLSv1.1' : info.tls10 ? 'TLSv1.0' : 'Unknown';
 
-  // Real TLS certificate fetch via direct tlsConnect
+  // Real TLS certificate fetch via https.request (works through HTTP proxies)
   if (url.startsWith('https')) {
     try {
       const u = new URL(url);
       const certData = await new Promise<{cert: any, cipher: any}>((resolve) => {
-        const socket = tlsConnect({ host: u.hostname, port: parseInt(u.port||'443'), rejectUnauthorized: false, servername: u.hostname, timeout: 8000 }, () => {
-          const peer = socket.getPeerCertificate(true);
-          const ciph = socket.getCipher ? socket.getCipher() : null;
-          socket.end();
-          resolve({ cert: peer, cipher: ciph });
+        const req = httpsRequest({ hostname: u.hostname, port: parseInt(u.port||'443'), method: 'HEAD', timeout: 8000, rejectUnauthorized: false }, (res) => {
+          const tlsSocket = res.socket as any;
+          if (tlsSocket && tlsSocket.getPeerCertificate) {
+            resolve({ cert: tlsSocket.getPeerCertificate(true), cipher: tlsSocket.getCipher ? tlsSocket.getCipher() : null });
+          } else {
+            resolve({ cert: null, cipher: null });
+          }
+          res.resume();
         });
-        socket.on('error', () => { try { socket.end(); } catch {} resolve({ cert: null, cipher: null }); });
-        socket.setTimeout(8000, () => { try { socket.destroy(); } catch {} resolve({ cert: null, cipher: null }); });
+        req.on('error', () => resolve({ cert: null, cipher: null }));
+        req.on('timeout', () => { req.destroy(); resolve({ cert: null, cipher: null }); });
+        req.end();
       });
       const cert = certData.cert;
       if (cert && cert.subject) {
@@ -2364,56 +2368,90 @@ async function analyzeDNS(domain: string): Promise<{ records: DNSRecord[]; spfPo
 // ─── Cloud Infrastructure Scanner ───────────────────────────────────────────
 async function scanCloud(domain: string): Promise<CloudAsset[]> {
   const assets: CloudAsset[] = [];
-  async function checkS3(name: string, pattern: string) {
+  const seen = new Set<string>();
+
+  async function checkS3(name: string) {
+    const key = `s3:${name}`;
+    if (seen.has(key)) return;
+    seen.add(key);
     try {
       const res = await fetchURL(`https://${name}.s3.amazonaws.com`, 'GET', {}, undefined, 8000);
-      if (res.status < 400 || res.status === 403) {
-        const severity: CloudAsset['severity'] = res.status === 200 && res.body.includes('ListBucketResult') ? 'critical' : res.status === 403 ? 'medium' : 'low';
-        assets.push({ id: genId(), provider: 'aws', serviceType: 'S3 Bucket', resourceId: name, url: `https://${name}.s3.amazonaws.com`, permissions: res.status === 200 ? ['ListBucket'] : ['Exists'], misconfigurations: [{ type: 'cloud_misconfig', severity, description: `S3 bucket ${name} is ${res.status === 200 ? 'publicly listable' : 'accessible (status ' + res.status + ')'}` }], riskScore: severity === 'critical' ? 85 : severity === 'medium' ? 50 : 20, severity, exposureLevel: res.status === 200 ? 'public' : 'authenticated' });
+      // Only report if actually public (200 with bucket listing) or if body shows real exposure
+      if (res.status === 200 && (res.body.includes('ListBucketResult') || res.body.includes('<Contents>') || res.body.includes('<Key>'))) {
+        assets.push({ id: genId(), provider: 'aws', serviceType: 'S3 Bucket', resourceId: name, url: `https://${name}.s3.amazonaws.com`, permissions: ['ListBucket'], misconfigurations: [{ type: 'cloud_misconfig', severity: 'critical', description: `S3 bucket ${name} is publicly listable` }], riskScore: 85, severity: 'critical', exposureLevel: 'public' });
       }
+      // If 403 with explicit AccessDenied in body, it's private - don't report
+      // If any other status, ignore (not a real finding)
     } catch {}
   }
+
+  // Extract bucket names from domain patterns
   for (const p of CLOUD_PATTERNS.awsS3) {
     const m = domain.match(p);
-    if (m) await checkS3(m[0].replace(/\.s3[.-].*amazonaws\.com$/i,'').replace(/^https?:\/\//,''), m[0]);
+    if (m) {
+      const bucketName = m[0].replace(/\.s3[.-].*amazonaws\.com$/i,'').replace(/^https?:\/\//,'');
+      await checkS3(bucketName);
+    }
   }
-  for (const name of [domain, domain.replace(/\./g,'-'), domain.replace(/^www\./,'')]) {
-    await checkS3(name.toLowerCase(), '');
-    await checkS3(`backup-${name}`.toLowerCase(), '');
-    await checkS3(`assets-${name}`.toLowerCase(), '');
-    await checkS3(`cdn-${name}`.toLowerCase(), '');
-    await checkS3(`data-${name}`.toLowerCase(), '');
-    await checkS3(`media-${name}`.toLowerCase(), '');
-    await checkS3(`public-${name}`.toLowerCase(), '');
-    await checkS3(`static-${name}`.toLowerCase(), '');
-    await checkS3(`upload-${name}`.toLowerCase(), '');
+
+  // Check common bucket naming patterns (deduped)
+  const baseNames = Array.from(new Set([domain, domain.replace(/\./g,'-'), domain.replace(/^www\./,'')]));
+  for (const name of baseNames) {
+    const n = name.toLowerCase();
+    await checkS3(n);
+    await checkS3(`backup-${n}`);
+    await checkS3(`assets-${n}`);
+    await checkS3(`cdn-${n}`);
+    await checkS3(`data-${n}`);
+    await checkS3(`media-${n}`);
+    await checkS3(`public-${n}`);
+    await checkS3(`static-${n}`);
+    await checkS3(`upload-${n}`);
   }
+
+  // GCP - only if actually public
   try {
     const res = await fetchURL(`https://storage.googleapis.com/${domain}`, 'GET', {}, undefined, 8000);
-    if (res.status < 400) assets.push({ id: genId(), provider: 'gcp', serviceType: 'Cloud Storage', resourceId: domain, url: `https://storage.googleapis.com/${domain}`, permissions: res.status === 200 ? ['Read'] : ['Exists'], misconfigurations: [{ type: 'cloud_misconfig', severity: res.status === 200 ? 'high' : 'medium', description: `Google Cloud Storage bucket ${domain} is accessible` }], riskScore: res.status === 200 ? 70 : 40, severity: res.status === 200 ? 'high' : 'medium', exposureLevel: res.status === 200 ? 'public' : 'authenticated' });
+    if (res.status === 200 && (res.body.includes('<ListBucketResult') || res.body.includes('<Name>'))) {
+      assets.push({ id: genId(), provider: 'gcp', serviceType: 'Cloud Storage', resourceId: domain, url: `https://storage.googleapis.com/${domain}`, permissions: ['Read'], misconfigurations: [{ type: 'cloud_misconfig', severity: 'high', description: `Google Cloud Storage bucket ${domain} is publicly listable` }], riskScore: 70, severity: 'high', exposureLevel: 'public' });
+    }
   } catch {}
+
+  // Azure - only if actually public
   try {
     const res = await fetchURL(`https://${domain}.blob.core.windows.net`, 'GET', {}, undefined, 8000);
-    if (res.status < 400) assets.push({ id: genId(), provider: 'azure', serviceType: 'Blob Storage', resourceId: domain, url: `https://${domain}.blob.core.windows.net`, permissions: res.status === 200 ? ['List'] : ['Exists'], misconfigurations: [{ type: 'cloud_misconfig', severity: res.status === 200 ? 'high' : 'medium', description: `Azure Blob container ${domain} is accessible` }], riskScore: res.status === 200 ? 70 : 40, severity: res.status === 200 ? 'high' : 'medium', exposureLevel: res.status === 200 ? 'public' : 'authenticated' });
+    if (res.status === 200 && res.body.includes('<?xml') && res.body.includes('<Containers>')) {
+      assets.push({ id: genId(), provider: 'azure', serviceType: 'Blob Storage', resourceId: domain, url: `https://${domain}.blob.core.windows.net`, permissions: ['List'], misconfigurations: [{ type: 'cloud_misconfig', severity: 'high', description: `Azure Blob container ${domain} is publicly listable` }], riskScore: 70, severity: 'high', exposureLevel: 'public' });
+    }
   } catch {}
+
+  // Firebase - only if real JSON data returned
   try {
     const res = await fetchURL(`https://${domain}.firebaseio.com/.json`, 'GET', {}, undefined, 8000);
-    if (res.status === 200 && res.body.includes('{')) assets.push({ id: genId(), provider: 'firebase', serviceType: 'Realtime DB', resourceId: domain, url: `https://${domain}.firebaseio.com`, permissions: ['Read','Write'], misconfigurations: [{ type: 'cloud_misconfig', severity: 'critical', description: `Firebase Realtime Database for ${domain} appears publicly writable` }], riskScore: 95, severity: 'critical', exposureLevel: 'public' });
+    if (res.status === 200 && res.body.includes('{') && !res.body.includes('Permission denied') && !res.body.includes('Unauthorized')) {
+      assets.push({ id: genId(), provider: 'firebase', serviceType: 'Realtime DB', resourceId: domain, url: `https://${domain}.firebaseio.com`, permissions: ['Read','Write'], misconfigurations: [{ type: 'cloud_misconfig', severity: 'critical', description: `Firebase Realtime Database for ${domain} appears publicly readable` }], riskScore: 95, severity: 'critical', exposureLevel: 'public' });
+    }
   } catch {}
+
+  // DigitalOcean - only if actually public
   try {
     const res = await fetchURL(`https://${domain}.digitaloceanspaces.com`, 'GET', {}, undefined, 8000);
-    if (res.status < 400) assets.push({ id: genId(), provider: 'digitalocean', serviceType: 'Spaces', resourceId: domain, url: `https://${domain}.digitaloceanspaces.com`, permissions: res.status === 200 ? ['List'] : ['Exists'], misconfigurations: [{ type: 'cloud_misconfig', severity: res.status === 200 ? 'high' : 'medium', description: `DigitalOcean Spaces bucket ${domain} is accessible` }], riskScore: res.status === 200 ? 70 : 40, severity: res.status === 200 ? 'high' : 'medium', exposureLevel: res.status === 200 ? 'public' : 'authenticated' });
+    if (res.status === 200 && (res.body.includes('ListBucketResult') || res.body.includes('<Contents>'))) {
+      assets.push({ id: genId(), provider: 'digitalocean', serviceType: 'Spaces', resourceId: domain, url: `https://${domain}.digitaloceanspaces.com`, permissions: ['List'], misconfigurations: [{ type: 'cloud_misconfig', severity: 'high', description: `DigitalOcean Spaces bucket ${domain} is publicly listable` }], riskScore: 70, severity: 'high', exposureLevel: 'public' });
+    }
   } catch {}
+
+  // Docker/K8s exposed ports
   for (const port of [2375,2376,6443]) {
     try {
       const banner = await bannerGrab(domain, port, 5000);
       if (banner.body.includes('Docker') || banner.body.includes('docker') || banner.body.includes('Kubernetes') || banner.body.includes('k8s') || banner.body.includes('etcd')) {
         const svc = banner.body.includes('Kubernetes') || banner.body.includes('k8s') ? 'Kubernetes API' : banner.body.includes('etcd') ? 'etcd' : 'Docker Daemon';
-        const provider: CloudAsset['provider'] = 'aws';
-        assets.push({ id: genId(), provider, serviceType: svc, resourceId: `${domain}:${port}`, url: `http://${domain}:${port}`, permissions: ['Connect'], misconfigurations: [{ type: 'cloud_misconfig', severity: 'critical', description: `${svc} exposed on port ${port} without proper network controls` }], riskScore: 90, severity: 'critical', exposureLevel: 'public' });
+        assets.push({ id: genId(), provider: 'aws', serviceType: svc, resourceId: `${domain}:${port}`, url: `http://${domain}:${port}`, permissions: ['Connect'], misconfigurations: [{ type: 'cloud_misconfig', severity: 'critical', description: `${svc} exposed on port ${port} without proper network controls` }], riskScore: 90, severity: 'critical', exposureLevel: 'public' });
       }
     } catch {}
   }
+
   return assets;
 }
 
