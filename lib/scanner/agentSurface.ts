@@ -153,17 +153,29 @@ async function scanHost(host: string, result: AgentSurfaceResult, deadline: numb
   const catchAll = !!ctrl && ctrl.status < 400 && ctrl.status > 0;
 
   // MCP server exposure probes
+  let oauthMcpHost = false;
   for (const path of MCP_PATHS) {
     if (Date.now() > deadline) return;
     const res = await fetchUrl(`https://${host}${path}`, 3200);
     if (!res || res.status === 0) continue;
     const ct = (res.headers['content-type'] || '').toLowerCase();
     const bodyLower = res.body.toLowerCase();
+    const wwwAuth = (res.headers['www-authenticate'] || '').toLowerCase();
+    // OAuth-protected MCP servers answer 401 with www-authenticate: Bearer realm="OAuth" and a
+    // resource_metadata URL whose PATH contains "mcp" (e.g. /.well-known/oauth-protected-resource/mcp).
+    // Only trust this signal on the standard discovery paths; on other paths a catch-all auth middleware
+    // (e.g. Vercel/Next.js) returns 401 for every route, which is NOT evidence of an MCP server.
+    const rmMatch = wwwAuth.match(/resource_metadata="([^"]+)"/i);
+    let rmPath = '';
+    if (rmMatch) { try { rmPath = new URL(rmMatch[1]).pathname.toLowerCase(); } catch { rmPath = rmMatch[1].toLowerCase(); } }
+    const oauthMcp = !catchAll && res.status === 401 && wwwAuth.includes('oauth') && rmPath.includes('mcp') &&
+      (path === '/.well-known/mcp' || path === '/mcp');
+    if (oauthMcp) oauthMcpHost = true;
     const looksMcp =
-      res.status >= 200 && res.status < 300 &&
-      !catchAll &&
-      (ct.includes('text/event-stream') || ct.startsWith('application/json') ||
-        bodyLower.includes('jsonrpc') || bodyLower.includes('tools/list') || bodyLower.includes('"mcp"'));
+      (res.status >= 200 && res.status < 300 && !catchAll &&
+        (ct.includes('text/event-stream') || ct.startsWith('application/json') ||
+          bodyLower.includes('jsonrpc') || bodyLower.includes('tools/list') || bodyLower.includes('"mcp"')))
+      || oauthMcp;
     if (!looksMcp) continue;
     const auth = res.status === 401 || res.status === 403 || res.status === 407 ? 'required' : 'NONE (unauthenticated)';
     result.exposedMcpServers.push({ host, url: `https://${host}${path}`, transport: ct.includes('text/event-stream') ? 'SSE' : 'JSON-RPC', authentication: auth });
@@ -172,17 +184,23 @@ async function scanHost(host: string, result: AgentSurfaceResult, deadline: numb
       severity: auth === 'required' ? 'medium' : 'high',
       host,
       description: `Exposed MCP (Model Context Protocol) server at ${path}`,
-      evidence: `GET https://${host}${path} -> HTTP ${res.status} (${ct || 'unknown content-type'}) authentication: ${auth}`,
+      evidence: `GET https://${host}${path} -> HTTP ${res.status} (${ct || 'unknown content-type'}) authentication: ${auth}${oauthMcp ? ' (OAuth-protected MCP)' : ''}`,
       remediation: 'Protect MCP endpoints with authentication and IP allowlisting. Remove public access to internal tool-calling servers.',
       confidence: auth === 'required' ? 'likely' : 'confirmed',
     });
   }
 
   // Agent / LLM API endpoint discovery (POST -> 401/400/200 signals a real route)
+  // 404 = no route, 405 = static-server behavior (nginx returns 405 for POST on any path) -> NOT evidence
+  // catchAll hosts (SPA/auth middleware answering every path) are skipped: uniform 401/200 is not a real route signal
   for (const ep of AGENT_PATHS) {
     if (Date.now() > deadline) return;
+    if (catchAll) break;
+    // OAuth-protected MCP hosts answer 401 on every protected path via their site-wide auth wall;
+    // those 401s are NOT evidence of real agent endpoints, so skip endpoint discovery there.
+    if (oauthMcpHost) break;
     const res = await fetchUrl(`https://${host}${ep.path}`, 3200, 'POST');
-    if (!res || res.status === 0 || res.status === 404) continue;
+    if (!res || res.status === 0 || res.status === 404 || res.status === 405) continue;
     const auth = res.status === 401 || res.status === 403 ? 'required' : res.status === 200 ? 'NONE (unauthenticated)' : 'maybe';
     result.agentEndpoints.push({ host, url: `https://${host}${ep.path}`, service: ep.service, authRequired: auth });
     if (auth === 'NONE (unauthenticated)' || res.status === 200) {
