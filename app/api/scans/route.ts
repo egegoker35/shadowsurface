@@ -42,19 +42,6 @@ export async function POST(req: NextRequest) {
     const plan = org?.plan || 'free';
     const config = PLAN_CONFIG[plan] || PLAN_CONFIG.starter;
 
-    const hourRL = await rateLimitByUser(user.id, config.perHour, 3600);
-    if (!hourRL.success) {
-      return NextResponse.json({ error: `Hourly limit (${config.perHour}/hour). Upgrade at /pricing` }, { status: 429 });
-    }
-
-    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const monthCount = await prisma.scan.count({
-      where: { orgId: user.orgId, createdAt: { gte: monthAgo } },
-    });
-    if (monthCount >= config.perMonth) {
-      return NextResponse.json({ error: `Monthly limit (${config.perMonth}/month). Upgrade at /pricing` }, { status: 429 });
-    }
-
     const body = await req.json();
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: 'Invalid target' }, { status: 400 });
@@ -79,6 +66,20 @@ export async function POST(req: NextRequest) {
 
     const target = sanitizeTarget(primaryTarget);
     if (isBlockedTarget(target)) return NextResponse.json({ error: 'Target blocked' }, { status: 403 });
+
+    // Rate limits run AFTER validation so rejected requests never consume quota.
+    const hourRL = await rateLimitByUser(user.id, config.perHour, 3600);
+    if (!hourRL.success) {
+      return NextResponse.json({ error: `Hourly limit (${config.perHour}/hour). Upgrade at /pricing` }, { status: 429 });
+    }
+
+    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const monthCount = await prisma.scan.count({
+      where: { orgId: user.orgId, createdAt: { gte: monthAgo } },
+    });
+    if (monthCount >= config.perMonth) {
+      return NextResponse.json({ error: `Monthly limit (${config.perMonth}/month). Upgrade at /pricing` }, { status: 429 });
+    }
 
     const scan = await prisma.scan.create({
       data: { target: rawTarget, scanType, status: 'running', orgId: user.orgId, createdById: user.id },
