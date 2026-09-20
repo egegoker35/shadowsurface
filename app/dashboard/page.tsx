@@ -177,7 +177,7 @@ export default function DashboardPage() {
                     <td className="py-2 text-slate-400 cursor-pointer" onClick={() => window.location.href = `/dashboard/scans/${s.id}`}>{new Date(s.createdAt).toLocaleString()}</td>
                     <td className="py-2 text-right">
                       {(s.status === 'running' || s.status === 'pending') && (
-                        <button onClick={async (e) => { e.stopPropagation(); if (!confirm('Cancel this scan?')) return; await fetch(`/api/scans/cancel?id=${s.id}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }); fetchScans(); }} className="text-xs text-red-400 hover:text-red-300 border border-red-900/50 rounded px-2 py-0.5 hover:bg-red-900/20 transition-colors">Cancel</button>
+                        <button onClick={async (e) => { e.stopPropagation(); await fetch(`/api/scans/cancel?id=${s.id}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }); fetchScans(); }} className="text-xs text-red-400 hover:text-red-300 border border-red-900/50 rounded px-2 py-0.5 hover:bg-red-900/20 transition-colors">Cancel</button>
                       )}
                     </td>
                   </tr>

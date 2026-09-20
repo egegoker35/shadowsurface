@@ -24,40 +24,32 @@ export default function UsersTable({ users, onRefresh }: { users: any[]; onRefre
   const token = typeof window !== 'undefined' ? localStorage.getItem('ss_admin_token') : null;
 
   const upgrade = async (userId: string, plan: string) => {
-    if (!confirm(`Upgrade to ${plan}?`)) return;
     try {
       const res = await fetch('/api/admin/upgrade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ userId, plan }),
       });
-      const data = await res.json();
-      if (res.ok) { alert('Upgraded successfully!'); onRefresh(); }
-      else alert(data.error || 'Failed to upgrade');
-    } catch (e: any) { alert('Network error: ' + (e.message || 'Failed')); }
+      if (res.ok) onRefresh();
+    } catch { /* silent */ }
   };
 
   const del = async (userId: string) => {
-    if (!confirm('Delete this user permanently?')) return;
     try {
       const res = await fetch(`/api/admin/delete-user?id=${userId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) { alert('Deleted!'); onRefresh(); }
-      else alert('Failed to delete');
-    } catch (e: any) { alert('Error: ' + (e.message || 'Failed')); }
+      if (res.ok) onRefresh();
+    } catch { /* silent */ }
   };
 
   const setRole = async (userId: string, role: string) => {
-    if (!confirm(`Change role to ${role}?`)) return;
     try {
       const res = await fetch('/api/admin/update-role', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ userId, role }),
       });
-      const data = await res.json();
-      if (res.ok) { alert(`Role changed to ${role}!`); onRefresh(); }
-      else alert(data.error || 'Failed');
-    } catch (e: any) { alert('Network error: ' + (e.message || 'Failed')); }
+      if (res.ok) onRefresh();
+    } catch { /* silent */ }
   };
 
   return (

@@ -20,12 +20,10 @@ export default function TeamPage() {
     setSending(true);
     const res = await fetch('/api/invites', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ email }) });
     if (res.ok) { setEmail(''); fetchInvites(); }
-    else alert('Failed to send invite');
     setSending(false);
   };
 
   const del = async (id: string) => {
-    if (!confirm('Revoke this invite?')) return;
     await fetch(`/api/invites?id=${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     fetchInvites();
   };

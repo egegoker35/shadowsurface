@@ -36,7 +36,6 @@ export default function ScheduledScansPage() {
   };
 
   const del = async (id: string) => {
-    if (!confirm('Delete scheduled scan?')) return;
     await fetch(`/api/scheduled-scans?id=${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     fetchItems();
   };

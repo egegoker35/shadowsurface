@@ -28,15 +28,13 @@ export default function ScansTable({ scans, onRefresh }: { scans: any[]; onRefre
   const [selectedScan, setSelectedScan] = useState<any>(null);
 
   const del = async (scanId: string) => {
-    if (!confirm('Delete this scan?')) return;
     try {
       const res = await fetch(`/api/admin/delete-scan?id=${scanId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) { if (onRefresh) onRefresh(); }
-      else alert('Failed to delete');
-    } catch { alert('Error'); }
+      if (res.ok && onRefresh) onRefresh();
+    } catch { /* silent */ }
   };
 
   return (
