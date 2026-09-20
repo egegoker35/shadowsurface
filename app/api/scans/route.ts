@@ -9,7 +9,7 @@ import { z } from 'zod';
 const VALID_SCAN_TYPES = ['subdomain', 'port', 'cve', 'cloud', 'full', 'bulk'];
 
 const PLAN_CONFIG: Record<string, { perHour: number; perMonth: number; portLimit: number; allowedTypes: string[]; bulkDomains: number }> = {
-  free: { perHour: 0, perMonth: 0, portLimit: 0, allowedTypes: [], bulkDomains: 0 },
+  free: { perHour: 1, perMonth: 2, portLimit: 10, allowedTypes: ['subdomain', 'port'], bulkDomains: 1 },
   starter: { perHour: 5, perMonth: 20, portLimit: 20, allowedTypes: ['subdomain', 'port', 'cve'], bulkDomains: 1 },
   professional: { perHour: 20, perMonth: 200, portLimit: 50, allowedTypes: ['subdomain', 'port', 'cve', 'cloud', 'full'], bulkDomains: 5 },
   enterprise: { perHour: 100, perMonth: 9999, portLimit: 100, allowedTypes: ['subdomain', 'port', 'cve', 'cloud', 'full', 'bulk'], bulkDomains: 50 },
@@ -40,9 +40,6 @@ export async function POST(req: NextRequest) {
 
     const org = await prisma.organization.findUnique({ where: { id: user.orgId } });
     const plan = org?.plan || 'free';
-    if (plan === 'free') {
-      return NextResponse.json({ error: 'Please upgrade your plan to start scanning. Visit /pricing' }, { status: 403 });
-    }
     const config = PLAN_CONFIG[plan] || PLAN_CONFIG.starter;
 
     const hourRL = await rateLimitByUser(user.id, config.perHour, 3600);

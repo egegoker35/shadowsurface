@@ -144,6 +144,24 @@ export interface CloudAsset {
   exposureLevel?: 'public' | 'authenticated' | 'private';
 }
 
+export interface AgentSurfaceFinding {
+  type: 'mcp_exposure' | 'agent_secret' | 'agent_endpoint' | 'agent_typosquat';
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  host: string;
+  description: string;
+  evidence: string;
+  remediation: string;
+  confidence: 'confirmed' | 'likely' | 'potential';
+}
+
+export interface AgentSurfaceResult {
+  findings: AgentSurfaceFinding[];
+  exposedMcpServers: { host: string; url: string; transport: string; authentication: string }[];
+  leakedSecrets: { host: string; pattern: string; snippet: string }[];
+  agentEndpoints: { host: string; url: string; service: string; authRequired: string }[];
+  summary: { totalFindings: number; exposedMcpCount: number; leakedSecretCount: number; agentEndpointCount: number; scannedHosts: number };
+}
+
 export interface ScanResult {
   scanId: string;
   target: string;
@@ -194,4 +212,5 @@ export interface ScanResult {
     subdomainTakeover?: string[];
     zoneTransfer?: boolean;
   };
+  agentSurface?: AgentSurfaceResult;
 }

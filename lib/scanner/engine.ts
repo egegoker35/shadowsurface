@@ -6,7 +6,8 @@ import { URL } from 'url';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 const execAsync = promisify(exec);
-import type { DiscoveredAsset, CloudAsset, ScanResult, Finding, WebVuln, WebVulnType, SSLInfo, DNSRecord } from './types';
+import type { DiscoveredAsset, CloudAsset, ScanResult, Finding, WebVuln, WebVulnType, SSLInfo, DNSRecord, AgentSurfaceResult } from './types';
+import { scanAgentSurface } from './agentSurface';
 
 const genId = () => Math.random().toString(36).substring(2, 14);
 
@@ -2956,7 +2957,20 @@ export class ScannerEngine {
         }
       }
     }
-    const cloudAssets = await scanCloud(this.target);
+    const [cloudAssets, agentSurface] = await Promise.all([
+      scanCloud(this.target),
+      scanAgentSurface(this.target, Object.keys(subdomains)).catch(() => ({ findings: [], exposedMcpServers: [], leakedSecrets: [], agentEndpoints: [], summary: { totalFindings: 0, exposedMcpCount: 0, leakedSecretCount: 0, agentEndpointCount: 0, scannedHosts: 0 } })),
+    ]);
+    // Inject Agent Attack Surface lite findings into the primary asset (AI-agent MCP exposure, leaked tokens, LLM endpoints)
+    if (agentSurface.findings.length > 0) {
+      this.scanResult.agentSurface = agentSurface;
+      if (assets.length > 0) {
+        const primary = assets[0];
+        for (const f of agentSurface.findings) {
+          primary.findings.push({ type: 'agent_surface', severity: f.severity, description: `${f.description}`, evidence: f.evidence });
+        }
+      }
+    }
     for (const asset of assets) {
       const cves = mapCVEs([{name: asset.technology || '', version: asset.version || ''}]).filter(c=>!asset.cves.includes(c.id));
       asset.cves.push(...cves.map(c=>c.id));
