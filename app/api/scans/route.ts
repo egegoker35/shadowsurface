@@ -136,15 +136,9 @@ export async function POST(req: NextRequest) {
         console.error('[Scan Save Error]', e);
         await prisma.scan.update({ where: { id: scan.id }, data: { status: 'failed' } });
       }
-      await prisma.notification.create({
-        data: { userId: user.id, type: 'scan_complete', title: 'Scan Completed', message: `${target} scan finished with ${result.statistics?.highRiskCount || 0} high-risk findings.`, data: { scanId: scan.id } },
-      });
     }).catch(async (err: any) => {
       console.error('[Scan Engine Error]', err?.message || err);
       await prisma.scan.update({ where: { id: scan.id }, data: { status: 'failed' } });
-      await prisma.notification.create({
-        data: { userId: user.id, type: 'scan_failed', title: 'Scan Failed', message: `${target} scan could not be completed. Target may be unreachable.`, data: { scanId: scan.id } },
-      });
     });
 
     return NextResponse.json({ scanId: scan.id, status: 'running', message: 'Scan started. This may take 5-30 minutes depending on target size.' });

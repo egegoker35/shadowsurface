@@ -48,8 +48,6 @@ model Scan {
   statistics    Json?
   executiveSummary Json?
   durationSeconds Float?
-  isPublic      Boolean  @default(false)
-  sharedAt      DateTime?
   orgId         String
   org           Organization @relation(fields: [orgId], references: [id])
   createdById   String?

@@ -1512,13 +1512,20 @@ function detectWAF(responseHeaders: Record<string, string>, body: string): strin
   return null;
 }
 
+// A CVE regex without any digit/version pattern (e.g. /WordPress/, /Struts/, /cPanel|WHM/)
+// would match ANY version of the product — a guaranteed false positive. Skip those.
+function hasVersionPattern(re: RegExp): boolean {
+  const src = re.source;
+  return src.includes('\\d') || /[0-9]/.test(src);
+}
+
 function mapCVEs(techs: Array<{ name: string; version?: string }>): Array<{ id: string; cvss: number; cwe: string; description: string; exploitAvailable: boolean }> {
   const matches: Array<{ id: string; cvss: number; cwe: string; description: string; exploitAvailable: boolean }> = [];
   const seen = new Set<string>();
   for (const tech of techs) {
     const techStr = tech.name + (tech.version ? ' ' + tech.version : '');
     for (const cve of CVE_DB) {
-      if (cve.techRegex.test(techStr) && !seen.has(cve.id)) {
+      if (hasVersionPattern(cve.techRegex) && cve.techRegex.test(techStr) && !seen.has(cve.id)) {
         seen.add(cve.id);
         matches.push({ id: cve.id, cvss: cve.cvss, cwe: cve.cwe, description: cve.description, exploitAvailable: cve.exploitAvailable });
       }
@@ -1600,14 +1607,14 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
     }
   }
 
-  // LFI / Path Traversal
+  // LFI / Path Traversal (only strong signals: actual file content or encoded traversal echoes)
   const lfiPatterns = [
-    /root\s*:\s*x\s*:\s*0\s*:\s*0\s*:/i, /bin\/bash/i, /etc\/passwd/i,
+    /root\s*:\s*x\s*:\s*0\s*:\s*0\s*:/i,
     /Windows\s+Directory/i, /win\.ini/i, /boot\.ini/i,
     /system32\/drivers\/etc\/hosts/i, /\[extensions\]/i, /\[fonts\]/i,
     /\[MCPI\]/i, /\[PADDING\]/i, /\[Mail\]/i, /\[MCI Extensions\]/i,
     /\[files\]/i, /\[windows\]/i, /type\s+\w+\s*:\s*directory/i,
-    /\bC:\\/i, /php:\/\/filter/i, /php:\/\/input/i, /data:\/\/text\/plain/i,
+    /php:\/\/filter/i, /php:\/\/input/i, /data:\/\/text\/plain/i,
     /\.\.\/%2f/i, /%2e%2e%2f/i, /\.\.\\/i, /%252e%252e%252f/i,
     new RegExp('%252e%252e', 'i'), new RegExp('..\\..\\..\\..\\etc\/passwd', 'i'),
     /..%c0%af..%c0%af..%c0%afetc\/passwd/i,
@@ -1631,10 +1638,6 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
     /Server:\s+\d+\.\d+\.\d+\.\d+/i,
     /Address:\s+\d+\.\d+\.\d+\.\d+/i,
     /traceroute\s+to\s+.*?\d+\.\d+\.\d+\.\d+/i,
-    /eval\(/i, /system\(/i, /exec\(/i, /passthru\(/i,
-    /shell_exec\(/i, /proc_open\(/i, /popen\(/i,
-    /assert\(/i, /preg_replace.*\/e/i,
-    /backticks.*\`/i, /`.*`.*\$/i,
   ];
   for (const rx of rcePatterns) {
     if (rx.test(body)) { vulns.push({ type: 'rce', severity: 'critical', url: baseUrl, description: 'Potential RCE / command injection output detected in response', evidence: body.slice(0,200), confidence: 'potential' }); break; }
@@ -1643,9 +1646,6 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
   // SSRF Detection
   if (/169\.254\.169\.254/.test(body) || /169\.254\.169\.254/.test(url) || /metadata\.google\.internal/.test(body) || /metadata\.google\.internal/.test(url)) {
     vulns.push({ type: 'ssrf', severity: 'critical', url: baseUrl, description: 'Potential SSRF — cloud metadata endpoint reflected in response', evidence: body.slice(0,200), confidence: 'likely' });
-  }
-  if (/localhost/.test(body) || /127\.0\.0\.1/.test(body) || /0\.0\.0\.0/.test(body)) {
-    if (status >= 200 && status < 300) vulns.push({ type: 'ssrf', severity: 'high', url: baseUrl, description: 'Internal resource accessed — potential SSRF', evidence: body.slice(0,200), confidence: 'potential' });
   }
 
   // XXE Detection
@@ -1668,8 +1668,8 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
   if (acao === '*' && /true|1/i.test(acac)) {
     vulns.push({ type: 'cors', severity: 'high', url: baseUrl, description: 'CORS wildcard + credentials enabled — allows authenticated cross-origin attacks', evidence: `Origin: ${acao}, Credentials: ${acac}`, confidence: 'confirmed' });
   }
-  if (acao && (acao === 'null' || acao.includes('evil.com') || acao === '*')) {
-    vulns.push({ type: 'cors', severity: 'medium', url: baseUrl, description: 'Permissive CORS policy detected', evidence: `Access-Control-Allow-Origin: ${acao}`, confidence: 'likely' });
+  if (acao && acao.includes('evil.com') && /true|1/i.test(acac)) {
+    vulns.push({ type: 'cors', severity: 'high', url: baseUrl, description: 'CORS reflects attacker-controlled origin with credentials — allows authenticated cross-origin attacks', evidence: `Origin: ${acao}, Credentials: ${acac}`, confidence: 'confirmed' });
   }
 
   // CSRF (missing token detection)
@@ -1813,12 +1813,12 @@ async function probePaths(baseUrl: string, timeout=8000): Promise<WebVuln[]> {
           vulns.push({ type: 'info_disclosure', severity: 'critical', url: testUrl, description: 'Git repository exposed — source code and history accessible', evidence: res.body.slice(0,200), confidence: 'confirmed' });
         }
         if (p === '/config.php' || p === '/config.json' || p === '/web.config') {
-          if (res.body.includes('password') || res.body.includes('key') || res.body.includes('secret') || res.body.includes('host')) {
+          if (res.body.includes('password') || res.body.includes('key') || res.body.includes('secret')) {
             vulns.push({ type: 'info_disclosure', severity: 'critical', url: testUrl, description: `Config file ${p} exposed with sensitive data`, evidence: res.body.slice(0,200), confidence: 'confirmed' });
           }
         }
         if (p === '/phpmyadmin' || p === '/myadmin' || p === '/pma' || p === '/adminer.php') {
-          if (res.body.includes('phpMyAdmin') || res.body.includes('Adminer') || res.body.includes('login')) {
+          if (res.body.includes('phpMyAdmin') || res.body.includes('Adminer') || res.body.includes('pma_username')) {
             vulns.push({ type: 'exposed_admin', severity: 'high', url: testUrl, description: `Database admin panel exposed: ${p}`, evidence: `Status ${res.status}`, confidence: 'confirmed' });
           }
         }
@@ -1832,27 +1832,25 @@ async function probePaths(baseUrl: string, timeout=8000): Promise<WebVuln[]> {
           vulns.push({ type: 'graphql_issue', severity: 'high', url: testUrl, description: 'GraphQL endpoint/introspection exposed', evidence: p, confidence: 'confirmed' });
         }
         if (p === '/actuator' || p === '/health' || p === '/metrics') {
-          if (res.body.includes('status') || res.body.includes('UP') || res.body.includes('health') || res.body.includes('jvm')) {
+          const j = res.body.trim();
+          if (j.startsWith('{') && (j.includes('"status"') || j.includes('"UP"') || j.includes('jvm') || j.includes('"health"') || j.includes('"mem"') || j.includes('"gauge"') || j.includes('"names"'))) {
             vulns.push({ type: 'api_exposure', severity: 'medium', url: testUrl, description: 'Spring Boot actuator endpoint exposed — may leak internal state', evidence: p, confidence: 'confirmed' });
           }
         }
         if (p === '/debug/vars' || p === '/debug/pprof') {
-          if (res.status === 200) {
+          if (res.body.includes('memstats') || res.body.includes('pprof') || res.body.includes('goroutine') || res.body.includes('expvar')) {
             vulns.push({ type: 'api_exposure', severity: 'high', url: testUrl, description: 'Go debug/pprof or expvar endpoint exposed — memory dumps and profiling accessible', evidence: p, confidence: 'confirmed' });
           }
         }
         if (p === '/server-status' && res.body.includes('Apache Server Status')) {
           vulns.push({ type: 'info_disclosure', severity: 'medium', url: testUrl, description: 'Apache server-status page exposed — reveals request details and internal IPs', evidence: p, confidence: 'confirmed' });
         }
-        if ((p === '/trace.axd' || p === '/elmah.axd') && res.status !== 404) {
+        if ((p === '/trace.axd' || p === '/elmah.axd') && (res.body.includes('trace') || res.body.includes('elmah') || res.body.includes('System.Web'))) {
           vulns.push({ type: 'info_disclosure', severity: 'high', url: testUrl, description: 'ASP.NET trace/ELMAH error log exposed — may contain sensitive request data', evidence: p, confidence: 'confirmed' });
         }
       }
     } catch {}
   }));
-  if (foundPaths.length > 5 && !u.pathname.includes('wp-')) {
-    vulns.push({ type: 'directory_listing', severity: 'medium', url: baseUrl, description: `${foundPaths.length} sensitive paths responded successfully — broad attack surface`, evidence: foundPaths.slice(0,5).join(', ') + '...', confidence: 'confirmed' });
-  }
   return vulns;
 }
 
@@ -1975,18 +1973,6 @@ async function testParameterInjection(baseUrl: string, headers: Record<string, s
       } else {
         vulns.push({ type: 'cors', severity: 'medium', url: base, description: 'CORS misconfiguration — reflects arbitrary Origin without proper whitelist validation', evidence: `Access-Control-Allow-Origin: ${acao}`, confidence: 'confirmed' });
       }
-    }
-  } catch {}
-
-  // CSRF token absence probe
-  try {
-    const res = await fetchURL(base, 'GET', { 'Connection': 'close' }, undefined, timeout);
-    const bodyLower = res.body.toLowerCase();
-    const hasForm = /<form[^>]*>/i.test(res.body);
-    const hasCsrfToken = /csrf|xsrf|authenticity_token|__requestverificationtoken|_token|nonce|anti-forgery/i.test(res.body);
-    const hasCookie = !!res.headers['set-cookie'];
-    if (hasForm && !hasCsrfToken && hasCookie) {
-      vulns.push({ type: 'csrf', severity: 'high', url: base, description: 'Potential CSRF vulnerability — form found without CSRF token and session cookie is set', evidence: 'Form tag present; no csrf/authenticity token detected', confidence: 'likely' });
     }
   } catch {}
 
@@ -2434,10 +2420,11 @@ async function scanCloud(domain: string): Promise<CloudAsset[]> {
     }
   } catch {}
 
-  // Firebase - only if real JSON data returned
+  // Firebase - only if real JSON data returned (body must actually start with JSON)
   try {
     const res = await fetchURL(`https://${domain}.firebaseio.com/.json`, 'GET', {}, undefined, 8000);
-    if (res.status === 200 && res.body.includes('{') && !res.body.includes('Permission denied') && !res.body.includes('Unauthorized')) {
+    const trimmed = res.body.trim();
+    if (res.status === 200 && (trimmed.startsWith('{') || trimmed.startsWith('[')) && !res.body.includes('Permission denied') && !res.body.includes('Unauthorized')) {
       assets.push({ id: genId(), provider: 'firebase', serviceType: 'Realtime DB', resourceId: domain, url: `https://${domain}.firebaseio.com`, permissions: ['Read','Write'], misconfigurations: [{ type: 'cloud_misconfig', severity: 'critical', description: `Firebase Realtime Database for ${domain} appears publicly readable` }], riskScore: 95, severity: 'critical', exposureLevel: 'public' });
     }
   } catch {}
@@ -2495,8 +2482,6 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                 const findings: Finding[] = [];
                 if (DANGEROUS_PORTS.has(port)) findings.push({ type:'dangerous_service', severity:'high', port, service:svc, description:`${svc} exposed on port ${port}`, evidence: probe.body.slice(0,120)});
                 if (EXPOSABLE_DB_PORTS.has(port)) findings.push({ type:'exposed_database', severity:'critical', port, service:svc, description:`Database ${svc} exposed on port ${port}`, evidence: probe.body.slice(0,120)});
-                const creds = DEFAULT_CREDS[svc];
-                if (creds) findings.push({ type:'default_creds', severity:'critical', port, service:svc, description:`${svc} may have default credentials: ${creds.slice(0,3).join(', ')}...`, evidence:creds.slice(0,3).join(', ')});
                 let webVulns: WebVuln[] = [];
                 let sslInfo: SSLInfo | null = null;
                 let sslGrade: DiscoveredAsset['sslGrade'] = undefined;
@@ -2665,41 +2650,14 @@ function calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[
 
 function detectPassiveWebVulns(body: string, headers: Record<string,string>, url: string, port: number): Finding[] {
   const findings: Finding[] = [];
-  const lowerBody = body.toLowerCase();
-  // Detect HTML forms (injection surface)
-  if (/<form[^>]*>/i.test(body)) {
-    const formCount = (body.match(/<form[^>]*>/gi) || []).length;
-    findings.push({ type:'info_disclosure', severity:'low', port, description:`${formCount} HTML form(s) detected - potential injection surface`, evidence:`Forms found at ${url}` });
-  }
-  // Detect input fields with name attributes
-  const inputNames = body.match(/<input[^>]*name=["']([^"']+)["']/gi) || [];
-  if (inputNames.length > 0) {
-    const names = inputNames.slice(0,5).map(s => s.replace(/.*name=["']([^"']+)["'].*/i,'$1'));
-    findings.push({ type:'info_disclosure', severity:'low', port, description:`Input parameters exposed: ${names.join(', ')}${inputNames.length>5?'...':''}`, evidence:`${inputNames.length} input fields` });
-  }
-  // Detect API endpoints in body
-  const apiPaths = body.match(/["']\/(api|graphql|swagger|rest|v1|v2|wp-json)\/[^"']*["']/gi) || [];
-  if (apiPaths.length > 0) {
-    findings.push({ type:'info_disclosure', severity:'low', port, description:`API endpoints detected in page source`, evidence:apiPaths.slice(0,3).join(', ') });
-  }
-  // Detect inline scripts (XSS surface)
-  const scriptTags = (body.match(/<script[^>]*>/gi) || []).length;
-  if (scriptTags > 0) {
-    findings.push({ type:'info_disclosure', severity:'low', port, description:`${scriptTags} inline/external script tag(s) detected`, evidence:`Scripts present - XSS attack surface` });
-  }
-  // Detect commented-out code / debug info
-  if (/<!--.*?debug|<!--.*?test|<!--.*?dev|<!--.*?localhost/i.test(body)) {
-    findings.push({ type:'info_disclosure', severity:'low', port, description:'HTML comments may contain debug/sensitive information', evidence:'Debug-related comments found' });
+  // Detect commented-out secrets / credentials (actual secret material, not generic comments)
+  if (/<!--[\s\S]{0,600}?(api[_-]?key|secret|password|passwd|token|aws_access|AKIA|BEGIN\s+(RSA|OPENSSH|EC|DSA)\s+PRIVATE)/i.test(body)) {
+    findings.push({ type:'info_disclosure', severity:'medium', port, description:'HTML comments may contain credentials or secrets', evidence:'Secret-like content found in HTML comments' });
   }
   // Detect server/framework version leaks in body
   const versionLeaks = body.match(/(Apache|nginx|IIS|Tomcat|Jetty|PHP|Python|Rails|Django|Express)\/[\d.]+/gi) || [];
   if (versionLeaks.length > 0) {
     findings.push({ type:'info_disclosure', severity:'low', port, description:`Technology version leaked in response body: ${versionLeaks.slice(0,2).join(', ')}`, evidence:versionLeaks.join(', ') });
-  }
-  // Detect potential IDOR patterns in URLs/links
-  const idorLinks = body.match(/href=["'][^"']*\/(user|account|profile|order|invoice|admin|api)\/\d+["']/gi) || [];
-  if (idorLinks.length > 0) {
-    findings.push({ type:'info_disclosure', severity:'medium', port, description:'Potential IDOR endpoints detected (numeric IDs in URLs)', evidence:idorLinks.slice(0,3).join(', ') });
   }
   return findings;
 }
@@ -2798,7 +2756,6 @@ function generateRecommendations(assets: DiscoveredAsset[], cloudAssets: CloudAs
   if (assets.some(a=>a.webVulns?.some(w=>w.severity==='critical'||w.severity==='high'))) recs.push('Address critical/high web vulnerabilities (SQLi, XSS, RCE) immediately');
   if (assets.some(a=>a.findings.some(f=>f.type==='exposed_database'))) recs.push('Restrict database access via firewall rules or private subnets');
   if (assets.some(a=>a.findings.some(f=>f.type==='dangerous_service'))) recs.push('Close or restrict dangerous service ports (Telnet, RDP, FTP) exposed to the internet');
-  if (assets.some(a=>a.findings.some(f=>f.type==='default_creds'))) recs.push('Change default credentials on all management interfaces');
   if (assets.some(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X')) recs.push('Fix critical SSL/TLS misconfigurations (upgrade to TLS 1.2+, enforce HSTS)');
   if (!dnsInfo?.spfPolicy || dnsInfo.spfPolicy==='none') recs.push('Configure strict SPF record to prevent email spoofing');
   if (!dnsInfo?.dmarcPolicy || dnsInfo.dmarcPolicy==='none') recs.push('Enforce DMARC policy (p=quarantine or p=reject)');
@@ -2820,13 +2777,12 @@ function generateThreatActors(assets: DiscoveredAsset[]): { actors: string[]; mi
   const hasRDP = assets.some(a=>a.port===3389);
   const hasSSH = assets.some(a=>a.port===22);
   const hasDockerKube = assets.some(a=>[2375,2376,6443].includes(a.port));
-  const hasDefaultCreds = assets.some(a=>a.findings.some(f=>f.type==='default_creds'));
   const hasExploit = assets.some(a=>a.exploitAvailable);
   if (hasCritical && hasExploit) { actors.push('Advanced Persistent Threats (APTs) leveraging known CVEs with public exploits'); mitre.push('TA0001-Initial Access','TA0002-Execution'); }
   if (hasWeb) { actors.push('Web application attackers (SQL injection, XSS, SSRF specialists)'); mitre.push('TA0001-Initial Access','TA0040-Impact'); }
   if (hasDB) { actors.push('Data exfiltration groups targeting exposed databases'); mitre.push('TA0009-Collection','TA0010-Exfiltration'); }
   if (hasRDP) { actors.push('Ransomware operators exploiting RDP access'); mitre.push('TA0001-Initial Access','TA0040-Impact'); }
-  if (hasSSH && hasDefaultCreds) { actors.push('Cryptojacking / botnet operators targeting weak SSH credentials'); mitre.push('TA0001-Initial Access','TA0002-Execution'); }
+  if (hasSSH) { actors.push('Cryptojacking / botnet operators targeting weak SSH credentials'); mitre.push('TA0001-Initial Access','TA0002-Execution'); }
   if (hasDockerKube) { actors.push('Cloud adversaries targeting container escape and cluster takeover'); mitre.push('TA0001-Initial Access','TA0004-Privilege Escalation'); }
   if (!actors.length) { actors.push('Opportunistic low-level reconnaissance actors'); mitre.push('TA0043-Reconnaissance'); }
   return { actors, mitreTactics: Array.from(new Set(mitre)) };

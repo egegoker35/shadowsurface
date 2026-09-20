@@ -1,7 +1,6 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
-import NotificationBell from './NotificationBell';
 
 export default function Navbar() {
   const [token, setToken] = useState<string | null>(null);
@@ -43,7 +42,6 @@ export default function Navbar() {
           {token ? (
             <>
               <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white transition-colors">Dashboard</Link>
-              <NotificationBell />
               <div className="relative" ref={menuRef}>
                 <button
                   onClick={() => setMenuOpen((v) => !v)}

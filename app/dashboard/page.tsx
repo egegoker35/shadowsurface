@@ -22,8 +22,6 @@ export default function DashboardPage() {
   const [csvName, setCsvName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [token, setToken] = useState<string | null>(null);
-  const prevScansRef = useRef<any[]>([]);
-  const [toasts, setToasts] = useState<{id:string;type:string;message:string}[]>([]);
   const searchParams = useSearchParams();
 
   const fetchDashboard = useCallback(async () => {
@@ -53,44 +51,6 @@ export default function DashboardPage() {
     const interval = setInterval(() => { fetchScans(); fetchDashboard(); }, 3000);
     return () => clearInterval(interval);
   }, [scans, fetchScans, fetchDashboard]);
-
-  // Detect scan completion and show toast
-  // Poll for new notifications
-  useEffect(() => {
-    if (!token) return;
-    const pollNotifications = async () => {
-      try {
-        const res = await fetch("/api/notifications", { headers: { Authorization: `Bearer ${token}` } });
-        if (!res.ok) return;
-        const data = await res.json();
-        const unread = data.items?.filter((n: any) => !n.read) || [];
-        if (unread.length > 0) {
-          for (const n of unread.slice(0, 3)) {
-            const id = Math.random().toString(36).substring(2, 8);
-            setToasts((t) => [...t, { id, type: n.type === "error" ? "error" : "success", message: n.message }]);
-            setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 6000);
-          }
-          await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } });
-        }
-      } catch {}
-    };
-    pollNotifications();
-    const interval = setInterval(pollNotifications, 8000);
-    return () => clearInterval(interval);
-  }, [token]);
-
-  useEffect(() => {
-    if (prevScansRef.current.length === 0) { prevScansRef.current = scans; return; }
-    const prevRunning = new Set(prevScansRef.current.filter((s:any)=>s.status==='running'||s.status==='pending').map((s:any)=>s.id));
-    const newlyCompleted = scans.filter((s:any)=>prevRunning.has(s.id) && (s.status==='completed'||s.status==='failed'));
-    for (const s of newlyCompleted) {
-      const id = Math.random().toString(36).substring(2,8);
-      const msg = s.status === 'completed' ? `${s.target} scan completed!` : `${s.target} scan failed.`;
-      setToasts((t)=>[...t,{id,type:s.status,message:msg}]);
-      setTimeout(()=>setToasts((t)=>t.filter((x)=>x.id!==id)),5000);
-    }
-    prevScansRef.current = scans;
-  }, [scans]);
 
   const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -131,14 +91,6 @@ export default function DashboardPage() {
 
   return (
     <div>
-      {/* Toast Notifications */}
-      <div className="fixed top-20 right-4 z-50 space-y-3">
-        {toasts.map((t)=> (
-          <div key={t.id} className={`px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium animate-[slideIn_0.3s_ease-out] ${t.type==='completed'?'bg-emerald-900/90 border-emerald-700 text-emerald-100':'bg-red-900/90 border-red-700 text-red-100'}`}>
-            {t.message}
-          </div>
-        ))}
-      </div>
       <div className="flex items-center justify-between mb-6"><h1 className="text-2xl font-bold">Dashboard</h1><span className="px-3 py-1 rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 text-xs font-bold uppercase">{plan} Plan</span></div>
       {paymentMsg && (
         <div className={`mb-6 px-4 py-3 rounded-lg text-sm ${paymentMsg.includes('successful') ? 'bg-emerald-900/20 border border-emerald-800 text-emerald-400' : 'bg-red-900/20 border border-red-800 text-red-400'}`}>
