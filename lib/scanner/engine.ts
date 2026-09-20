@@ -2834,8 +2834,29 @@ export class ScannerEngine {
   async runSubdomainOnly(): Promise<ScanResult> {
     const start = Date.now();
     const subdomains = await this.enumerateSubdomains();
+    // Populate assets so the report shows the discovered subdomains instead of an empty "No Assets Found" state.
+    const now = new Date().toISOString();
+    const assets: DiscoveredAsset[] = Object.entries(subdomains).map(([fqdn, ips]) => ({
+      id: genId(),
+      domain: this.target.replace(/^www\./, ''),
+      subdomain: fqdn,
+      ip: ips[0] || null,
+      port: 0,
+      service: 'DNS',
+      banner: '',
+      technology: null,
+      version: null,
+      cves: [],
+      cveConfidence: 'low',
+      cloudProvider: null,
+      riskScore: 0,
+      findings: [],
+      headers: {},
+      firstSeen: now,
+    }));
+    this.scanResult.assets = assets;
     this.scanResult.durationSeconds=(Date.now()-start)/1000;
-    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:0, totalCloudAssets:0, criticalFindings:0, highRiskCount:0, mediumRiskCount:0, lowRiskCount:0, infoCount:0, totalCVEs:0, totalWebVulns:0, sslIssues:0, totalExploits:0, weakSSLCount:0, missingHeaderCount:0, exposedDBCount:0, exposedAdminCount:0 };
+    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:0, highRiskCount:0, mediumRiskCount:0, lowRiskCount:0, infoCount:0, totalCVEs:0, totalWebVulns:0, sslIssues:0, totalExploits:0, weakSSLCount:0, missingHeaderCount:0, exposedDBCount:0, exposedAdminCount:0 };
     this.scanResult.executiveSummary={ overallRisk:'LOW', riskScore:0, criticalFindings:0, attackSurfaceSize:Object.keys(subdomains).length, recommendations:['Run full scan for deeper analysis'], threatActors:['None identified'], complianceStatus:{owaspCompliant:true,pciDssCompliant:true,gdprCompliant:true}, mitreTactics:['TA0043-Reconnaissance'] };
     return this.scanResult;
   }
