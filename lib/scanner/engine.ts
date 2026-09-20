@@ -2890,10 +2890,99 @@ export class ScannerEngine {
   }
 
   async runFullScan(portLimit=50, cveLimit:'lite'|'full'='full'): Promise<ScanResult> {
-    return Promise.race([
-      this._runFullScanInternal(portLimit, cveLimit),
-      new Promise<ScanResult>((_, reject) => setTimeout(() => reject(new Error('Scan timeout - exceeded 45s')), 45000))
-    ]).catch(() => this.scanResult);
+    // No internal hard-timeout race: scans run in the background after the API responds,
+    // and app/api/scans/route.ts enforces a 30-minute outer timeout that marks the scan
+    // FAILED honestly. A 45s race here silently returned an EMPTY result (0 assets) that
+    // was then saved as "completed" - a false negative that destroys product trust.
+    return this._runFullScanInternal(portLimit, cveLimit);
+  }
+
+  // Bulk scan: run a full scan for EACH target and merge into one report.
+  // Previously bulk only scanned targets[0] silently - a false negative for every other domain.
+  async runBulkScan(targets: string[], portLimit = 50, cveLimit: 'lite'|'full' = 'full'): Promise<ScanResult> {
+    const start = Date.now();
+    const mergedAssets: DiscoveredAsset[] = [];
+    const mergedCloud: CloudAsset[] = [];
+    const agentSurfaceMerged: AgentSurfaceResult = { findings: [], exposedMcpServers: [], leakedSecrets: [], agentEndpoints: [], summary: { totalFindings: 0, exposedMcpCount: 0, leakedSecretCount: 0, agentEndpointCount: 0, scannedHosts: 0 } };
+    let totalSubdomains = 0;
+    let dnsInfo: any = null;
+    const recs: string[] = [];
+    const actorSet = new Set<string>();
+    const tacticSet = new Set<string>();
+    let owasp = true, pci = true, gdpr = true;
+    let failedTargets = 0;
+
+    for (const t of targets) {
+      const clean = t.trim();
+      if (!clean) continue;
+      try {
+        const sub = new ScannerEngine(clean);
+        const res = await Promise.race([
+          sub._runFullScanInternal(portLimit, cveLimit),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`target ${clean} timed out`)), 480000)),
+        ]);
+        mergedAssets.push(...(res.assets || []));
+        mergedCloud.push(...(res.cloudAssets || []));
+        totalSubdomains += res.statistics?.totalSubdomains || 0;
+        if (!dnsInfo && (res as any).dnsAnalysis) dnsInfo = (res as any).dnsAnalysis;
+        const ag = (res as any).agentSurface as AgentSurfaceResult | undefined;
+        if (ag && ag.findings && ag.findings.length > 0) {
+          agentSurfaceMerged.findings.push(...ag.findings);
+          agentSurfaceMerged.exposedMcpServers.push(...(ag.exposedMcpServers || []));
+          agentSurfaceMerged.leakedSecrets.push(...(ag.leakedSecrets || []));
+          agentSurfaceMerged.agentEndpoints.push(...(ag.agentEndpoints || []));
+        }
+        for (const r of res.executiveSummary?.recommendations || []) if (!recs.includes(r) && recs.length < 12) recs.push(r);
+        for (const a of res.executiveSummary?.threatActors || []) actorSet.add(a);
+        for (const m of res.executiveSummary?.mitreTactics || []) tacticSet.add(m);
+        const cs = res.executiveSummary?.complianceStatus;
+        if (cs) { owasp = owasp && !!cs.owaspCompliant; pci = pci && !!cs.pciDssCompliant; gdpr = gdpr && !!cs.gdprCompliant; }
+      } catch {
+        failedTargets++;
+      }
+    }
+
+    // De-duplicate assets discovered on multiple targets (same subdomain may appear twice)
+    const seenAssetKeys = new Set<string>();
+    const dedupedAssets = mergedAssets.filter((a) => {
+      const key = `${a.subdomain}|${a.ip}|${a.port}`;
+      if (seenAssetKeys.has(key)) return false;
+      seenAssetKeys.add(key); return true;
+    });
+    const seenCloud = new Set<string>();
+    const dedupedCloud = mergedCloud.filter((c) => {
+      const key = `${c.provider}|${c.resourceId}|${c.url}`;
+      if (seenCloud.has(key)) return false;
+      seenCloud.add(key); return true;
+    });
+    if (agentSurfaceMerged.findings.length > 0) {
+      agentSurfaceMerged.summary = { totalFindings: agentSurfaceMerged.findings.length, exposedMcpCount: agentSurfaceMerged.exposedMcpServers.length, leakedSecretCount: agentSurfaceMerged.leakedSecrets.length, agentEndpointCount: agentSurfaceMerged.agentEndpoints.length, scannedHosts: agentSurfaceMerged.exposedMcpServers.length + agentSurfaceMerged.agentEndpoints.length };
+      this.scanResult.agentSurface = agentSurfaceMerged;
+    }
+    dedupeFindings(dedupedAssets);
+    consolidateFindings(dedupedAssets);
+    calculateRiskScores(dedupedAssets, dedupedCloud);
+    const duration = (Date.now()-start)/1000;
+    const crit = dedupedAssets.filter(a=>a.riskScore>=70).length + dedupedCloud.filter(a=>a.severity==='critical').length;
+    const totalCves = dedupedAssets.reduce((s,a)=>s+a.cves.length,0);
+    const totalWebVulns = dedupedAssets.reduce((s,a)=>s+(a.webVulns?.length||0),0);
+    const sslIssues = dedupedAssets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length;
+    const totalExploits = dedupedAssets.filter(a=>a.exploitAvailable).length;
+    const weakSSLCount = dedupedAssets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length;
+    const missingHeaderCount = dedupedAssets.reduce((s,a)=>s+(a.webVulns?.filter(w=>w.type==='missing_header').length||0),0);
+    const exposedDBCount = dedupedAssets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length;
+    const exposedAdminCount = dedupedAssets.filter(a=>a.findings.some(f=>f.type==='dangerous_service'&&['Telnet','SSH','RDP'].includes(f.service||''))).length;
+    this.scanResult.assets = dedupedAssets;
+    this.scanResult.cloudAssets = dedupedCloud;
+    this.scanResult.durationSeconds = duration;
+    this.scanResult.completedAt = new Date().toISOString();
+    this.scanResult.statistics = { totalSubdomains, totalAssets: dedupedAssets.length, totalCloudAssets: dedupedCloud.length, criticalFindings: crit, highRiskCount: dedupedAssets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount: dedupedAssets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount: dedupedAssets.filter(a=>a.riskScore<15).length, infoCount: dedupedAssets.reduce((s,a)=>s+a.findings.filter(f=>f.severity==='info').length,0), totalCVEs: totalCves, totalWebVulns, sslIssues, totalExploits: dedupedAssets.filter(a=>a.exploitAvailable).length, weakSSLCount, missingHeaderCount, exposedDBCount, exposedAdminCount };
+    if (failedTargets > 0) recs.push(`${failedTargets} of ${targets.length} target(s) could not be fully scanned - re-run them individually`);
+    const {actors} = generateThreatActors(dedupedAssets);
+    for (const a of actors) actorSet.add(a);
+    this.scanResult.executiveSummary = { overallRisk: crit>0?'CRITICAL':dedupedAssets.some(a=>a.riskScore>=70)?'HIGH':dedupedAssets.some(a=>a.riskScore>=40)?'MEDIUM':'LOW', riskScore: Math.min(Math.max(...dedupedAssets.map(a=>a.riskScore), ...dedupedCloud.map(c=>c.riskScore), 0), 95), criticalFindings: crit, attackSurfaceSize: totalSubdomains + dedupedCloud.length, recommendations: recs.length ? recs : ['No action required - no significant findings'], threatActors: Array.from(actorSet), complianceStatus: { owaspCompliant: owasp, pciDssCompliant: pci, gdprCompliant: gdpr }, mitreTactics: Array.from(tacticSet) };
+    this.scanResult.dnsAnalysis = dnsInfo;
+    return this.scanResult;
   }
 
   async _runFullScanInternal(portLimit=50, cveLimit:'lite'|'full'='full'): Promise<ScanResult> {

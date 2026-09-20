@@ -20,10 +20,13 @@ const createSchema = z.object({
   scanType: z.string().optional(),
 });
 
-function runScanWithTimeout(engine: ScannerEngine, scanType: string, ms = 1800000, portLimit = 50): Promise<any> {
+function runScanWithTimeout(engine: ScannerEngine, scanType: string, ms = 1800000, portLimit = 50, targets?: string[]): Promise<any> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Scan timed out after 30 minutes')), ms);
-    engine.runScan(scanType, portLimit).then((result) => {
+    const work = scanType === 'bulk' && targets && targets.length > 1
+      ? engine.runBulkScan(targets, portLimit)
+      : engine.runScan(scanType, portLimit);
+    work.then((result: any) => {
       clearTimeout(timer);
       resolve(result);
     }).catch((err: any) => {
@@ -61,11 +64,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Bulk scan limited to ${config.bulkDomains} domain(s) on ${plan} plan. Upgrade at /pricing` }, { status: 403 });
     }
 
-    const primaryTarget = targets[0];
-    if (hasSuspiciousInput(primaryTarget)) return NextResponse.json({ error: 'Suspicious input' }, { status: 400 });
+    // Validate EVERY target (bulk scans must not bypass security checks on secondary domains)
+    for (const t of targets) {
+      if (hasSuspiciousInput(t)) return NextResponse.json({ error: 'Suspicious input' }, { status: 400 });
+      const st = sanitizeTarget(t);
+      if (isBlockedTarget(st)) return NextResponse.json({ error: 'Target blocked' }, { status: 403 });
+    }
 
+    const primaryTarget = targets[0];
     const target = sanitizeTarget(primaryTarget);
-    if (isBlockedTarget(target)) return NextResponse.json({ error: 'Target blocked' }, { status: 403 });
 
     // Rate limits run AFTER validation so rejected requests never consume quota.
     const hourRL = await rateLimitByUser(user.id, config.perHour, 3600);
@@ -86,7 +93,7 @@ export async function POST(req: NextRequest) {
     });
 
     const engine = new ScannerEngine(target);
-    runScanWithTimeout(engine, scanType, 1800000, config.portLimit).then(async (result: any) => {
+    runScanWithTimeout(engine, scanType, 1800000, config.portLimit, targets).then(async (result: any) => {
       try {
         await prisma.scan.update({
           where: { id: scan.id },
