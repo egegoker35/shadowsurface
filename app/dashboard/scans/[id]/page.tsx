@@ -91,7 +91,7 @@ export default function ScanDetailPage() {
               {exec.overallRisk || 'UNKNOWN'} RISK
             </span>
           </div>
-          <p className="text-slate-400">Target: <span className="text-white font-semibold">{scan.target}</span> · {new Date(scan.createdAt).toLocaleString()} · {durationVal > 0 ? `${durationVal.toFixed(1)}s` : 'In progress'}</p>
+          <p className="text-slate-400">Target: <span className="text-white font-semibold">{scan.target}</span> · {new Date(scan.createdAt).toLocaleString()} · {scan.status === 'running' || scan.status === 'pending' ? 'In progress' : durationVal > 0 ? `${durationVal.toFixed(1)}s` : 'Completed'}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={exportJSON} className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-medium transition-colors flex items-center gap-2">

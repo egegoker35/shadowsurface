@@ -102,6 +102,7 @@ export async function POST(req: NextRequest) {
             resultJson: result as any,
             executiveSummary: result.executiveSummary as any,
             statistics: result.statistics as any,
+            durationSeconds: typeof result.durationSeconds === 'number' ? result.durationSeconds : null,
           },
         });
         if (result.assets?.length > 0) {
