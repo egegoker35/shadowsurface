@@ -27,10 +27,27 @@ export default function ScanDetailPage() {
 
   useEffect(() => {
     if (!id || !token) return;
-    fetch(`/api/scans/${id}`, { headers: { Authorization: `Bearer ${token}` } }).then(async (res) => {
-      if (res.ok) { const d = await res.json(); setScan(d.scan); }
-      setLoading(false);
-    });
+    let active = true;
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const fetchScan = async () => {
+      try {
+        const res = await fetch(`/api/scans/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) { setLoading(false); return; }
+        const d = await res.json();
+        if (!active) return;
+        setScan(d.scan);
+        setLoading(false);
+        // Final state: stop polling. Running/pending: keep polling every 10s
+        // so the page genuinely updates automatically.
+        if (!['running', 'pending'].includes(d.scan?.status) && timer) {
+          clearInterval(timer);
+          timer = null;
+        }
+      } catch { setLoading(false); }
+    };
+    fetchScan();
+    timer = setInterval(fetchScan, 10000);
+    return () => { active = false; if (timer) clearInterval(timer); };
   }, [id, token]);
 
   const exportJSON = () => {
