@@ -1654,39 +1654,30 @@ const SECURITY_HEADERS = ['Strict-Transport-Security','Content-Security-Policy',
 
 
 // ─── WAF / CDN Detection Patterns ───────────────────────────────────────────
-const WAF_PATTERNS: Record<string, { headers: string[]; body: RegExp[]; anyHeaderRegex?: RegExp }> = {
-  'Cloudflare': { headers: ['CF-RAY','CF-Cache-Status','CF-Visitor'], body: [/cdn-cgi\/challenge-platform/i, /\/cdn-cgi\//i, /__cf_bm/i, /cf.challenge.js/i, /cf-browser-revive/i] },
-  'Akamai': { headers: ['X-Akamai-Transformed','X-Akamai-Request-ID'], body: [], anyHeaderRegex: /AkamaiGHost/i },
-  'AWS CloudFront': { headers: ['X-Amz-Cf-Id','X-Amz-Cf-Pop'], body: [/CloudFront/i] },
-  'Sucuri': { headers: ['X-Sucuri-ID','X-Sucuri-Cache','X-Sucuri-Block'], body: [/sucuri/i] },
-  'Fastly': { headers: ['X-Served-By','X-Cache-Hits'], body: [/fastly/i] },
-  'Azure CDN': { headers: ['X-Azure-Ref'], body: [/azureedge/i] },
-  'Vercel': { headers: ['X-Vercel-Cache','X-Vercel-Id'], body: [/vercel/i] },
-  'Netlify': { headers: ['X-NF-Request-ID','X-Netlify-Cache'], body: [/netlify/i] },
-  'Heroku': { headers: ['X-Heroku-Request-Id'], body: [/herokuapp/i] },
-  'GitHub Pages': { headers: [], body: [/GitHub\.com/i], anyHeaderRegex: /^GitHub\.com/i },
-  'Imperva/Incapsula': { headers: ['X-Iinfo','X-CDN'], body: [/incapsula/i, /imperva/i], anyHeaderRegex: /incap_ses/i },
-  'Wordfence': { headers: [], body: [/wordfence/i] },
-  'ModSecurity': { headers: [], anyHeaderRegex: /mod_security/i, body: [] },
-  'BunnyCDN': { headers: ['CDN-Provider'], body: [/BunnyCDN/i] },
-  'StackPath': { headers: ['X-StackPath-Edge'], body: [/stackpath/i] },
-  'ArvanCloud': { headers: [], anyHeaderRegex: /ArvanCloud/i, body: [/arvancloud/i] },
-  'KeyCDN': { headers: ['X-CDN'], anyHeaderRegex: /keycdn/i, body: [] },
-  'Reblaze': { headers: ['X-Reblaze-SOAR'], body: [/reblaze/i] },
-  'F5 ASM': { headers: ['X-WA-Info'], body: [] },
-  'Citrix NetScaler': { headers: [], anyHeaderRegex: /NetScaler/i, body: [] },
-  'Radware': { headers: ['X-RDWR-CE'], body: [/radware/i] },
-  'Fortinet FortiWeb': { headers: ['X-FW-CE'], body: [/fortiweb/i] },
-  'Barracuda': { headers: ['X-Barracuda-'], body: [/barracuda/i] },
-  'Sophos UTM': { headers: ['X-Sophos-UTM'], body: [/sophos/i] },
-  'Palo Alto': { headers: ['X-PA-CE'], body: [/paloalto/i] },
-  'AWS WAF': { headers: ['X-AMZ-WAF'], body: [/AWS WAF/i] },
-  'Google Cloud Armor': { headers: ['X-Google-Cache-Control'], body: [/Cloud Armor/i] },
-  'Oracle Cloud WAF': { headers: ['X-Oracle-CE'], body: [/oracle.*waf/i] },
-  'Alibaba Cloud WAF': { headers: ['X-Alibaba-WAF'], body: [/alibaba.*waf/i] },
-  'Tencent Cloud WAF': { headers: ['X-Tencent-WAF'], body: [/tencent.*waf/i] },
-  'Huawei Cloud WAF': { headers: ['X-Huawei-WAF'], body: [/huawei.*waf/i] },
-  'IBM Cloud WAF': { headers: ['X-IBM-WAF'], body: [/ibm.*waf/i] },
+const WAF_PATTERNS: Record<string, { headers?: string[]; headerValues?: Array<[string, RegExp]>; anyHeaderRegex?: RegExp }> = {
+  // Only signatures that cannot occur by coincidence are kept. A brand name in page
+  // text (a script CDN link, a job posting, a blog mention) is NOT evidence that a
+  // WAF/CDN is protecting the origin, so body matching was removed entirely.
+  'Cloudflare': { headers: ['CF-RAY', 'CF-Cache-Status', 'CF-Visitor'], anyHeaderRegex: /^cloudflare$/i },
+  'Akamai': { headers: ['X-Akamai-Transformed', 'X-Akamai-Request-ID'], anyHeaderRegex: /AkamaiGHost/i },
+  'AWS CloudFront': { headers: ['X-Amz-Cf-Id', 'X-Amz-Cf-Pop'] },
+  'Sucuri': { headers: ['X-Sucuri-ID', 'X-Sucuri-Cache', 'X-Sucuri-Block'] },
+  'Fastly': { headers: ['X-Fastly-Request-ID', 'Fastly-Debug-Digest'], headerValues: [['X-Served-By', /^cache-[a-z]{3}\d+$/i]] },
+  'Azure CDN': { headers: ['X-Azure-Ref'] },
+  'Vercel': { headers: ['X-Vercel-Cache', 'X-Vercel-Id'] },
+  'Netlify': { headers: ['X-NF-Request-ID', 'X-Netlify-Cache'] },
+  'Heroku': { headerValues: [['Via', /\bvegur\b/i]] },
+  'GitHub Pages': { anyHeaderRegex: /^GitHub\.com$/i },
+  'Imperva/Incapsula': { headers: ['X-Iinfo'], headerValues: [['X-CDN', /incapsula/i]], anyHeaderRegex: /incap_ses/i },
+  'ModSecurity': { anyHeaderRegex: /mod_security|\bNOYB\b/i },
+  'BunnyCDN': { headerValues: [['Server', /BunnyCDN/i], ['CDN-Provider', /BunnyCDN/i]] },
+  'KeyCDN': { anyHeaderRegex: /keycdn/i },
+  'ArvanCloud': { anyHeaderRegex: /ArvanCloud/i },
+  'StackPath': { anyHeaderRegex: /StackPath/i },
+  'F5 ASM': { headers: ['X-WA-Info'] },
+  'Citrix NetScaler': { anyHeaderRegex: /NetScaler/i },
+  'Fortinet FortiWeb': { anyHeaderRegex: /FortiWeb/i },
+  'Barracuda': { headers: ['X-Barracuda-'], anyHeaderRegex: /Barracuda/i },
 };
 
 // ─── Cloud Patterns ─────────────────────────────────────────────────────────
@@ -1790,22 +1781,23 @@ function mergeTechnologies(...lists: Array<Array<{ name: string; category?: stri
   return out.sort((a, b) => (b.version ? 1 : 0) - (a.version ? 1 : 0));
 }
 
-function detectWAF(responseHeaders: Record<string, string>, body: string): string | null {
+function detectWAF(responseHeaders: Record<string, string>): string | null {
   const headersLower: Record<string, string> = {};
-  for (const [k,v] of Object.entries(responseHeaders)) headersLower[k.toLowerCase()] = v;
+  for (const [k, v] of Object.entries(responseHeaders || {})) headersLower[k.toLowerCase()] = v;
+  const headerNames = Object.keys(headersLower);
+  const values = Object.values(headersLower);
   for (const [provider, sigs] of Object.entries(WAF_PATTERNS)) {
-    for (const h of sigs.headers) {
-      const val = headersLower[h.toLowerCase()] || '';
-      if (val) return provider;
-    }
-    if (sigs.anyHeaderRegex) {
-      for (const [k,v] of Object.entries(headersLower)) {
-        if (sigs.anyHeaderRegex.test(v)) return provider;
-      }
-    }
-    for (const re of sigs.body) {
-      if (re.test(body)) return provider;
-    }
+    // A header name issued only by this provider. A trailing '-' means a header prefix.
+    if (sigs.headers?.some(h => h.endsWith('-'))
+      ? sigs.headers!.some(h => h.endsWith('-') && headerNames.some(k => k.startsWith(h.toLowerCase())))
+      : sigs.headers?.some(h => headersLower[h.toLowerCase()] !== undefined)) return provider;
+    // A header value that must match the provider's own product string.
+    if (sigs.headerValues?.some(([name, re]) => {
+      const val = headersLower[name.toLowerCase()];
+      return val !== undefined && re.test(val);
+    })) return provider;
+    // A distinctive provider token anywhere in the response headers (Server, Set-Cookie, ...).
+    if (sigs.anyHeaderRegex && values.some(v => sigs.anyHeaderRegex!.test(v))) return provider;
   }
   return null;
 }
@@ -2872,7 +2864,7 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                     try { const cmsRes = await probeCMS(finalUrl, web.body, web.headers, timeout); if (cmsRes.techs.length) { techs.push(...cmsRes.techs.map(t => ({...t, category: 'CMS'}))); cves.push(...mapCVEs(cmsRes.techs.map(t => ({...t, category: 'CMS'}))).filter(c=>!cves.some(ex=>ex.id===c.id))); } webVulns.push(...cmsRes.vulns); } catch {}
                     techsWeb = detectTechnologies(web.headers, web.body);
                     cves.push(...mapCVEs(techsWeb).filter(c=>!cves.some(ex=>ex.id===c.id)));
-                    waf = detectWAF(web.headers, web.body);
+                    waf = detectWAF(web.headers);
                     // SSL cert check: only for HTTPS assets to avoid timeouts and false findings on plain HTTP
                     if (!sslChecked && (port===443 || port===8443 || finalUrl.startsWith('https://'))) {
                       sslChecked = true;
@@ -2995,6 +2987,47 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
 }
 
 // ─── Risk Scoring Engine (CVSS-based + Exploitability) ────────────────────
+/**
+ * One shared scale for every scan type. Previously the full scan mapped any asset
+ * scoring 70+ to CRITICAL while the port scan called the same score HIGH, and the
+ * HIGH branch was unreachable in the full scan.
+ */
+function riskLabel(score: number): 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' {
+  if (score >= 85) return 'CRITICAL';
+  if (score >= 70) return 'HIGH';
+  if (score >= 40) return 'MEDIUM';
+  return 'LOW';
+}
+
+function peekRiskScore(assets: DiscoveredAsset[], cloudAssets: CloudAsset[] = []): number {
+  return Math.min(Math.max(...assets.map(a => a.riskScore || 0), ...cloudAssets.map(c => c.riskScore || 0), 0), 95);
+}
+
+/** Count findings that are actually rated critical - not assets above a score. */
+function countCriticalFindings(assets: DiscoveredAsset[], cloudAssets: CloudAsset[] = []): number {
+  let n = (cloudAssets || []).filter(c => c.severity === 'critical').length;
+  for (const a of assets) {
+    n += a.findings.filter(f => f.severity === 'critical').length;
+    n += (a.webVulns || []).filter(w => w.severity === 'critical').length;
+  }
+  return n;
+}
+
+/** Missing-header findings live in `findings`; reading webVulns always returned 0. */
+function countMissingHeaders(assets: DiscoveredAsset[]): number {
+  return assets.reduce((s, a) => s + a.findings.filter(f => f.type === 'missing_header').length, 0);
+}
+
+function countInfoFindings(assets: DiscoveredAsset[]): number {
+  return assets.reduce((s, a) => s + a.findings.filter(f => f.severity === 'info').length, 0);
+}
+
+/** Exposed admin panels / management consoles, counted from the real finding type. */
+function countExposedAdmin(assets: DiscoveredAsset[]): number {
+  return assets.filter(a => a.findings.some(f => f.type === 'exposed_admin') ||
+    (a.webVulns || []).some(w => w.type === 'exposed_admin')).length;
+}
+
 function calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[]) {
   for (const a of assets) {
     let score = 0;
@@ -3107,8 +3140,12 @@ function consolidateFindings(assets: DiscoveredAsset[]) {
     for (const a of list) {
       for (const f of a.findings) {
         if (f.type === 'missing_header' && f.description) {
-          const hdr = f.description.replace(/ header missing.*$/i, '').trim();
-          if (hdr) missingHeaders.add(hdr);
+          // Accept both 'X header missing' and 'Missing security headers (N): X, Y'
+          const listMatch = f.description.match(/\(\d+\):\s*(.+)$/);
+          const names = listMatch
+            ? listMatch[1].split(',').map((s: string) => s.trim())
+            : [f.description.replace(/ header missing.*$/i, '').trim()];
+          for (const hdr of names) if (hdr) missingHeaders.add(hdr);
         }
       }
     }
@@ -3119,11 +3156,13 @@ function consolidateFindings(assets: DiscoveredAsset[]) {
       }
       // Add a single consolidated finding to the first web asset of this subdomain
       const firstWeb = list.find((a: DiscoveredAsset) => a.port === 80 || a.port === 443 || a.port === 8080 || a.port === 8443) || list[0];
+      const hdrRank: Record<string, number> = { info: 0, low: 1, medium: 2, high: 3, critical: 4 };
+      const worstHdr = missingHeaders.size >= 3 ? 'medium' : missingHeaders.size === 2 ? 'low' : 'info';
       firstWeb.findings.push({
         type: 'missing_header',
-        severity: missingHeaders.size >= 4 ? 'high' : missingHeaders.size >= 2 ? 'medium' : 'low',
-        description: `Missing security headers: ${Array.from(missingHeaders).join(', ')}`,
-        evidence: `Missing ${missingHeaders.size} headers across ${list.length} ports`,
+        severity: worstHdr as Finding['severity'],
+        description: `Missing security headers (${missingHeaders.size}): ${Array.from(missingHeaders).join(', ')}`,
+        evidence: `Absent across ${list.length} port(s)`,
       });
     }
     // Consolidate ssl_weakness similarly
@@ -3282,12 +3321,13 @@ export class ScannerEngine {
     const subdomains = await this.enumerateSubdomains();
     const assets = await scanPortsOnAssets(subdomains, TOP_PORTS.slice(0, portLimit));
     dedupeFindings(assets);
+    consolidateFindings(assets);
     calculateRiskScores(assets, []);
     this.scanResult.assets=assets; this.scanResult.durationSeconds=(Date.now()-start)/1000;
-    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:0, highRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount:assets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount:assets.filter(a=>a.riskScore<15).length, infoCount:0, totalCVEs:new Set(assets.flatMap(a=>a.cves)).size, totalWebVulns:assets.reduce((s,a)=>s+(a.webVulns?.length||0),0), sslIssues:assets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length, totalExploits:assets.filter(a=>a.exploitAvailable).length, weakSSLCount:assets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length, missingHeaderCount:assets.reduce((s,a)=>s+(a.webVulns?.filter(w=>w.type==='missing_header').length||0),0), exposedDBCount:assets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length, exposedAdminCount:0 };
+    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:countCriticalFindings(assets), highRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount:assets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount:assets.filter(a=>a.riskScore<15).length, infoCount:countInfoFindings(assets), totalCVEs:new Set(assets.flatMap(a=>a.cves)).size, totalWebVulns:assets.reduce((s,a)=>s+(a.webVulns?.length||0),0), sslIssues:assets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length, totalExploits:assets.filter(a=>a.exploitAvailable).length, weakSSLCount:assets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length, missingHeaderCount:countMissingHeaders(assets), exposedDBCount:assets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length, exposedAdminCount:countExposedAdmin(assets) };
     const maxPortRisk = Math.max(...assets.map(a=>a.riskScore),0);
     const portThreats = assets.filter(a=>a.findings.length>0 || (a.webVulns && a.webVulns.length>0)).length;
-    this.scanResult.executiveSummary={ overallRisk:assets.some(a=>a.riskScore>=70)?'HIGH':assets.some(a=>a.riskScore>=40)?'MEDIUM':'LOW', riskScore:maxPortRisk, criticalFindings:0, attackSurfaceSize:assets.length, recommendations:['Run full scan for CVE and cloud checks'], threatActors:portThreats>0?['Opportunistic attackers','Reconnaissance groups']:['None identified'], complianceStatus:{owaspCompliant:portThreats===0,pciDssCompliant:portThreats===0,gdprCompliant:portThreats===0}, mitreTactics:['TA0043-Reconnaissance'] };
+    this.scanResult.executiveSummary={ overallRisk:riskLabel(maxPortRisk), riskScore:maxPortRisk, criticalFindings:countCriticalFindings(assets), attackSurfaceSize:assets.length, recommendations:['Run full scan for CVE and cloud checks'], threatActors:portThreats>0?['Opportunistic attackers','Reconnaissance groups']:['None identified'], complianceStatus:{owaspCompliant:portThreats===0,pciDssCompliant:portThreats===0,gdprCompliant:portThreats===0}, mitreTactics:['TA0043-Reconnaissance'] };
     return this.scanResult;
   }
 
@@ -3296,7 +3336,6 @@ export class ScannerEngine {
     const [subdomains, dnsInfo] = await Promise.all([this.enumerateSubdomains(), analyzeDNS(this.target)]);
     const assets = await scanPortsOnAssets(subdomains, TOP_PORTS.slice(0, portLimit));
     for (const asset of assets) {
-      const techStr = asset.technology + (asset.version ? ' ' + asset.version : '');
       const cves = mapCVEs([{name: asset.technology || '', version: asset.version || ''}]).filter(c=>!asset.cves.includes(c.id));
       asset.cves.push(...cves.map(c=>c.id));
       if (cves.length) {
@@ -3307,15 +3346,16 @@ export class ScannerEngine {
       asset.exploitAvailable = asset.exploitAvailable || cves.some(c=>c.exploitAvailable);
     }
     dedupeFindings(assets);
+    consolidateFindings(assets);
     calculateRiskScores(assets, []);
-    const crit = assets.filter(a=>a.riskScore>=70).length;
+    const crit = countCriticalFindings(assets);
     const totalCves = new Set(assets.flatMap(a=>a.cves)).size; // unique CVEs, not http/https double-count
     const totalWebVulns = assets.reduce((s,a)=>s+(a.webVulns?.length||0),0);
     const sslIssues = assets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length;
     this.scanResult.assets=assets; this.scanResult.durationSeconds=(Date.now()-start)/1000;
-    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:crit, highRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount:assets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount:assets.filter(a=>a.riskScore<15).length, infoCount:0, totalCVEs:totalCves, totalWebVulns, sslIssues, totalExploits:assets.filter(a=>a.exploitAvailable).length, weakSSLCount:assets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length, missingHeaderCount:assets.reduce((s,a)=>s+(a.webVulns?.filter(w=>w.type==='missing_header').length||0),0), exposedDBCount:assets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length, exposedAdminCount:0 };
+    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:crit, highRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount:assets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount:assets.filter(a=>a.riskScore<15).length, infoCount:countInfoFindings(assets), totalCVEs:totalCves, totalWebVulns, sslIssues, totalExploits:assets.filter(a=>a.exploitAvailable).length, weakSSLCount:assets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length, missingHeaderCount:countMissingHeaders(assets), exposedDBCount:assets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length, exposedAdminCount:countExposedAdmin(assets) };
     const {actors, mitreTactics} = generateThreatActors(assets);
-    this.scanResult.executiveSummary={ overallRisk:crit>0?'CRITICAL':assets.some(a=>a.riskScore>=70)?'HIGH':assets.some(a=>a.riskScore>=40)?'MEDIUM':'LOW', riskScore:crit>0?90:Math.max(...assets.map(a=>a.riskScore),0), criticalFindings:crit, attackSurfaceSize:assets.length, recommendations:generateRecommendations(assets,[],dnsInfo), threatActors:actors, complianceStatus:complianceCheck(assets), mitreTactics };
+    this.scanResult.executiveSummary={ overallRisk:riskLabel(peekRiskScore(assets)), riskScore:peekRiskScore(assets), criticalFindings:crit, attackSurfaceSize:assets.length, recommendations:generateRecommendations(assets,[],dnsInfo), threatActors:actors, complianceStatus:complianceCheck(assets), mitreTactics };
     this.scanResult.dnsAnalysis = dnsInfo;
     return this.scanResult;
   }
@@ -3404,24 +3444,25 @@ export class ScannerEngine {
     consolidateFindings(dedupedAssets);
     calculateRiskScores(dedupedAssets, dedupedCloud);
     const duration = (Date.now()-start)/1000;
-    const crit = dedupedAssets.filter(a=>a.riskScore>=70).length + dedupedCloud.filter(a=>a.severity==='critical').length;
+    const crit = countCriticalFindings(dedupedAssets, dedupedCloud);
     const totalCves = new Set(dedupedAssets.flatMap(a=>a.cves)).size; // unique CVEs, not http/https double-count
     const totalWebVulns = dedupedAssets.reduce((s,a)=>s+(a.webVulns?.length||0),0);
     const sslIssues = dedupedAssets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length;
     const totalExploits = dedupedAssets.filter(a=>a.exploitAvailable).length;
     const weakSSLCount = dedupedAssets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length;
-    const missingHeaderCount = dedupedAssets.reduce((s,a)=>s+(a.webVulns?.filter(w=>w.type==='missing_header').length||0),0);
+    const missingHeaderCount = countMissingHeaders(dedupedAssets);
     const exposedDBCount = dedupedAssets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length;
     const exposedAdminCount = dedupedAssets.filter(a=>a.findings.some(f=>f.type==='dangerous_service'&&['Telnet','SSH','RDP'].includes(f.service||''))).length;
     this.scanResult.assets = dedupedAssets;
     this.scanResult.cloudAssets = dedupedCloud;
     this.scanResult.durationSeconds = duration;
     this.scanResult.completedAt = new Date().toISOString();
-    this.scanResult.statistics = { totalSubdomains, totalAssets: dedupedAssets.length, totalCloudAssets: dedupedCloud.length, criticalFindings: crit, highRiskCount: dedupedAssets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount: dedupedAssets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount: dedupedAssets.filter(a=>a.riskScore<15).length, infoCount: dedupedAssets.reduce((s,a)=>s+a.findings.filter(f=>f.severity==='info').length,0), totalCVEs: totalCves, totalWebVulns, sslIssues, totalExploits: dedupedAssets.filter(a=>a.exploitAvailable).length, weakSSLCount, missingHeaderCount, exposedDBCount, exposedAdminCount };
+    this.scanResult.statistics = { totalSubdomains, totalAssets: dedupedAssets.length, totalCloudAssets: dedupedCloud.length, criticalFindings: crit, highRiskCount: dedupedAssets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount: dedupedAssets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount: dedupedAssets.filter(a=>a.riskScore<15).length, infoCount: countInfoFindings(dedupedAssets), totalCVEs: totalCves, totalWebVulns, sslIssues, totalExploits: dedupedAssets.filter(a=>a.exploitAvailable).length, weakSSLCount, missingHeaderCount, exposedDBCount,
+      exposedAdminCount: countExposedAdmin(dedupedAssets) };
     if (failedTargets > 0) recs.push(`${failedTargets} of ${targets.length} target(s) could not be fully scanned - re-run them individually`);
     const {actors} = generateThreatActors(dedupedAssets);
     for (const a of actors) actorSet.add(a);
-    this.scanResult.executiveSummary = { overallRisk: crit>0?'CRITICAL':dedupedAssets.some(a=>a.riskScore>=70)?'HIGH':dedupedAssets.some(a=>a.riskScore>=40)?'MEDIUM':'LOW', riskScore: Math.min(Math.max(...dedupedAssets.map(a=>a.riskScore), ...dedupedCloud.map(c=>c.riskScore), 0), 95), criticalFindings: crit, attackSurfaceSize: totalSubdomains + dedupedCloud.length, recommendations: recs.length ? recs : ['No action required - no significant findings'], threatActors: Array.from(actorSet), complianceStatus: { owaspCompliant: owasp, pciDssCompliant: pci, gdprCompliant: gdpr }, mitreTactics: Array.from(tacticSet) };
+    this.scanResult.executiveSummary = { overallRisk: riskLabel(peekRiskScore(dedupedAssets, dedupedCloud)), riskScore: peekRiskScore(dedupedAssets, dedupedCloud), criticalFindings: crit, attackSurfaceSize: totalSubdomains + dedupedCloud.length, recommendations: recs.length ? recs : ['No action required - no significant findings'], threatActors: Array.from(actorSet), complianceStatus: { owaspCompliant: owasp, pciDssCompliant: pci, gdprCompliant: gdpr }, mitreTactics: Array.from(tacticSet) };
     this.scanResult.dnsAnalysis = dnsInfo;
     return this.scanResult;
   }
@@ -3471,22 +3512,22 @@ export class ScannerEngine {
     consolidateFindings(assets);
     calculateRiskScores(assets, cloudAssets);
     const duration = (Date.now()-start)/1000;
-    const crit = assets.filter(a=>a.riskScore>=70).length + cloudAssets.filter(a=>a.severity==='critical').length;
+    const crit = countCriticalFindings(assets, cloudAssets);
     const totalCves = new Set(assets.flatMap(a=>a.cves)).size; // unique CVEs, not http/https double-count
     const totalWebVulns = assets.reduce((s,a)=>s+(a.webVulns?.length||0),0);
     const sslIssues = assets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length;
     const totalExploits = assets.filter(a=>a.exploitAvailable).length;
     const weakSSLCount = assets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length;
-    const missingHeaderCount = assets.reduce((s,a)=>s+(a.webVulns?.filter(w=>w.type==='missing_header').length||0),0);
+    const missingHeaderCount = countMissingHeaders(assets);
     const exposedDBCount = assets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length;
     const exposedAdminCount = assets.filter(a=>a.findings.some(f=>f.type==='dangerous_service'&&['Telnet','SSH','RDP'].includes(f.service||''))).length;
     this.scanResult.assets=assets;
     this.scanResult.cloudAssets=cloudAssets;
     this.scanResult.durationSeconds=duration;
     this.scanResult.completedAt=new Date().toISOString();
-    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:cloudAssets.length, criticalFindings:crit, highRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount:assets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount:assets.filter(a=>a.riskScore<15).length, infoCount:assets.reduce((s,a)=>s+a.findings.filter(f=>f.severity==='info').length,0), totalCVEs:totalCves, totalWebVulns, sslIssues, totalExploits, weakSSLCount, missingHeaderCount, exposedDBCount, exposedAdminCount };
+    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:cloudAssets.length, criticalFindings:crit, highRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount:assets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount:assets.filter(a=>a.riskScore<15).length, infoCount:countInfoFindings(assets), totalCVEs:totalCves, totalWebVulns, sslIssues, totalExploits, weakSSLCount, missingHeaderCount, exposedDBCount, exposedAdminCount };
     const {actors, mitreTactics} = generateThreatActors(assets);
-    this.scanResult.executiveSummary={ overallRisk:crit>0?'CRITICAL':assets.some(a=>a.riskScore>=70)?'HIGH':assets.some(a=>a.riskScore>=40)?'MEDIUM':'LOW', riskScore:Math.min(Math.max(...assets.map(a=>a.riskScore), ...cloudAssets.map(a=>a.riskScore),0),95), criticalFindings:crit, attackSurfaceSize:Object.keys(subdomains).length+cloudAssets.length, recommendations: generateRecommendations(assets,cloudAssets,dnsInfo), threatActors:actors, complianceStatus:complianceCheck(assets), mitreTactics };
+    this.scanResult.executiveSummary={ overallRisk:riskLabel(peekRiskScore(assets, cloudAssets)), riskScore:peekRiskScore(assets, cloudAssets), criticalFindings:crit, attackSurfaceSize:Object.keys(subdomains).length+cloudAssets.length, recommendations: generateRecommendations(assets,cloudAssets,dnsInfo), threatActors:actors, complianceStatus:complianceCheck(assets), mitreTactics };
     this.scanResult.dnsAnalysis = dnsInfo;
     return this.scanResult;
   }

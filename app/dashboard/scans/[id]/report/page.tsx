@@ -138,6 +138,7 @@ export default function ScanReportPage() {
                     <th className="px-4 py-3 font-bold">WAF</th>
                     <th className="px-4 py-3 font-bold">SSL</th>
                     <th className="px-4 py-3 font-bold">CVEs</th>
+                    <th className="px-4 py-3 font-bold">Paths</th>
                     <th className="px-4 py-3 font-bold text-right">Risk</th>
                   </tr>
                 </thead>
@@ -177,6 +178,11 @@ export default function ScanReportPage() {
                           </div>
                         ) : <span className="text-slate-400">-</span>}
                       </td>
+                      <td className="px-4 py-3">
+                        {a.discoveredEndpoints?.length > 0
+                          ? <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">{a.discoveredEndpoints.length} discovered</span>
+                          : <span className="text-slate-400">-</span>}
+                      </td>
                       <td className="px-4 py-3 text-right">
                         <span className={`px-2 py-0.5 rounded text-xs font-bold ${
                           a.riskScore >= 70 ? 'bg-red-100 text-red-700' :
@@ -189,6 +195,25 @@ export default function ScanReportPage() {
                 </tbody>
               </table>
             </div>
+            {assets.some((a: any) => a.discoveredEndpoints?.length > 0) && (
+              <div className="mt-3 border border-slate-200 rounded-xl bg-white p-4">
+                <h3 className="text-sm font-bold text-slate-700 mb-2">Discovered Endpoints</h3>
+                <p className="text-xs text-slate-500 mb-3">Same-origin links, forms and API paths found in the fetched pages. Informational — these are entry points an attacker would inspect.</p>
+                <div className="space-y-3">
+                  {assets.filter((a: any) => a.discoveredEndpoints?.length > 0).map((a: any) => (
+                    <div key={`ep-${a.id}`}>
+                      <div className="text-xs font-semibold text-slate-600 mb-1">{a.subdomain}:{a.port} <span className="text-slate-400 font-normal">({a.discoveredEndpoints.length})</span></div>
+                      <div className="flex flex-wrap gap-1">
+                        {a.discoveredEndpoints.slice(0, 12).map((ep: string) => (
+                          <span key={ep} className="px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 text-[10px] font-mono border border-slate-200 break-all">{ep.replace(/^https?:\/\/[^/]+/, '') || '/'}</span>
+                        ))}
+                        {a.discoveredEndpoints.length > 12 && <span className="text-[10px] text-slate-500">+{a.discoveredEndpoints.length - 12} more</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
         {allWebVulns.length > 0 && (
