@@ -1951,7 +1951,10 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
   // (GA, cookie banners, ad pixels) legitimately lack HttpOnly/Secure/SameSite and caused false positives.
   // Note: fetchURL joins multiple Set-Cookie headers into one ', '-separated string (and lowercases all
   // header names), so cookies are re-segmented with Expires-aware splitting before evaluation.
-  const sessionCookieNameRx = /(?:^|([a-z0-9_.-]*?(?:session|sid|token|auth|jwt|login|remember|csrf|xsrf|logged)[a-z0-9_.-]*?))\s*=/i;
+  // Tested against the cookie NAME only, so it must not require an '=' (an earlier version did, which
+  // made the whole check unreachable). 'sess' covers PHPSESSID/ASPSESSIONID; 'sid' needs delimiters so
+  // tracking cookies such as _gid are not mistaken for session cookies.
+  const sessionCookieNameRx = /session|sess|token|auth|jwt|login|remember|csrf|xsrf|logged|(?:^|[-_.])sid(?:$|[-_.])/i;
   const setCookieRaw = headers['set-cookie'] || '';
   const isHttps = url.startsWith('https://');
   if (setCookieRaw) {
@@ -1965,49 +1968,71 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
       if (!sessionCookieNameRx.test(name)) continue;
       const lower = c.toLowerCase();
       if (!lower.includes('httponly')) vulns.push({ type: 'cookie_issue', severity: 'medium', url: baseUrl, description: `Session cookie ${name} missing HttpOnly flag`, evidence: c.slice(0,100), confidence: 'confirmed' });
-      if (isHttps && !lower.includes('secure')) vulns.push({ type: 'cookie_issue', severity: 'medium', url: baseUrl, description: `Session cookie ${name} missing Secure flag`, evidence: c.slice(0,100), confidence: 'confirmed' });
-      if (!lower.includes('samesite')) vulns.push({ type: 'cookie_issue', severity: 'medium', url: baseUrl, description: `Session cookie ${name} missing SameSite attribute`, evidence: c.slice(0,100), confidence: 'confirmed' });
+      if (isHttps && !lower.includes('secure') && !name.startsWith('__host-')) vulns.push({ type: 'cookie_issue', severity: 'medium', url: baseUrl, description: `Session cookie ${name} missing Secure flag`, evidence: c.slice(0,100), confidence: 'confirmed' });
+      // SameSite absence is a real observation but a lower-impact one: browsers default to Lax.
+      if (!lower.includes('samesite')) vulns.push({ type: 'cookie_issue', severity: 'low', url: baseUrl, description: `Session cookie ${name} has no explicit SameSite attribute (browser default Lax applies)`, evidence: c.slice(0,100), confidence: 'confirmed' });
     }
   }
 
-  // Insecure HTTP Methods — the Allow header only advertises supported methods; it does NOT prove they
-  // are enabled or enforced. Reported as low/'potential' with honest wording.
-  const allow = headers['allow'] || '';
-  if (/PUT|DELETE|TRACE|PATCH|CONNECT/.test(allow)) {
-    vulns.push({ type: 'insecure_method', severity: 'low', url: baseUrl, description: `Server advertises potentially dangerous HTTP methods in Allow header — advertisement only, actual method behavior not verified`, evidence: `Allow: ${allow}`, confidence: 'potential' });
-  }
+  // Insecure HTTP Methods — removed. The Allow header only advertises what a server is willing to
+  // discuss; it does not prove PUT/DELETE/TRACE are accepted, and the fetch layer used by the scanner
+  // forbids the only method (TRACE) that could be proven non-destructively. Advertising is therefore
+  // not evidence of a vulnerability, so nothing is reported instead of a speculative finding.
 
   // Info Disclosure — high-confidence secret formats only; skip login pages (they legitimately mention passwords)
   const hasLoginForm = /<input[^>]*type=["']?password["']?/i.test(body);
   if (!hasLoginForm) {
-    const secretRx = [
+    // A token with a provider-specific format is self-evidencing. A generic KEY=value assignment is
+    // only evidence when the value is not a documentation placeholder ("your-password", "example", ...).
+    const formatSecretRx = [
       /\bAKIA[0-9A-Z]{16}\b/,
       /-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----/,
       /\bsk_live_[0-9a-zA-Z]{16,}/,
       /\bghp_[0-9A-Za-z]{36}\b/,
       /\bxox[baprs]-[0-9A-Za-z-]{10,}/,
       /\bAIza[0-9A-Za-z_-]{35}\b/,
-      /\b(?:DB_|DATABASE_)?(?:PASSWORD|PASSWD)\s*=\s*["'][^"']{4,}["']/,
-      /\b(?:API_KEY|SECRET_KEY|ACCESS_KEY|PRIVATE_KEY|CLIENT_SECRET|APP_KEY|AUTH_TOKEN)\s*[:=]\s*["'][^"']{6,}["']/,
     ];
-    if (secretRx.some(rx => rx.test(body))) {
-      vulns.push({ type: 'info_disclosure', severity: 'critical', url: baseUrl, description: 'Sensitive configuration or credential leakage detected in response', evidence: body.slice(0,200), confidence: 'likely' });
+    const assignmentSecretRx = /\b(?:DB_|DATABASE_)?(?:PASSWORD|PASSWD|API_KEY|SECRET_KEY|ACCESS_KEY|PRIVATE_KEY|CLIENT_SECRET|APP_KEY|AUTH_TOKEN)\s*[:=]\s*["']([^"']{4,})["']/i;
+    const placeholderValueRx = /^(?:your|example|sample|placeholder|change|xxx|todo|dummy|test|foo|bar|secret|password|passwd|\*{3,}|\.{3,}|<)|\$\{|process\.env/i;
+    let disclosed = formatSecretRx.some(rx => rx.test(body));
+    if (!disclosed) {
+      const m = body.match(assignmentSecretRx);
+      if (m && !placeholderValueRx.test(m[1].trim())) disclosed = true;
+    }
+    if (disclosed) {
+      vulns.push({ type: 'info_disclosure', severity: 'critical', url: baseUrl, description: 'Sensitive configuration or credential leakage detected in response', evidence: body.slice(0,200), confidence: 'confirmed' });
     }
   }
 
-  // Sensitive Files — only when the page actually REFERENCES such a path in href/src/action attributes.
-  // Checking the URL itself caused false positives (any URL containing 'backup', '.sql', '.zip', 'test.php'
-  // fired). Direct exposure of e.g. /.env is validated by the active path fuzzer with content markers.
-  const sensitivePaths = ['.git','.svn','.hg','.env','.htaccess','web.config','config.php','config.ini','settings.php','phpinfo.php','info.php','test.php','adminer.php','phpmyadmin','wp-config.php','.DS_Store','.bak','.old','.swp','.sql','.tar.gz','backup','dump.sql','database.sql'];
+  // Sensitive Files — a link in the markup is only a lead. The referenced path is fetched once (same
+  // origin only) and reported only when it really returns downloadable, non-HTML content. Matching the
+  // page URL itself caused false positives (any URL containing 'backup', '.sql' or '.zip' fired).
+  // Deliberately excludes .zip/.tar.gz: a public download archive is normal, not an exposure.
+  const sensitivePaths = ['.env','.git/','.svn/','web.config','config.php','wp-config','.DS_Store','.bak','.sql','.old'];
+  let sensitiveRef: string | null = null;
   for (const sp of sensitivePaths) {
     const esc = sp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const refRx = new RegExp(`(?:href|src|action|srcset|data-[a-z-]+)\\s*=\\s*["'][^"']*${esc}`, 'i');
-    if (refRx.test(body)) {
-      vulns.push({ type: 'sensitive_file', severity: 'medium', url: baseUrl, description: `Sensitive file/path referenced in page source: ${sp}`, evidence: body.slice(0,200), confidence: 'likely' });
-      break;
-    }
+    const refRx = new RegExp(`(?:href|src|action|srcset|data-[a-z-]+)\\s*=\\s*["']([^"']*${esc}[^"']*)["']`, 'i');
+    const m = body.match(refRx);
+    if (m) { sensitiveRef = m[1]; break; }
   }
-  if (/Index of |\[To Parent Directory\]|Directory Listing For|folder listing|directory of|<title>Index of \//i.test(body) || /Last modified<\/th>.*Name<\/th>.*Size<\/th>/i.test(body)) {
+  if (sensitiveRef) {
+    try {
+      const resolved = new URL(sensitiveRef, url);
+      if (resolved.origin === new URL(url).origin) {
+        const f = await fetchURL(resolved.toString(), 'GET', { 'Connection': 'close' }, undefined, 8000);
+        const ctype = (f.headers['content-type'] || '').toLowerCase();
+        if (f.status === 200 && ctype && !ctype.includes('text/html') && f.body.length > 20) {
+          vulns.push({ type: 'sensitive_file', severity: 'medium', url: resolved.toString(), description: `Sensitive file downloadable: ${resolved.pathname} is served as ${ctype}`, evidence: f.body.slice(0,160), confidence: 'confirmed' });
+        }
+      }
+    } catch {}
+  }
+  // Directory listing — only genuine autoindex signatures. Loose phrases ('folder listing', 'directory of')
+  // appear in ordinary documentation and used to misfire.
+  const dirListing = /<title>\s*Index of \/|\[To Parent Directory\]|Directory Listing For |Last modified<\/th>(?:(?!<\/table>)[\s\S]){0,300}?Name<\/th>/i.test(body)
+    || /<h1>\s*Index of \//i.test(body);
+  if (dirListing) {
     vulns.push({ type: 'directory_listing', severity: 'medium', url: baseUrl, description: 'Directory listing enabled', evidence: body.slice(0,200), confidence: 'confirmed' });
   }
 
@@ -3059,9 +3084,11 @@ function calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[
       else webScore += 1;
     }
     score += Math.min(webScore, 40);
-    // Missing security headers penalty
-    const missingHeaders = a.findings.filter(f=>f.type==='missing_header').length;
-    score += Math.min(missingHeaders * 6, 12);
+    // Missing security headers penalty. Findings are consolidated per asset as
+    // "Missing security headers (N): ...", so the count is read from the description;
+    // two points per missing header, capped, instead of a flat per-finding penalty.
+    const missingHeaders = a.findings.filter(f=>f.type==='missing_header').reduce((s,f)=>s+parseInt((f.description.match(/\((\d+)\)/)||[])[1]||'1',10)||0,0);
+    score += Math.min(missingHeaders * 2, 12);
     // SSL weakness penalty
     const sslWeak = a.findings.filter(f=>f.type==='ssl_weakness').length;
     score += Math.min(sslWeak * 6, 15);
@@ -3096,9 +3123,19 @@ function calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[
 
 function detectPassiveWebVulns(body: string, headers: Record<string,string>, url: string, port: number): Finding[] {
   const findings: Finding[] = [];
-  // Detect commented-out secrets / credentials (actual secret material, not generic comments)
-  if (/<!--[\s\S]{0,600}?(api[_-]?key|secret|password|passwd|token|aws_access|AKIA|BEGIN\s+(RSA|OPENSSH|EC|DSA)\s+PRIVATE)/i.test(body)) {
-    findings.push({ type:'info_disclosure', severity:'medium', port, description:'HTML comments may contain credentials or secrets', evidence:'Secret-like content found in HTML comments' });
+  // Detect commented-out secrets. A bare keyword ('password', 'token') appears in ordinary markup
+  // (commented-out forms, TODOs, docs), so only real credential formats count: provider token
+  // formats, PEM keys, or a KEY=value assignment whose value is not a documentation placeholder.
+  const commentBodies = body.match(/<!--[\s\S]{0,600}?-->/g) || [];
+  const commentFormatSecret = /\bAKIA[0-9A-Z]{16}\b|-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----|\bsk_live_[0-9a-zA-Z]{16,}|\bghp_[0-9A-Za-z]{36}\b|\bxox[baprs]-[0-9A-Za-z-]{10,}|\bAIza[0-9A-Za-z_-]{35}\b/;
+  const commentAssignment = /\b(?:DB_|DATABASE_)?(?:PASSWORD|PASSWD|API_KEY|SECRET_KEY|ACCESS_KEY|CLIENT_SECRET|AUTH_TOKEN)\s*[:=]\s*["']([^"']{6,})["']/i;
+  const commentPlaceholder = /^(?:your|example|sample|placeholder|change|xxx|todo|dummy|test|secret|password|\*{3,})|process\.env|\$\{/i;
+  for (const c of commentBodies) {
+    const cm = c.match(commentAssignment);
+    if (commentFormatSecret.test(c) || (cm && !commentPlaceholder.test(cm[1].trim()))) {
+      findings.push({ type:'info_disclosure', severity:'medium', port, description:'Credential material found in HTML comment', evidence: c.slice(0,160) });
+      break;
+    }
   }
   // Detect server/framework version leaks in body
   const versionLeaks = body.match(/(Apache|nginx|IIS|Tomcat|Jetty|PHP|Python|Rails|Django|Express)\/[\d.]+/gi) || [];
@@ -3366,7 +3403,9 @@ export class ScannerEngine {
     const dnsFindings = await analyzeDNS(this.target);
     this.scanResult.cloudAssets=cloudAssets; this.scanResult.durationSeconds=(Date.now()-start)/1000;
     this.scanResult.statistics={ totalSubdomains:0, totalAssets:0, totalCloudAssets:cloudAssets.length, criticalFindings:cloudAssets.filter(a=>a.severity==='critical').length, highRiskCount:cloudAssets.filter(a=>a.severity==='high').length, mediumRiskCount:cloudAssets.filter(a=>a.severity==='medium').length, lowRiskCount:0, infoCount:0, totalCVEs:0, totalWebVulns:0, sslIssues:0, totalExploits:0, weakSSLCount:0, missingHeaderCount:0, exposedDBCount:0, exposedAdminCount:0 };
-    this.scanResult.executiveSummary={ overallRisk:cloudAssets.some(a=>a.severity==='critical')?'CRITICAL':cloudAssets.some(a=>a.severity==='high')?'HIGH':'LOW', riskScore:cloudAssets.filter(a=>a.severity==='critical').length*25, criticalFindings:cloudAssets.filter(a=>a.severity==='critical').length, attackSurfaceSize:cloudAssets.length, recommendations:generateRecommendations([],cloudAssets,dnsFindings), threatActors:['Cloud-focused threat actors','Data exfiltration groups'], complianceStatus:{owaspCompliant:true,pciDssCompliant:true,gdprCompliant:!cloudAssets.some(a=>a.severity==='critical')}, mitreTactics:['TA0001-Initial Access','TA0009-Collection'] };
+    // riskScore was criticalCount*25, which is unbounded (4 criticals = 100) and ignores high/medium.
+    const cloudMaxRisk = Math.max(...cloudAssets.map(c=>c.riskScore||0),0);
+    this.scanResult.executiveSummary={ overallRisk:cloudAssets.some(a=>a.severity==='critical')?'CRITICAL':cloudAssets.some(a=>a.severity==='high')?'HIGH':cloudAssets.some(a=>a.severity==='medium')?'MEDIUM':'LOW', riskScore:cloudMaxRisk, criticalFindings:cloudAssets.filter(a=>a.severity==='critical').length, attackSurfaceSize:cloudAssets.length, recommendations:generateRecommendations([],cloudAssets,dnsFindings), threatActors:['Cloud-focused threat actors','Data exfiltration groups'], complianceStatus:{owaspCompliant:true,pciDssCompliant:true,gdprCompliant:!cloudAssets.some(a=>a.severity==='critical')}, mitreTactics:['TA0001-Initial Access','TA0009-Collection'] };
     return this.scanResult;
   }
 
@@ -3452,7 +3491,6 @@ export class ScannerEngine {
     const weakSSLCount = dedupedAssets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length;
     const missingHeaderCount = countMissingHeaders(dedupedAssets);
     const exposedDBCount = dedupedAssets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length;
-    const exposedAdminCount = dedupedAssets.filter(a=>a.findings.some(f=>f.type==='dangerous_service'&&['Telnet','SSH','RDP'].includes(f.service||''))).length;
     this.scanResult.assets = dedupedAssets;
     this.scanResult.cloudAssets = dedupedCloud;
     this.scanResult.durationSeconds = duration;
@@ -3520,12 +3558,11 @@ export class ScannerEngine {
     const weakSSLCount = assets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length;
     const missingHeaderCount = countMissingHeaders(assets);
     const exposedDBCount = assets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length;
-    const exposedAdminCount = assets.filter(a=>a.findings.some(f=>f.type==='dangerous_service'&&['Telnet','SSH','RDP'].includes(f.service||''))).length;
     this.scanResult.assets=assets;
     this.scanResult.cloudAssets=cloudAssets;
     this.scanResult.durationSeconds=duration;
     this.scanResult.completedAt=new Date().toISOString();
-    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:cloudAssets.length, criticalFindings:crit, highRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount:assets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount:assets.filter(a=>a.riskScore<15).length, infoCount:countInfoFindings(assets), totalCVEs:totalCves, totalWebVulns, sslIssues, totalExploits, weakSSLCount, missingHeaderCount, exposedDBCount, exposedAdminCount };
+    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:cloudAssets.length, criticalFindings:crit, highRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount:assets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount:assets.filter(a=>a.riskScore<15).length, infoCount:countInfoFindings(assets), totalCVEs:totalCves, totalWebVulns, sslIssues, totalExploits, weakSSLCount, missingHeaderCount, exposedDBCount, exposedAdminCount: countExposedAdmin(assets) };
     const {actors, mitreTactics} = generateThreatActors(assets);
     this.scanResult.executiveSummary={ overallRisk:riskLabel(peekRiskScore(assets, cloudAssets)), riskScore:peekRiskScore(assets, cloudAssets), criticalFindings:crit, attackSurfaceSize:Object.keys(subdomains).length+cloudAssets.length, recommendations: generateRecommendations(assets,cloudAssets,dnsInfo), threatActors:actors, complianceStatus:complianceCheck(assets), mitreTactics };
     this.scanResult.dnsAnalysis = dnsInfo;
