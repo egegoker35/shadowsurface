@@ -1740,6 +1740,13 @@ function bannerGrab(host: string, port: number, timeout = 10000, payload?: strin
   });
 }
 
+/** Strip trailing dots/whitespace that version regexes pick up from filenames like jquery-3.4.1.min.js */
+function cleanVersion(v?: string): string | undefined {
+  if (!v) return undefined;
+  const cleaned = v.trim().replace(/[.\s]+$/, '');
+  return cleaned.length > 0 ? cleaned : undefined;
+}
+
 function detectTechnologies(headers: Record<string, string>, body: string): Array<{ name: string; category: string; version?: string }> {
   const found: Array<{ name: string; category: string; version?: string }> = [];
   const seen = new Set<string>();
@@ -1759,7 +1766,7 @@ function detectTechnologies(headers: Record<string, string>, body: string): Arra
         if (pat.value.test(body)) { matched = true; if (pat.versionRegex) { const m = body.match(pat.versionRegex); if (m) version = m[1]; }}
       }
     }
-    if (matched && !seen.has(tech.name)) { seen.add(tech.name); found.push({ name: tech.name, category: tech.category, version }); }
+    if (matched && !seen.has(tech.name)) { seen.add(tech.name); found.push({ name: tech.name, category: tech.category, version: cleanVersion(version) }); }
   }
   return found;
 }
@@ -3280,7 +3287,7 @@ export class ScannerEngine {
     this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:0, highRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount:assets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount:assets.filter(a=>a.riskScore<15).length, infoCount:0, totalCVEs:assets.reduce((s,a)=>s+a.cves.length,0), totalWebVulns:assets.reduce((s,a)=>s+(a.webVulns?.length||0),0), sslIssues:assets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length, totalExploits:assets.filter(a=>a.exploitAvailable).length, weakSSLCount:assets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length, missingHeaderCount:assets.reduce((s,a)=>s+(a.webVulns?.filter(w=>w.type==='missing_header').length||0),0), exposedDBCount:assets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length, exposedAdminCount:0 };
     const maxPortRisk = Math.max(...assets.map(a=>a.riskScore),0);
     const portThreats = assets.filter(a=>a.findings.length>0 || (a.webVulns && a.webVulns.length>0)).length;
-    this.scanResult.executiveSummary={ overallRisk:assets.some(a=>a.riskScore>=70)?'CRITICAL':assets.some(a=>a.riskScore>=40)?'HIGH':assets.some(a=>a.riskScore>=15)?'MEDIUM':'LOW', riskScore:maxPortRisk, criticalFindings:0, attackSurfaceSize:assets.length, recommendations:['Run full scan for CVE and cloud checks'], threatActors:portThreats>0?['Opportunistic attackers','Reconnaissance groups']:['None identified'], complianceStatus:{owaspCompliant:portThreats===0,pciDssCompliant:portThreats===0,gdprCompliant:portThreats===0}, mitreTactics:['TA0043-Reconnaissance'] };
+    this.scanResult.executiveSummary={ overallRisk:assets.some(a=>a.riskScore>=70)?'HIGH':assets.some(a=>a.riskScore>=40)?'MEDIUM':'LOW', riskScore:maxPortRisk, criticalFindings:0, attackSurfaceSize:assets.length, recommendations:['Run full scan for CVE and cloud checks'], threatActors:portThreats>0?['Opportunistic attackers','Reconnaissance groups']:['None identified'], complianceStatus:{owaspCompliant:portThreats===0,pciDssCompliant:portThreats===0,gdprCompliant:portThreats===0}, mitreTactics:['TA0043-Reconnaissance'] };
     return this.scanResult;
   }
 
@@ -3302,7 +3309,7 @@ export class ScannerEngine {
     dedupeFindings(assets);
     calculateRiskScores(assets, []);
     const crit = assets.filter(a=>a.riskScore>=70).length;
-    const totalCves = assets.reduce((s,a)=>s+a.cves.length,0);
+    const totalCves = new Set(assets.flatMap(a=>a.cves)).size; // unique CVEs, not http/https double-count
     const totalWebVulns = assets.reduce((s,a)=>s+(a.webVulns?.length||0),0);
     const sslIssues = assets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length;
     this.scanResult.assets=assets; this.scanResult.durationSeconds=(Date.now()-start)/1000;
@@ -3398,7 +3405,7 @@ export class ScannerEngine {
     calculateRiskScores(dedupedAssets, dedupedCloud);
     const duration = (Date.now()-start)/1000;
     const crit = dedupedAssets.filter(a=>a.riskScore>=70).length + dedupedCloud.filter(a=>a.severity==='critical').length;
-    const totalCves = dedupedAssets.reduce((s,a)=>s+a.cves.length,0);
+    const totalCves = new Set(dedupedAssets.flatMap(a=>a.cves)).size; // unique CVEs, not http/https double-count
     const totalWebVulns = dedupedAssets.reduce((s,a)=>s+(a.webVulns?.length||0),0);
     const sslIssues = dedupedAssets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length;
     const totalExploits = dedupedAssets.filter(a=>a.exploitAvailable).length;
@@ -3465,7 +3472,7 @@ export class ScannerEngine {
     calculateRiskScores(assets, cloudAssets);
     const duration = (Date.now()-start)/1000;
     const crit = assets.filter(a=>a.riskScore>=70).length + cloudAssets.filter(a=>a.severity==='critical').length;
-    const totalCves = assets.reduce((s,a)=>s+a.cves.length,0);
+    const totalCves = new Set(assets.flatMap(a=>a.cves)).size; // unique CVEs, not http/https double-count
     const totalWebVulns = assets.reduce((s,a)=>s+(a.webVulns?.length||0),0);
     const sslIssues = assets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length;
     const totalExploits = assets.filter(a=>a.exploitAvailable).length;
