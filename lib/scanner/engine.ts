@@ -1756,7 +1756,7 @@ const WAF_PATTERNS: Record<string, { headers: string[]; body: RegExp[]; anyHeade
   'ArvanCloud': { headers: [], anyHeaderRegex: /ArvanCloud/i, body: [/arvancloud/i] },
   'KeyCDN': { headers: ['X-CDN'], anyHeaderRegex: /keycdn/i, body: [] },
   'Reblaze': { headers: ['X-Reblaze-SOAR'], body: [/reblaze/i] },
-  'F5 ASM': { headers: ['X-WA-Info'], body: [/F5/i] },
+  'F5 ASM': { headers: ['X-WA-Info'], body: [] },
   'Citrix NetScaler': { headers: [], anyHeaderRegex: /NetScaler/i, body: [] },
   'Radware': { headers: ['X-RDWR-CE'], body: [/radware/i] },
   'Fortinet FortiWeb': { headers: ['X-FW-CE'], body: [/fortiweb/i] },
@@ -2116,15 +2116,17 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
 
   // API Exposure — GraphQL: plain body.includes('__schema') matched JavaScript bundles (type definitions);
   // Swagger: /swagger|openapi/ word matches matched documentation text. Both now need real endpoint signals.
-  const graphqlUrl = /\/graphql|graphiql|playground|altair/i.test(url);
-  const graphqlSchemaBody = /__schema\s*[:{]|"query"\s*:\s*"IntrospectionQuery"|"__typename"/i.test(body);
-  if ((graphqlUrl && status === 200) || graphqlSchemaBody) {
-    vulns.push({ type: 'graphql_issue', severity: 'medium', url: baseUrl, description: 'GraphQL endpoint detected — introspection may expose schema', evidence: url, confidence: 'likely' });
+  // GraphQL: require an actual GraphQL JSON envelope, not a page that merely mentions the word.
+  const graphqlJson = /"(?:data|errors)"\s*:\s*[\[{]/.test(body) && (/__schema|"__typename"|"graphql"/i.test(body));
+  const graphqlIntrospection = /"__schema"\s*:\s*\{/.test(body);
+  if (graphqlIntrospection || (/\/graphql\b/i.test(url) && status === 200 && graphqlJson)) {
+    vulns.push({ type: 'graphql_issue', severity: 'medium', url: baseUrl, description: 'GraphQL endpoint detected — introspection may expose schema', evidence: url, confidence: 'confirmed' });
   }
-  const swaggerSchema = /"swagger"\s*:\s*"2\.0"|"openapi"\s*:\s*"3\.|"paths"\s*:\s*\{|"info"\s*:\s*\{/.test(body);
-  const swaggerUi = /swagger-ui|swagger ui|swagger-ui\.(?:js|css)|swagger\.(?:json|ya?ml)/i.test(body);
-  if (swaggerSchema || swaggerUi || (/\/v\d+\/api-docs|\/swagger\.(json|ya?ml)/i.test(url) && status === 200)) {
-    vulns.push({ type: 'api_exposure', severity: 'medium', url: baseUrl, description: 'API documentation exposed (Swagger/OpenAPI schema or UI)', evidence: url, confidence: 'likely' });
+  // OpenAPI/Swagger: require a real schema document (version field plus paths/components).
+  const swaggerSchema = /"(?:swagger|openapi)"\s*:\s*"[23]\.\d/.test(body) && /"(?:paths|components|definitions)"\s*:/.test(body);
+  const swaggerUi = /<title>[^<]*swagger[ ]?ui|swagger-ui-bundle\.js|swagger-ui\.css/i.test(body);
+  if (swaggerSchema || swaggerUi) {
+    vulns.push({ type: 'api_exposure', severity: 'medium', url: baseUrl, description: 'API documentation exposed (Swagger/OpenAPI schema or UI)', evidence: url, confidence: 'confirmed' });
   }
 
   // WordPress Specific
@@ -2235,13 +2237,22 @@ async function probePaths(baseUrl: string, timeout=8000): Promise<WebVuln[]> {
         if (p === '/wp-admin' && res.status !== 404 && (res.body.includes('wp-login') || res.body.includes('wordpress'))) {
           vulns.push({ type: 'exposed_admin', severity: 'high', url: testUrl, description: 'WordPress admin panel exposed', evidence: `/wp-login accessible`, confidence: 'confirmed' });
         }
-        if ((p === '/swagger-ui.html' || p === '/swagger.json' || p === '/v2/api-docs') && (res.body.includes('swagger') || res.body.includes('openapi'))) {
-          vulns.push({ type: 'api_exposure', severity: 'high', url: testUrl, description: 'API documentation (Swagger/OpenAPI) publicly exposed', evidence: p, confidence: 'confirmed' });
+        if ((p === '/swagger-ui.html' || p === '/swagger.json' || p === '/v2/api-docs') && !isSoft404) {
+          // Must be an actual OpenAPI document or the Swagger UI app shell, not a page that echoes the word.
+          const openApiDoc = /"(?:swagger|openapi)"\s*:\s*"[23]\.\d/.test(res.body) && /"paths"\s*:/.test(res.body);
+          const swaggerShell = /<title>[^<]*swagger[ ]?ui|swagger-ui-bundle\.js/i.test(res.body);
+          if (openApiDoc || swaggerShell) {
+            vulns.push({ type: 'api_exposure', severity: 'high', url: testUrl, description: 'API documentation (Swagger/OpenAPI) publicly exposed', evidence: p, confidence: 'confirmed' });
+          }
         }
-        if (p === '/graphql' && (res.body.includes('graphql') || res.body.includes('playground') || res.body.includes('__schema'))) {
-          vulns.push({ type: 'graphql_issue', severity: 'high', url: testUrl, description: 'GraphQL endpoint/introspection exposed', evidence: p, confidence: 'confirmed' });
+        if (p === '/graphql' && !isSoft404) {
+          // Only a real GraphQL JSON error/schema response counts.
+          const gql = /"(?:data|errors|__schema)"\s*:\s*[\[{"]/.test(res.body.trim().slice(0, 2000));
+          if (gql) {
+            vulns.push({ type: 'graphql_issue', severity: 'high', url: testUrl, description: 'GraphQL endpoint/introspection exposed', evidence: p, confidence: 'confirmed' });
+          }
         }
-        if (p === '/actuator' || p === '/health' || p === '/metrics') {
+        if ((p === '/actuator' || p === '/health' || p === '/metrics') && !isSoft404) {
           const j = res.body.trim();
           if (j.startsWith('{') && (j.includes('"status"') || j.includes('"UP"') || j.includes('jvm') || j.includes('"health"') || j.includes('"mem"') || j.includes('"gauge"') || j.includes('"names"'))) {
             vulns.push({ type: 'api_exposure', severity: 'medium', url: testUrl, description: 'Spring Boot actuator endpoint exposed — may leak internal state', evidence: p, confidence: 'confirmed' });
@@ -3220,9 +3231,12 @@ function consolidateFindings(assets: DiscoveredAsset[]) {
     if (infoFindings.length > 1) {
       for (const a of list) a.findings = a.findings.filter((f: Finding) => f.type !== 'info_disclosure');
       const first = list[0];
+      // Keep the worst severity actually observed instead of inflating every disclosure to medium.
+      const rank: Record<string, number> = { info: 0, low: 1, medium: 2, high: 3, critical: 4 };
+      const worst = infoFindings.reduce((acc, f) => (rank[f.severity] > rank[acc] ? f.severity : acc), 'info' as Finding['severity']);
       first.findings.push({
         type: 'info_disclosure',
-        severity: 'medium',
+        severity: worst,
         description: `Information disclosure issues (${infoFindings.length} occurrences)`,
         evidence: infoFindings.map((f: Finding) => f.evidence).filter(Boolean).slice(0,3).join('; '),
       });
