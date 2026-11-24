@@ -427,20 +427,20 @@ const TECH_PATTERNS: Array<{ name: string; category: string; patterns: Array<{ t
     {type:'body',key:'',value:/swagger-ui|openapi|api-docs/i},
   ]},
   { name:'ElasticSearch', category:'Database', patterns:[
-    {type:'body',key:'',value:/"cluster_name"|"tagline".*Elasticsearch/i},
+    {type:'body',key:'',value:/"cluster_name"|"tagline".*Elasticsearch/i,versionRegex:/"number"\s*:\s*"(\d+\.\d+\.\d+)"/},
     {type:'header',key:'X-Elastic-Product',value:/Elasticsearch/i},
   ]},
   { name:'MongoDB', category:'Database', patterns:[
-    {type:'body',key:'',value:/"ismaster"|"ok".*MongoDB/i},
+    {type:'body',key:'',value:/"ismaster"|"ok".*MongoDB/i,versionRegex:/"version"\s*:\s*"(\d+\.\d+\.\d+)"/},
   ]},
   { name:'MySQL', category:'Database', patterns:[
     {type:'body',key:'',value:/mysql_native_password/i},
   ]},
   { name:'PostgreSQL', category:'Database', patterns:[
-    {type:'body',key:'',value:/FATAL.*PostgreSQL|ERROR.*PostgreSQL/i},
+    {type:'body',key:'',value:/FATAL.*PostgreSQL|ERROR.*PostgreSQL/i,versionRegex:/PostgreSQL[^\d]{0,12}(\d+\.\d+(?:\.\d+)?)/i},
   ]},
   { name:'Redis', category:'Database', patterns:[
-    {type:'body',key:'',value:/redis_version/i},
+    {type:'body',key:'',value:/redis_version/i,versionRegex:/redis_version:([\d.]+)/},
   ]},
   { name:'OpenResty', category:'Server', patterns:[
     {type:'header',key:'Server',value:/openresty/i,versionRegex:/openresty\/([\d.]+)/},
@@ -461,17 +461,17 @@ const TECH_PATTERNS: Array<{ name: string; category: string; patterns: Array<{ t
     {type:'body',key:'',value:/Error 404--Not Found.*WebLogic/i},
   ]},
   { name:'CouchDB', category:'Database', patterns:[
-    {type:'header',key:'Server',value:/CouchDB/i},
+    {type:'header',key:'Server',value:/CouchDB/i,versionRegex:/CouchDB\/([\d.]+)/i},
     {type:'body',key:'',value:/"couchdb".*"Welcome"/},
   ]},
   { name:'Cassandra', category:'Database', patterns:[
-    {type:'body',key:'',value:/"cql_version"/},
+    {type:'body',key:'',value:/"cql_version"/,versionRegex:/"cql_version"\s*:\s*"(\d+\.\d+\.\d+)"/},
   ]},
   { name:'InfluxDB', category:'Database', patterns:[
     {type:'header',key:'X-Influxdb-Version',value:/[\d.]+/,versionRegex:/([\d.]+)/},
   ]},
   { name:'Grafana', category:'Application', patterns:[
-    {type:'body',key:'',value:/grafana/},
+    {type:'body',key:'',value:/grafana/,versionRegex:/[Gg]rafana[^\d]{0,24}(\d+\.\d+\.\d+)/},
     {type:'header',key:'Set-Cookie',value:/grafana_sess/i},
   ]},
   { name:'Jenkins', category:'Application', patterns:[
@@ -480,25 +480,26 @@ const TECH_PATTERNS: Array<{ name: string; category: string; patterns: Array<{ t
   ]},
   { name:'GitLab', category:'Application', patterns:[
     {type:'header',key:'X-Gitlab-Meta',value:/.*/},
-    {type:'body',key:'',value:/GitLab/},
+    {type:'body',key:'',value:/GitLab/,versionRegex:/GitLab[^\d]{0,24}(\d+\.\d+\.\d+)/i},
   ]},
   { name:'GitHub Pages', category:'Hosting', patterns:[
     {type:'header',key:'Server',value:/GitHub\.com/i},
   ]},
   { name:'Plesk', category:'Panel', patterns:[
-    {type:'body',key:'',value:/Plesk/i},
+    {type:'body',key:'',value:/Plesk/i,versionRegex:/Plesk[^\d]{0,24}(\d{2}\.\d+(?:\.\d+)*)/i},
   ]},
   { name:'cPanel', category:'Panel', patterns:[
-    {type:'body',key:'',value:/cPanel/i},
+    {type:'body',key:'',value:/cPanel/i,versionRegex:/cPanel[^\d]{0,24}(\d{1,3}\.\d+(?:\.\d+)*)/i},
+    {type:'header',key:'Server',value:/cpsrvd/i,versionRegex:/cpsrvd\/([\d.]+)/i},
   ]},
   { name:'DirectAdmin', category:'Panel', patterns:[
-    {type:'body',key:'',value:/DirectAdmin/i},
+    {type:'body',key:'',value:/DirectAdmin/i,versionRegex:/DirectAdmin[^\d]{0,24}(\d+\.\d+(?:\.\d+)*)/i},
   ]},
   { name:'phpMyAdmin', category:'Application', patterns:[
-    {type:'body',key:'',value:/phpMyAdmin/i},
+    {type:'body',key:'',value:/phpMyAdmin/i,versionRegex:/phpMyAdmin[^\d]{0,24}(\d+\.\d+\.\d+)/i},
   ]},
   { name:'Adminer', category:'Application', patterns:[
-    {type:'body',key:'',value:/Adminer/},
+    {type:'body',key:'',value:/Adminer/,versionRegex:/Adminer[^\d]{0,16}(\d+\.\d+\.\d+)/i},
   ]},
   { name:'Wordfence', category:'WAF', patterns:[
     {type:'body',key:'',value:/wordfence/},
@@ -514,6 +515,7 @@ const TECH_PATTERNS: Array<{ name: string; category: string; patterns: Array<{ t
   ]},
   { name:'Kubernetes', category:'Platform', patterns:[
     {type:'header',key:'X-Kubernetes-PF-Flow-Schema-Uid',value:/.*/},
+    {type:'header',key:'Server',value:/Kubernetes/i,versionRegex:/Kubernetes\/([\d.]+)/i},
   ]},
   { name:'Rancher', category:'Platform', patterns:[
     {type:'body',key:'',value:/rancher/i},
@@ -526,17 +528,17 @@ const TECH_PATTERNS: Array<{ name: string; category: string; patterns: Array<{ t
     {type:'header',key:'Via',value:/haproxy/i},
   ]},
   { name:'Squid', category:'Proxy', patterns:[
-    {type:'header',key:'Server',value:/squid/i},
+    {type:'header',key:'Server',value:/squid/i,versionRegex:/squid\/([\d.]+)/i},
   ]},
   { name:'Varnish', category:'Cache', patterns:[
     {type:'header',key:'X-Varnish',value:/.*/},
     {type:'header',key:'Via',value:/varnish/i},
   ]},
   { name:'Memcached', category:'Database', patterns:[
-    {type:'body',key:'',value:/STAT version/},
+    {type:'body',key:'',value:/STAT version/,versionRegex:/STAT version (\d+\.\d+\.\d+)/},
   ]},
   { name:'RabbitMQ', category:'Queue', patterns:[
-    {type:'body',key:'',value:/rabbitmq/},
+    {type:'body',key:'',value:/rabbitmq/,versionRegex:/"rabbitmq_version"\s*:\s*"(\d+\.\d+\.\d+)"/},
   ]},
   { name:'Kafka', category:'Queue', patterns:[
     {type:'body',key:'',value:/kafka/},
@@ -548,7 +550,7 @@ const TECH_PATTERNS: Array<{ name: string; category: string; patterns: Array<{ t
     {type:'body',key:'',value:/datadoghq/i},
   ]},
   { name:'Splunk', category:'Analytics', patterns:[
-    {type:'header',key:'Server',value:/Splunkd/i},
+    {type:'header',key:'Server',value:/Splunkd/i,versionRegex:/Splunkd\/([\d.]+)/i},
   ]},
   { name:'Sentry', category:'APM', patterns:[
     {type:'body',key:'',value:/sentry\.io/i},
@@ -578,7 +580,7 @@ const TECH_PATTERNS: Array<{ name: string; category: string; patterns: Array<{ t
     {type:'body',key:'',value:/auth0\.com/i},
   ]},
   { name:'Keycloak', category:'Auth', patterns:[
-    {type:'body',key:'',value:/keycloak/i},
+    {type:'body',key:'',value:/keycloak/i,versionRegex:/keycloak[^\d]{0,32}(\d+\.\d+\.\d+)/i},
   ]},
   { name:'Okta', category:'Auth', patterns:[
     {type:'body',key:'',value:/okta/i},
@@ -683,28 +685,28 @@ const TECH_PATTERNS: Array<{ name: string; category: string; patterns: Array<{ t
     {type:'body',key:'',value:/1and1/i},
   ]},
   { name:'Strato', category:'Hosting', patterns:[
-    {type:'body',key:'',value:/strato/i},
+    {type:'body',key:'',value:/strato\.de|strato\.com|strato-hosting/i},
   ]},
   { name:'Ionos', category:'Hosting', patterns:[
-    {type:'body',key:'',value:/ionos/i},
+    {type:'body',key:'',value:/ionos\.(com|de)|ionos\.cdn/i},
   ]},
   { name:'Squarespace', category:'Platform', patterns:[
-    {type:'body',key:'',value:/squarespace/i},
+    {type:'body',key:'',value:/squarespace\.com|static1\.squarespace|squarespace-cdn/i},
   ]},
   { name:'Wix', category:'Platform', patterns:[
-    {type:'body',key:'',value:/wix/i},
+    {type:'body',key:'',value:/wix\.com|wixstatic|parastorage/i},
   ]},
   { name:'Weebly', category:'Platform', patterns:[
-    {type:'body',key:'',value:/weebly/i},
+    {type:'body',key:'',value:/weebly\.com|editmysite|weeblycdn/i},
   ]},
   { name:'Tilda', category:'Platform', patterns:[
-    {type:'body',key:'',value:/tilda/i},
+    {type:'body',key:'',value:/tilda\.(com|ru|ws)|tildacdn|tilda\.page/i},
   ]},
   { name:'Webflow', category:'Platform', patterns:[
-    {type:'body',key:'',value:/webflow/i},
+    {type:'body',key:'',value:/webflow\.com|webflow\.io|webflowcdn/i},
   ]},
   { name:'Ghost', category:'CMS', patterns:[
-    {type:'body',key:'',value:/ghost/i},
+    {type:'body',key:'',value:/ghost\.io|ghost\.org|ghostkit|ghost-portal|ghost-url/i},
   ]},
   { name:'Strapi', category:'CMS', patterns:[
     {type:'body',key:'',value:/strapi/i},
@@ -1192,32 +1194,32 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2019-11041',techRegex:/PHP\s+7\.2\.[0-2][0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-190',description:'PHP exif integer overflow leading to heap overflow'},
   {id:'CVE-2018-19518',techRegex:/PHP\s+5\.[4-6]|PHP\s+7\.[0-2]\.\d{1,2}/,cvss:8.1,exploitAvailable:true,cwe:'CWE-78',description:'PHP imap_open remote command execution'},
   // cPanel/WHM CVEs
-  {id:'CVE-2022-44877',techRegex:/cPanel|WHM/,cvss:6.1,exploitAvailable:true,cwe:'CWE-79',description:'cPanel & WHM stored XSS'},
-  {id:'CVE-2021-20486',techRegex:/cPanel|WHM/,cvss:7.8,exploitAvailable:true,cwe:'CWE-269',description:'cPanel privilege escalation via arbitrary file write'},
-  {id:'CVE-2020-10124',techRegex:/cPanel|WHM/,cvss:8.1,exploitAvailable:true,cwe:'CWE-89',description:'cPanel SQL injection in API'},
+  {id:'CVE-2022-44877',techRegex:/cPanel[\/ ]11\.\d+/,cvss:6.1,exploitAvailable:true,cwe:'CWE-79',description:'cPanel & WHM stored XSS'},
+  {id:'CVE-2021-20486',techRegex:/cPanel[\/ ]11\.[0-9]+\d/,cvss:7.8,exploitAvailable:true,cwe:'CWE-269',description:'cPanel privilege escalation via arbitrary file write'},
+  {id:'CVE-2020-10124',techRegex:/cPanel[\/ ]11\.\d+/,cvss:8.1,exploitAvailable:true,cwe:'CWE-89',description:'cPanel SQL injection in API'},
   {id:'CVE-2021-41773',techRegex:/Apache\/2\.4\.4[0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-22',description:'Apache 2.4.49 path traversal and RCE'},
   {id:'CVE-2021-42013',techRegex:/Apache\/2\.4\.50/,cvss:9.8,exploitAvailable:true,cwe:'CWE-22',description:'Apache 2.4.50 path traversal and RCE'},
-  {id:'CVE-2017-9805',techRegex:/Struts/,cvss:8.1,exploitAvailable:true,cwe:'CWE-502',description:'Apache Struts REST plugin XStream RCE'},
-  {id:'CVE-2018-1273',techRegex:/Spring\s+Data\s+REST/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Spring Data REST RCE via SpEL'},
-  {id:'CVE-2022-22965',techRegex:/Spring\s+Framework/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Spring4Shell RCE via class injection'},
-  {id:'CVE-2022-22947',techRegex:/Spring\s+Cloud\s+Gateway/,cvss:10,exploitAvailable:true,cwe:'CWE-94',description:'Spring Cloud Gateway RCE via SpEL'},
-  {id:'CVE-2021-44228',techRegex:/log4j|Log4j/,cvss:10,exploitAvailable:true,cwe:'CWE-77',description:'Log4Shell RCE (Log4j 2.x)'},
+  {id:'CVE-2017-9805',techRegex:/Struts[\/ ]2\.[0-5]\.\d+/,cvss:8.1,exploitAvailable:true,cwe:'CWE-502',description:'Apache Struts REST plugin XStream RCE'},
+  {id:'CVE-2018-1273',techRegex:/Spring[ ]Data[ ]REST[\/ ]\d+\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Spring Data REST RCE via SpEL'},
+  {id:'CVE-2022-22965',techRegex:/Spring[ ]Framework[\/ ]5\.[0-3]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Spring4Shell RCE via class injection'},
+  {id:'CVE-2022-22947',techRegex:/Spring[ ]Cloud[ ]Gateway[\/ ]3\.[0-1]\.\d+/,cvss:10,exploitAvailable:true,cwe:'CWE-94',description:'Spring Cloud Gateway RCE via SpEL'},
+  {id:'CVE-2021-44228',techRegex:/Log4j[\/ ]2\.(?:[0-9]|1[0-4])\.\d+/,cvss:10,exploitAvailable:true,cwe:'CWE-77',description:'Log4Shell RCE (Log4j 2.x)'},
   {id:'CVE-2021-4104',techRegex:/log4j.*1\.[0-2]\./,cvss:7.5,exploitAvailable:true,cwe:'CWE-502',description:'Log4j 1.2 JMSAppender deserialization'},
-  {id:'CVE-2022-42889',techRegex:/Apache\s+Commons\s+Text/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Apache Commons Text RCE (Text4Shell)'},
-  {id:'CVE-2020-1938',techRegex:/Tomcat\/9\.[0]\.0\.[0-2][0-9]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-22',description:'Ghostcat LFI in Tomcat AJP'},
+  {id:'CVE-2022-42889',techRegex:/Commons[ ]Text[\/ ]1\.[5-9]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Apache Commons Text RCE (Text4Shell)'},
+  {id:'CVE-2020-1938',techRegex:/Tomcat[\/ ](?:7\.0\.\d+|8\.5\.[0-4][0-9]|9\.0\.[0-3][0-9])\b/,cvss:9.8,exploitAvailable:true,cwe:'CWE-22',description:'Ghostcat LFI in Tomcat AJP'},
   {id:'CVE-2023-25690',techRegex:/Apache\/2\.4\.[0-5][0-9]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-918',description:'Apache HTTP Server mod_proxy request splitting'},
   {id:'CVE-2023-27997',techRegex:/FortiOS.*7\.[0-4]\.[0-2]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-787',description:'FortiOS out-of-bounds write in SSL VPN'},
   {id:'CVE-2022-1388',techRegex:/BIG-IP.*1[45678]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-306',description:'F5 BIG-IP iControl REST auth bypass RCE'},
   {id:'CVE-2020-5902',techRegex:/BIG-IP.*1[1234]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-22',description:'F5 BIG-IP TMUI RCE via path traversal'},
-  {id:'CVE-2019-11510',techRegex:/Pulse\s+Secure/,cvss:10,exploitAvailable:true,cwe:'CWE-22',description:'Pulse Secure VPN arbitrary file reading (pre-auth)'},
-  {id:'CVE-2019-19781',techRegex:/Citrix.*NetScaler|Citrix.*ADC/,cvss:9.8,exploitAvailable:true,cwe:'CWE-22',description:'Citrix ADC/Gateway directory traversal RCE (Shitrix)'},
-  {id:'CVE-2023-3519',techRegex:/Citrix.*NetScaler|Citrix.*ADC/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Citrix ADC/Gateway unauthenticated RCE'},
+  {id:'CVE-2019-11510',techRegex:/Pulse[ ]Secure[\/ ](?:8\.[1-3]|9\.[0-1])\.\d+/,cvss:10,exploitAvailable:true,cwe:'CWE-22',description:'Pulse Secure VPN arbitrary file reading (pre-auth)'},
+  {id:'CVE-2019-19781',techRegex:/Citrix[ ](?:ADC|NetScaler)[\/ ]1[0-3]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-22',description:'Citrix ADC/Gateway directory traversal RCE (Shitrix)'},
+  {id:'CVE-2023-3519',techRegex:/Citrix[ ](?:ADC|NetScaler)[\/ ]1[3-4]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Citrix ADC/Gateway unauthenticated RCE'},
   {id:'CVE-2021-26855',techRegex:/Exchange.*201[39]|Exchange.*2016|Exchange.*2019/,cvss:9.8,exploitAvailable:true,cwe:'CWE-918',description:'Exchange ProxyLogon SSRF'},
   {id:'CVE-2021-34473',techRegex:/Exchange.*201[39]|Exchange.*2016|Exchange.*2019/,cvss:9.8,exploitAvailable:true,cwe:'CWE-200',description:'Exchange ProxyShell RCE chain'},
   {id:'CVE-2021-21972',techRegex:/VMware.*vCenter.*6\.[0-7]|VMware.*vCenter.*7\.0/,cvss:9.8,exploitAvailable:true,cwe:'CWE-78',description:'vCenter Server unauthenticated file upload to RCE'},
   {id:'CVE-2021-21985',techRegex:/VMware.*vCenter.*6\.[0-7]|VMware.*vCenter.*7\.0/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'vCenter Server Virtual SAN health RCE'},
-  {id:'CVE-2022-22954',techRegex:/VMware.*Workspace\s+ONE|VMware.*Identity\s+Manager/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'VMware Workspace ONE Access RCE via SSRF'},
-  {id:'CVE-2023-20198',techRegex:/Cisco.*IOS.*XE/,cvss:10,exploitAvailable:true,cwe:'CWE-306',description:'Cisco IOS XE Web UI privilege escalation'},
+  {id:'CVE-2022-22954',techRegex:/Workspace[ ]ONE[\/ ]2[12]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'VMware Workspace ONE Access RCE via SSRF'},
+  {id:'CVE-2023-20198',techRegex:/Cisco[ ]IOS[ ]XE[\/ ]1[7-8]\.\d+/,cvss:10,exploitAvailable:true,cwe:'CWE-306',description:'Cisco IOS XE Web UI privilege escalation'},
   {id:'CVE-2024-21762',techRegex:/FortiOS.*7\.[0-4]\.[0-2]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-787',description:'FortiOS out-of-bounds write in SSL VPN'},
   {id:'CVE-2022-40684',techRegex:/FortiOS.*7\.[0-2]\.[0-4]|FortiOS.*6\.[0-4]\.[0-9]/,cvss:9.6,exploitAvailable:true,cwe:'CWE-306',description:'FortiOS/FortiProxy/FortiSwitchManager auth bypass'},
   {id:'CVE-2021-22105',techRegex:/FortiOS.*6\.[0-4]\.[0-9]/,cvss:8.8,exploitAvailable:false,cwe:'CWE-502',description:'FortiOS log4j deserialization'},
@@ -1229,29 +1231,25 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2021-22205',techRegex:/GitLab.*13\.[0-1][0-9]|GitLab.*14\.0/,cvss:10,exploitAvailable:true,cwe:'CWE-78',description:'GitLab RCE via ExifTool'},
   {id:'CVE-2022-2185',techRegex:/GitLab.*1[0-5]/,cvss:9.9,exploitAvailable:true,cwe:'CWE-94',description:'GitLab RCE via Project Import'},
   {id:'CVE-2024-0402',techRegex:/GitLab.*1[0-6]/,cvss:9.6,exploitAvailable:true,cwe:'CWE-94',description:'GitLab RCE via pipeline job token'},
-  {id:'CVE-2024-23897',techRegex:/Jenkins.*2\.[0-4][0-2][0-9]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-22',description:'Jenkins CLI arbitrary file read (leads to RCE)'},
+  {id:'CVE-2024-23897',techRegex:/Jenkins[\/ ]2\.4[0-4][0-9]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-22',description:'Jenkins CLI arbitrary file read (leads to RCE)'},
   {id:'CVE-2024-22243',techRegex:/Jenkins.*2\.[0-4][0-2][0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-22',description:'Jenkins CLI arbitrary file read (follow-up)'},
   {id:'CVE-2022-34174',techRegex:/Jenkins.*2\.[0-3][0-5][0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-77',description:'Jenkins agent-to-controller escape'},
   {id:'CVE-2024-20295',techRegex:/Cisco.*IOS.*XE.*17\.[0-1][0-3]/,cvss:8.6,exploitAvailable:true,cwe:'CWE-78',description:'Cisco IOS XE Web UI command injection'},
-  {id:'CVE-2023-20273',techRegex:/Cisco.*IOS.*XE/,cvss:7.2,exploitAvailable:true,cwe:'CWE-78',description:'Cisco IOS XE Web UI command injection'},
-  {id:'CVE-2023-20873',techRegex:/Spring\s+Boot/,cvss:7.5,exploitAvailable:false,cwe:'CWE-200',description:'Spring Boot info disclosure via heapdump'},
-  {id:'CVE-2022-31129',techRegex:/Moment\.js/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Moment.js ReDoS'},
+  {id:'CVE-2023-20273',techRegex:/Cisco[ ]IOS[ ]XE[\/ ]1[7-8]\.\d+/,cvss:7.2,exploitAvailable:true,cwe:'CWE-78',description:'Cisco IOS XE Web UI command injection'},
+  {id:'CVE-2023-20873',techRegex:/Spring[ ]Boot[\/ ]2\.[0-7]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-200',description:'Spring Boot info disclosure via heapdump'},
+  {id:'CVE-2022-31129',techRegex:/Moment\.js[\/ ]2\.[0-9]+\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Moment.js ReDoS'},
   {id:'CVE-2021-23337',techRegex:/lodash.*4\.17\.[0-2][0-9]/,cvss:7.4,exploitAvailable:true,cwe:'CWE-78',description:'Lodash command injection via template'},
-  {id:'CVE-2019-11358',techRegex:/jquery[\/\\-]1\.[0-8]/,cvss:6.1,exploitAvailable:true,cwe:'CWE-1321',description:'jQuery prototype pollution'},
-  {id:'CVE-2020-11022',techRegex:/jquery[\/\\-]1\.[0-9]|jquery[\/\\-]2\.[0-2]/,cvss:6.1,exploitAvailable:true,cwe:'CWE-79',description:'jQuery XSS via htmlPrefilter'},
-  {id:'CVE-2020-11023',techRegex:/jquery.*3\.[0-4]\.[0-1]/,cvss:6.1,exploitAvailable:true,cwe:'CWE-79',description:'jQuery XSS via html() with untrusted input'},
+  {id:'CVE-2019-11358',techRegex:/jQuery[\/ ](?:[1-2]\.\d+\.\d+|3\.[0-3]\.\d+)/,cvss:6.1,exploitAvailable:true,cwe:'CWE-1321',description:'jQuery prototype pollution'},
+  {id:'CVE-2020-11022',techRegex:/jQuery[\/ ](?:[1-2]\.\d+\.\d+|3\.[0-6]\.\d+)/,cvss:6.1,exploitAvailable:true,cwe:'CWE-79',description:'jQuery XSS via htmlPrefilter'},
+  {id:'CVE-2020-11023',techRegex:/jQuery[\/ ](?:[1-2]\.\d+\.\d+|3\.[0-6]\.\d+)/,cvss:6.1,exploitAvailable:true,cwe:'CWE-79',description:'jQuery XSS via html() with untrusted input'},
   {id:'CVE-2021-29447',techRegex:/WordPress.*5\.[0-7]\./,cvss:7.5,exploitAvailable:true,cwe:'CWE-611',description:'WordPress XXE in Media Library'},
-  {id:'CVE-2022-21661',techRegex:/WordPress/,cvss:7.5,exploitAvailable:true,cwe:'CWE-89',description:'WordPress SQL injection via WP_Query'},
-  {id:'CVE-2023-22680',techRegex:/Elementor/,cvss:8.8,exploitAvailable:true,cwe:'CWE-94',description:'Elementor Pro RCE via file upload'},
-  {id:'CVE-2021-20793',techRegex:/WP\s+File\s+Manager/,cvss:9.8,exploitAvailable:true,cwe:'CWE-78',description:'WP File Manager RCE'},
-  {id:'CVE-2020-25213',techRegex:/WP\s+File\s+Manager/,cvss:9.8,exploitAvailable:true,cwe:'CWE-78',description:'WP File Manager RCE (v6.0-6.8)'},
-  {id:'CVE-2023-40000',techRegex:/LiteSpeed\s+Cache/,cvss:8.8,exploitAvailable:true,cwe:'CWE-89',description:'LiteSpeed Cache SQL injection'},
-  {id:'CVE-2021-26029',techRegex:/Joomla/,cvss:7.5,exploitAvailable:true,cwe:'CWE-22',description:'Joomla path traversal in Media Manager'},
+  {id:'CVE-2022-21661',techRegex:/WordPress[\/ ]5\.[6-9]\.\d+/,cvss:7.5,exploitAvailable:true,cwe:'CWE-89',description:'WordPress SQL injection via WP_Query'},
+  {id:'CVE-2020-25213',techRegex:/WP[ ]File[ ]Manager[\/ ]6\.[0-8]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-78',description:'WP File Manager RCE (v6.0-6.8)'},
+  {id:'CVE-2023-40000',techRegex:/LiteSpeed[ ]Cache[\/ ](?:[0-6]\.\d+)/,cvss:8.8,exploitAvailable:true,cwe:'CWE-89',description:'LiteSpeed Cache SQL injection'},
   {id:'CVE-2023-23752',techRegex:/Joomla.*3\.[0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-200',description:'Joomla unauthorized info disclosure'},
   {id:'CVE-2018-7600',techRegex:/Drupal.*7\.[0-5][0-9]|Drupal.*8\.[0-5]\.[0-9]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Drupalgeddon2 SA-CORE-2018-002 RCE'},
   {id:'CVE-2019-6340',techRegex:/Drupal.*8\.[0-6]\.[0-9]/,cvss:8.8,exploitAvailable:true,cwe:'CWE-502',description:'Drupal REST deserialization RCE'},
   {id:'CVE-2022-25277',techRegex:/Drupal.*9\.[0-4]\.0|Drupal.*10\.0\.0/,cvss:8.1,exploitAvailable:true,cwe:'CWE-434',description:'Drupal arbitrary PHP code execution'},
-  {id:'CVE-2019-11043',techRegex:/PHP\/7\.1\.[0-2][0-9]|PHP\/7\.2\.[0-2][0-9]|PHP\/7\.3\.[0-9]|PHP\/7\.0\.[0-3][0-9]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-787',description:'PHP-FPM RCE under certain Nginx config'},
   {id:'CVE-2021-22144',techRegex:/Elasticsearch.*7\.[0-1][0-7]|Elasticsearch.*6\.[0-8]\.[0-9]/,cvss:6.5,exploitAvailable:false,cwe:'CWE-400',description:'Elasticsearch memory exhaustion via malformed request'},
   {id:'CVE-2021-22145',techRegex:/Elasticsearch.*7\.[0-1][0-7]|Elasticsearch.*6\.[0-8]\.[0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-77',description:'Elasticsearch arbitrary code execution via script engine'},
   {id:'CVE-2022-35951',techRegex:/Redis.*6\.[2-9]|Redis.*7\.0\.[0-5]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-77',description:'Redis Lua sandbox escape via cjson'},
@@ -1261,17 +1259,13 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2021-2154',techRegex:/mysql.*8\.0\.[0-2][0-5]/,cvss:7.1,exploitAvailable:false,cwe:'CWE-89',description:'MySQL SQL injection via component optimizer'},
   {id:'CVE-2021-20333',techRegex:/MongoDB.*4\.[0-4]\./,cvss:5.3,exploitAvailable:false,cwe:'CWE-200',description:'MongoDB information disclosure via $regex'},
   {id:'CVE-2022-48282',techRegex:/MongoDB.*5\.0\.[0-1][0-4]|MongoDB.*6\.0\.[0-2]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-89',description:'MongoDB unauthorized command execution'},
-  {id:'CVE-2021-23017',techRegex:/nginx\/1\.[0-1][0-8]\.[0-9]|nginx\/1\.19\.[0-9]/,cvss:7.7,exploitAvailable:true,cwe:'CWE-787',description:'Nginx DNS resolver heap overflow'},
+  {id:'CVE-2021-23017',techRegex:/Nginx[\/ ]1\.(?:1[0-9]|2[0-1])\.\d+/,cvss:7.7,exploitAvailable:true,cwe:'CWE-787',description:'Nginx DNS resolver heap overflow'},
   {id:'CVE-2023-44487',techRegex:/nginx.*1\.[0-2][0-4]\./,cvss:7.5,exploitAvailable:true,cwe:'CWE-400',description:'HTTP/2 Rapid Reset DDoS'},
   {id:'CVE-2021-31166',techRegex:/IIS.*10\.0/,cvss:7.5,exploitAvailable:true,cwe:'CWE-400',description:'IIS HTTP protocol stack DoS (HTTP.SYS)'},
   {id:'CVE-2022-21907',techRegex:/IIS.*10\.0/,cvss:7.5,exploitAvailable:true,cwe:'CWE-400',description:'IIS HTTP protocol stack RCE (HTTP.SYS)'},
-  {id:'CVE-2022-22954',techRegex:/VMware.*Workspace\s+ONE|VMware.*Identity\s+Manager/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'VMware Workspace ONE Access RCE via SSRF'},
   {id:'CVE-2024-21410',techRegex:/Exchange.*201[69]|Exchange.*2019.*CU14|Exchange.*2016.*CU23/,cvss:9.8,exploitAvailable:true,cwe:'CWE-639',description:'Exchange NTLM relay privilege escalation'},
-  {id:'CVE-2022-1388',techRegex:/BIG-IP.*1[45678]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-306',description:'F5 BIG-IP iControl REST auth bypass RCE'},
-  {id:'CVE-2022-22965',techRegex:/Spring\s+Framework/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Spring4Shell RCE via class injection'},
   {id:'CVE-2024-1313',techRegex:/Grafana.*10\.[0-2]\./,cvss:7.5,exploitAvailable:true,cwe:'CWE-200',description:'Grafana arbitrary file read via plugin'},
   {id:'CVE-2023-0464',techRegex:/OpenSSL.*3\.0\.[0-8]|OpenSSL.*1\.1\.[0-1]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-295',description:'OpenSSL policy check bypass via X.509'},
-  {id:'CVE-2023-20873',techRegex:/Spring\s+Boot/,cvss:7.5,exploitAvailable:false,cwe:'CWE-200',description:'Spring Boot info disclosure via heapdump'},
   {id:'CVE-2024-10220',techRegex:/Kubernetes.*1\.[0-3][0-1]/,cvss:7.5,exploitAvailable:false,cwe:'CWE-94',description:'Kubernetes Windows command injection via storage'},
   {id:'CVE-2024-21626',techRegex:/runc.*1\.1\.[0-1][0-1]/,cvss:8.6,exploitAvailable:true,cwe:'CWE-22',description:'runc container breakout via workdir fd'},
   {id:'CVE-2023-24329',techRegex:/Python.*3\.[0-9]\.[0-1][0-5]|Python.*3\.10\.[0-9]|Python.*3\.11\.[0-3]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-20',description:'Python urllib request smuggling'},
@@ -1280,14 +1274,12 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2024-22231',techRegex:/Jira.*9\.[0-1][0-2]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-89',description:'Jira SQL injection via JQL function'},
   {id:'CVE-2024-1397',techRegex:/Laravel.*10\.[0-4]|Laravel.*11\.0/,cvss:7.5,exploitAvailable:false,cwe:'CWE-918',description:'Laravel HTTP client SSRF'},
   {id:'CVE-2024-23367',techRegex:/Nuxt.*3\.[0-9]|Nuxt.*2\.[1][0-5]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-200',description:'Nuxt.js information disclosure'},
-  {id:'CVE-2024-29041',techRegex:/express.*4\.[1][0-9]/,cvss:6.1,exploitAvailable:true,cwe:'CWE-1321',description:'Express qs prototype pollution (follow-up)'},
   {id:'CVE-2024-23346',techRegex:/Django.*4\.[0-2]\.[0-9]|Django.*5\.0\.[0-1]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-89',description:'Django SQL injection via Trunc'},
   {id:'CVE-2024-26141',techRegex:/Rails.*7\.[0-1]\.|Rails.*6\.1\./,cvss:5.3,exploitAvailable:false,cwe:'CWE-20',description:'Rails DoS via Range header'},
   {id:'CVE-2024-23368',techRegex:/Vue.*3\.[0-3]\.[0-4]/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'Vue.js XSS via v-html directive'},
   {id:'CVE-2024-28102',techRegex:/Angular.*1[0-7]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-79',description:'Angular XSS via bypassSecurityTrustHtml'},
   {id:'CVE-2024-23369',techRegex:/React.*18\.[0-2]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-79',description:'React XSS via server component rendering'},
   {id:'CVE-2024-23370',techRegex:/jquery.*3\.[0-7]/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'jQuery XSS via HTML parsing'},
-  {id:'CVE-2024-23371',techRegex:/Bootstrap.*4\.[0-6]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-79',description:'Bootstrap XSS via tooltip/popover'},
   {id:'CVE-2024-23444',techRegex:/Elasticsearch.*8\.[0-1][0-1]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-78',description:'Elasticsearch script engine RCE'},
   {id:'CVE-2024-23372',techRegex:/Redis.*7\.0\.[0-1][0-5]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-77',description:'Redis Lua sandbox escape via bitop'},
   {id:'CVE-2024-0985',techRegex:/PostgreSQL.*1[0-6]/,cvss:7.5,exploitAvailable:false,cwe:'CWE-89',description:'PostgreSQL SQL injection via MERGE'},
@@ -1297,23 +1289,16 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2024-23376',techRegex:/Nginx.*1\.[0-2][0-5]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-200',description:'Nginx HTTP/2 Rapid Reset variant'},
   {id:'CVE-2023-4911',techRegex:/glibc.*2\.[0-3][0-9]/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'glibc ld.so buffer overflow (Looney Tunables)'},
   {id:'CVE-2024-1086',techRegex:/Linux.*5\.[0-1][0-5]|Linux.*6\.[0-6]/,cvss:7.8,exploitAvailable:true,cwe:'CWE-362',description:'Linux kernel use-after-free in netfilter (privesc)'},
-  {id:'CVE-2024-21626',techRegex:/runc.*1\.1\.[0-1][0-1]/,cvss:8.6,exploitAvailable:true,cwe:'CWE-22',description:'runc container breakout via workdir fd'},
-  {id:'CVE-2024-22243',techRegex:/Jenkins.*2\.[0-4][0-2][0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-22',description:'Jenkins CLI arbitrary file read follow-up'},
   {id:'CVE-2023-29331',techRegex:/\.NET.*[4-7]\./,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'.NET Kestrel HTTP/2 rapid reset'},
   {id:'CVE-2023-33135',techRegex:/\.NET.*6\.[0-1][0-6]|\.NET.*7\.0\.[0-7]/,cvss:8.1,exploitAvailable:true,cwe:'CWE-20',description:'.NET JSON deserialization bypass'},
   {id:'CVE-2023-36632',techRegex:/Python.*3\.[0-9]\.[0-1][0-5]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-78',description:'Python email.utils.parseaddr command injection'},
   {id:'CVE-2023-3823',techRegex:/PHP\/8\.[0-2]\.[0-9]/,cvss:7.5,exploitAvailable:false,cwe:'CWE-20',description:'PHP CGI argument injection'},
   {id:'CVE-2023-3824',techRegex:/PHP\/8\.[0-2]\.[0-9]/,cvss:7.5,exploitAvailable:false,cwe:'CWE-125',description:'PHP buffer over-read in exif'},
-  {id:'CVE-2024-21762',techRegex:/FortiOS.*7\.[0-4]\.[0-2]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-787',description:'FortiOS out-of-bounds write in SSL VPN'},
   {id:'CVE-2024-22245',techRegex:/VMware.*vCenter.*7\.0|VMware.*vCenter.*8\.0/,cvss:8.8,exploitAvailable:true,cwe:'CWE-200',description:'vCenter Server SSRF via content library'},
   {id:'CVE-2024-20716',techRegex:/Magento.*2\.4\.[0-6]/,cvss:8.1,exploitAvailable:true,cwe:'CWE-89',description:'Magento SQL injection via CMS block'},
   {id:'CVE-2024-1398',techRegex:/PrestaShop.*8\.[0-1]/,cvss:8.8,exploitAvailable:true,cwe:'CWE-94',description:'PrestaShop RCE via module controller'},
-  {id:'CVE-2023-26009',techRegex:/WooCommerce/,cvss:8.8,exploitAvailable:false,cwe:'CWE-639',description:'WooCommerce privilege escalation'},
-  {id:'CVE-2022-25277',techRegex:/Drupal.*9\.[0-4]\.0|Drupal.*10\.0\.0/,cvss:8.1,exploitAvailable:true,cwe:'CWE-434',description:'Drupal arbitrary PHP code execution'},
   {id:'CVE-2023-0299',techRegex:/WordPress.*6\.[0-1]\./,cvss:6.5,exploitAvailable:false,cwe:'CWE-352',description:'WordPress CSRF via plugin deletion'},
-  {id:'CVE-2022-43504',techRegex:/WordPress/,cvss:8.1,exploitAvailable:false,cwe:'CWE-352',description:'WordPress admin-level CSRF'},
-  {id:'CVE-2022-27920',techRegex:/Joomla/,cvss:7.5,exploitAvailable:true,cwe:'CWE-89',description:'Joomla SQL injection'},
-  {id:'CVE-2021-24891',techRegex:/Yoast\s+SEO/,cvss:6.1,exploitAvailable:true,cwe:'CWE-79',description:'Yoast SEO XSS'},
+  {id:'CVE-2021-24891',techRegex:/Yoast[ ]SEO[\/ ]1[4-8]\.\d+/,cvss:6.1,exploitAvailable:true,cwe:'CWE-79',description:'Yoast SEO XSS'},
   {id:'CVE-2020-11984',techRegex:/mod_proxy/i,cvss:7.5,exploitAvailable:false,cwe:'CWE-918',description:'mod_proxy_uwsgi info disclosure'},
   {id:'CVE-2021-21285',techRegex:/Docker.*19|Docker.*20\.10\.[0-2]/,cvss:6.5,exploitAvailable:false,cwe:'CWE-400',description:'Docker daemon denial of service'},
   {id:'CVE-2019-5736',techRegex:/runc.*1\.[0-9]/,cvss:8.6,exploitAvailable:true,cwe:'CWE-78',description:'runc container escape via overwritten host binary'},
@@ -1333,7 +1318,7 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2022-41715',techRegex:/go.*1\.[0-1][0-8]\./,cvss:7.5,exploitAvailable:true,cwe:'CWE-400',description:'Go regexp ReDoS'},
   {id:'CVE-2022-32224',techRegex:/Rails.*6\.[0-1]\.|Rails.*7\.0/,cvss:7.5,exploitAvailable:true,cwe:'CWE-502',description:'Rails ActiveSupport YAML deserialization'},
   {id:'CVE-2023-30861',techRegex:/Flask.*2\.[0-2]\.[0-2]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-200',description:'Flask sensitive cookie exposure via cache'},
-  {id:'CVE-2022-24999',techRegex:/express.*4\.[0-1][0-7]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-1321',description:'Express qs prototype pollution'},
+  {id:'CVE-2022-24999',techRegex:/Express[\/ ]4\.[0-9]+\.\d+/,cvss:7.5,exploitAvailable:true,cwe:'CWE-1321',description:'Express qs prototype pollution'},
   {id:'CVE-2024-24762',techRegex:/fastapi.*0\.[0-1][0-9][0-9]/,cvss:7.5,exploitAvailable:false,cwe:'CWE-200',description:'FastAPI DoS via multipart form parsing'},
   {id:'CVE-2022-32229',techRegex:/Next\.js.*12\.[0-2]\.[0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-918',description:'Next.js SSRF via image optimization'},
   {id:'CVE-2023-28431',techRegex:/Next\.js.*13\.[0-2]\.[0-9]/,cvss:6.5,exploitAvailable:false,cwe:'CWE-918',description:'Next.js information exposure via middleware'},
@@ -1360,19 +1345,389 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2023-41080',techRegex:/Tomcat.*11\.0\.0-M[0-9]|Tomcat.*10\.1\.[0-1][0-2]|Tomcat.*9\.0\.[0-7][0-9]/,cvss:8.8,exploitAvailable:false,cwe:'CWE-639',description:'Tomcat WebDAV privilege escalation'},
   {id:'CVE-2022-21803',techRegex:/node.*v1[0-7]\./,cvss:7.5,exploitAvailable:false,cwe:'CWE-1321',description:'Node.js prototype pollution in URL parsing'},
   {id:'CVE-2023-23918',techRegex:/node.*v1[4-9]\./,cvss:7.5,exploitAvailable:false,cwe:'CWE-20',description:'Node.js permission bypass via process.binding'},
-  {id:'CVE-2024-23368',techRegex:/Vue.*3\.[0-3]\.[0-4]/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'Vue.js XSS via v-html directive'},
-  {id:'CVE-2024-28102',techRegex:/Angular.*1[0-7]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-79',description:'Angular XSS via bypassSecurityTrustHtml'},
-  {id:'CVE-2024-23369',techRegex:/React.*18\.[0-2]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-79',description:'React XSS via server component rendering'},
-  {id:'CVE-2024-23370',techRegex:/jquery.*3\.[0-7]/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'jQuery XSS via HTML parsing'},
-  {id:'CVE-2024-23371',techRegex:/Bootstrap.*4\.[0-6]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-79',description:'Bootstrap XSS via tooltip/popover'},
-  {id:'CVE-2024-23444',techRegex:/Elasticsearch.*8\.[0-1][0-1]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-78',description:'Elasticsearch script engine RCE'},
-  {id:'CVE-2024-23372',techRegex:/Redis.*7\.0\.[0-1][0-5]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-77',description:'Redis Lua sandbox escape via bitop'},
-  {id:'CVE-2024-0985',techRegex:/PostgreSQL.*1[0-6]/,cvss:7.5,exploitAvailable:false,cwe:'CWE-89',description:'PostgreSQL SQL injection via MERGE'},
-  {id:'CVE-2024-23373',techRegex:/PostgreSQL.*1[0-6]/,cvss:5.9,exploitAvailable:false,cwe:'CWE-200',description:'PostgreSQL information leak via pg_read_file'},
-  {id:'CVE-2024-23374',techRegex:/MySQL.*8\.0\.[0-3][0-5]/,cvss:5.9,exploitAvailable:false,cwe:'CWE-200',description:'MySQL InnoDB data leak via FTS'},
-  {id:'CVE-2024-23375',techRegex:/MongoDB.*6\.[0-3]\.|MongoDB.*7\.0\.[0-2]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-89',description:'MongoDB $where SQL injection'},
-  {id:'CVE-2023-4911',techRegex:/glibc.*2\.[0-3][0-9]/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'glibc ld.so buffer overflow (Looney Tunables)'},
-  {id:'CVE-2024-1086',techRegex:/Linux.*5\.[0-1][0-5]|Linux.*6\.[0-6]/,cvss:7.8,exploitAvailable:true,cwe:'CWE-362',description:'Linux kernel use-after-free in netfilter (privesc)'},
+  {id:'CVE-2021-44790',techRegex:/Apache[\/ ]2\.4\.(?:4[0-9]|5[01])\b/,cvss:9.8,exploitAvailable:false,cwe:'CWE-787',description:'Apache mod_lua buffer overflow'},
+  {id:'CVE-2022-22720',techRegex:/Apache[\/ ]2\.4\.(?:4[0-9]|5[0-2])\b/,cvss:9.8,exploitAvailable:false,cwe:'CWE-444',description:'Apache HTTP request smuggling via mod_proxy'},
+  {id:'CVE-2022-31813',techRegex:/Apache[\/ ]2\.4\.(?:4[0-9]|5[0-4])\b/,cvss:9.8,exploitAvailable:false,cwe:'CWE-345',description:'Apache X-Forwarded-For spoofing in mod_proxy'},
+  {id:'CVE-2023-43622',techRegex:/Apache[\/ ]2\.4\.(?:5[0-7])\b/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Apache mod_proxy_http2 DoS'},
+  {id:'CVE-2024-27316',techRegex:/Apache[\/ ]2\.4\.(?:5[0-8])\b/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Apache HTTP/2 memory exhaustion DoS'},
+  {id:'CVE-2024-38476',techRegex:/Apache[\/ ]2\.4\.(?:5[0-9])\b/,cvss:9.8,exploitAvailable:true,cwe:'CWE-829',description:'Apache mod_proxy untrusted content RCE'},
+  {id:'CVE-2024-38475',techRegex:/Apache[\/ ]2\.4\.(?:5[0-9])\b/,cvss:9.1,exploitAvailable:false,cwe:'CWE-22',description:'Apache mod_rewrite path traversal'},
+  {id:'CVE-2017-7679',techRegex:/Apache[\/ ]2\.4\.(?:[0-2][0-9])\b/,cvss:9.8,exploitAvailable:true,cwe:'CWE-125',description:'Apache mod_mime buffer over-read'},
+  {id:'CVE-2017-15715',techRegex:/Apache[\/ ]2\.4\.(?:2[0-9]|3[0-8])\b/,cvss:8.1,exploitAvailable:true,cwe:'CWE-20',description:'Apache FilesMatch newline bypass RCE'},
+  {id:'CVE-2019-0217',techRegex:/Apache[\/ ]2\.4\.(?:3[0-8])\b/,cvss:7.5,exploitAvailable:false,cwe:'CWE-362',description:'Apache mod_session race condition'},
+  {id:'CVE-2020-9490',techRegex:/Apache[\/ ]2\.4\.(?:4[0-3])\b/,cvss:7.5,exploitAvailable:false,cwe:'CWE-444',description:'Apache HTTP/2 Push Diary cache poisoning'},
+  {id:'CVE-2020-13950',techRegex:/Apache[\/ ]2\.4\.(?:4[0-6])\b/,cvss:7.5,exploitAvailable:false,cwe:'CWE-476',description:'Apache mod_proxy_http NULL pointer DoS'},
+  {id:'CVE-2019-17567',techRegex:/Apache[\/ ]2\.4\.(?:[0-4][0-9])\b/,cvss:7.5,exploitAvailable:false,cwe:'CWE-444',description:'Apache mod_proxy HTTP request smuggling'},
+  {id:'CVE-2011-3192',techRegex:/Apache[\/ ]2\.2\.(?:1[0-9]|20)\b/,cvss:7.8,exploitAvailable:true,cwe:'CWE-400',description:'Apache Range header DoS'},
+  {id:'CVE-2014-0226',techRegex:/Apache[\/ ]2\.2\.(?:[0-9]|1[0-9]|2[0-7])\b/,cvss:7.5,exploitAvailable:true,cwe:'CWE-362',description:'Apache mod_status race condition'},
+  {id:'CVE-2016-5387',techRegex:/Apache[\/ ]2\.4\.(?:[0-9]|1[0-9]|2[0-3])\b/,cvss:8.1,exploitAvailable:true,cwe:'CWE-20',description:'Apache HTTP_PROXY header injection'},
+  {id:'CVE-2019-20372',techRegex:/Nginx[\/ ]1\.(?:1[0-7])\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-444',description:'Nginx error_page request smuggling'},
+  {id:'CVE-2017-7529',techRegex:/Nginx[\/ ]1\.(?:[0-9]|1[0-3])\.\d+/,cvss:7.5,exploitAvailable:true,cwe:'CWE-190',description:'Nginx range filter integer overflow'},
+  {id:'CVE-2013-2028',techRegex:/Nginx[\/ ]1\.(?:[0-3]\.\d+|4\.0)\b/,cvss:9.8,exploitAvailable:true,cwe:'CWE-787',description:'Nginx chunked transfer encoding overflow'},
+  {id:'CVE-2021-3618',techRegex:/Nginx[\/ ]1\.(?:1[0-9]|2[0-1])\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-288',description:'Nginx ALPACA TLS cross-protocol attack'},
+  {id:'CVE-2014-0160',techRegex:/OpenSSL[\/ ]1\.0\.1[a-f]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-125',description:'OpenSSL Heartbleed memory disclosure'},
+  {id:'CVE-2014-3566',techRegex:/OpenSSL[\/ ]1\.0\.1[a-i]/,cvss:3.4,exploitAvailable:true,cwe:'CWE-310',description:'OpenSSL POODLE SSLv3 padding oracle'},
+  {id:'CVE-2016-2107',techRegex:/OpenSSL[\/ ]1\.0\.(?:1|2)[a-z]?/,cvss:5.9,exploitAvailable:false,cwe:'CWE-310',description:'OpenSSL AES-NI padding oracle'},
+  {id:'CVE-2016-0800',techRegex:/OpenSSL[\/ ]1\.0\.(?:1|2)[a-z]?/,cvss:5.9,exploitAvailable:true,cwe:'CWE-310',description:'OpenSSL DROWN cross-protocol attack'},
+  {id:'CVE-2021-3711',techRegex:/OpenSSL[\/ ]1\.1\.1[a-j]/,cvss:9.8,exploitAvailable:false,cwe:'CWE-120',description:'OpenSSL SM2 decryption buffer overflow'},
+  {id:'CVE-2021-3712',techRegex:/OpenSSL[\/ ]1\.1\.1[a-j]/,cvss:7.4,exploitAvailable:false,cwe:'CWE-125',description:'OpenSSL ASN.1 string over-read'},
+  {id:'CVE-2022-0778',techRegex:/OpenSSL[\/ ](?:1\.0\.2|1\.1\.1|3\.0\.[0-1])/,cvss:7.5,exploitAvailable:false,cwe:'CWE-835',description:'OpenSSL BN_mod_sqrt infinite loop DoS'},
+  {id:'CVE-2022-3786',techRegex:/OpenSSL[\/ ]3\.0\.[0-6]/,cvss:7.5,exploitAvailable:false,cwe:'CWE-787',description:'OpenSSL X.509 email overflow'},
+  {id:'CVE-2024-0727',techRegex:/OpenSSL[\/ ]3\.[0-3]\.\d+/,cvss:5.5,exploitAvailable:false,cwe:'CWE-476',description:'OpenSSL PKCS12 NULL dereference DoS'},
+  {id:'CVE-2024-4577',techRegex:/PHP[\/ ](?:8\.[1-2]\.\d+|8\.3\.[0-7])\b/,cvss:9.8,exploitAvailable:true,cwe:'CWE-78',description:'PHP CGI argument injection RCE (Windows)'},
+  {id:'CVE-2024-8932',techRegex:/PHP[\/ ]8\.3\.(?:[0-9]|1[0-3])\b|PHP[\/ ]8\.2\.(?:[0-9]|1[0-9]|2[0-5])\b|PHP[\/ ]8\.1\.(?:[0-9]|1[0-9]|2[0-9]|30)\b/,cvss:6.5,exploitAvailable:false,cwe:'CWE-787',description:'PHP dba extension buffer overflow'},
+  {id:'CVE-2022-31625',techRegex:/PHP[\/ ]8\.[0-2]\.\d+/,cvss:8.1,exploitAvailable:false,cwe:'CWE-824',description:'PHP pg_query_params use of uninitialized pointer'},
+  {id:'CVE-2022-31626',techRegex:/PHP[\/ ]7\.4\.[0-9]|PHP[\/ ]8\.[0-1]\.\d+/,cvss:8.1,exploitAvailable:false,cwe:'CWE-120',description:'PHP mysqlnd buffer overflow'},
+  {id:'CVE-2021-21707',techRegex:/PHP[\/ ]7\.[3-4]\.\d+|PHP[\/ ]8\.0\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-20',description:'PHP special character parsing bypass'},
+  {id:'CVE-2020-7071',techRegex:/PHP[\/ ]7\.[2-4]\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-20',description:'PHP FILTER_VALIDATE_URL bypass'},
+  {id:'CVE-2019-11042',techRegex:/PHP[\/ ]7\.3\.[0-9]/,cvss:7.5,exploitAvailable:false,cwe:'CWE-787',description:'PHP exif heap overflow'},
+  {id:'CVE-2016-7124',techRegex:/PHP[\/ ]5\.[0-9]\.\d+|PHP[\/ ]7\.0\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-502',description:'PHP unserialize object injection'},
+  {id:'CVE-2015-0235',techRegex:/glibc[\/ ]2\.(?:[0-9]|1[0-7])\b/,cvss:10,exploitAvailable:true,cwe:'CWE-787',description:'glibc gethostbyname buffer overflow (GHOST)'},
+  {id:'CVE-2015-1635',techRegex:/IIS[\/ ](?:7|8)\.[05]\b/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'IIS HTTP.sys remote code execution'},
+  {id:'CVE-2017-7269',techRegex:/IIS[\/ ]6\.0\b/,cvss:9.8,exploitAvailable:true,cwe:'CWE-120',description:'IIS 6.0 WebDAV ScStoragePathFromUrl overflow'},
+  {id:'CVE-2023-36478',techRegex:/IIS[\/ ]10\.0\b/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'HTTP/2 HPACK DoS (Windows)'},
+  {id:'CVE-2018-8174',techRegex:/ASP\.NET[\/ ]4\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-416',description:'VBScript engine use-after-free RCE'},
+  {id:'CVE-2020-0688',techRegex:/ASP\.NET[\/ ]4\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-798',description:'Exchange static machine key deserialization RCE'},
+  {id:'CVE-2017-12617',techRegex:/Tomcat[\/ ](?:7\.0\.[0-7][0-9]|8\.[05]\.[0-9]+|9\.0\.[0-1][0-9])/,cvss:8.1,exploitAvailable:true,cwe:'CWE-434',description:'Tomcat JSP upload RCE via PUT'},
+  {id:'CVE-2019-0232',techRegex:/Tomcat[\/ ](?:7\.0\.[0-5][0-9]|8\.5\.[0-3][0-9]|9\.0\.[0-1][0-9])/,cvss:8.1,exploitAvailable:true,cwe:'CWE-78',description:'Tomcat CGI Servlet command injection (Windows)'},
+  {id:'CVE-2021-25329',techRegex:/Tomcat[\/ ](?:7\.0\.[0-9]+|8\.5\.[0-5][0-9]|9\.0\.[0-3][0-9])/,cvss:7.8,exploitAvailable:false,cwe:'CWE-1188',description:'Tomcat session persistence bypass'},
+  {id:'CVE-2022-42252',techRegex:/Tomcat[\/ ](?:9\.0\.[0-6][0-9]|10\.0\.[0-9]|10\.1\.[0-9])/,cvss:7.5,exploitAvailable:false,cwe:'CWE-444',description:'Tomcat request smuggling via rejectIllegalHeader'},
+  {id:'CVE-2023-46589',techRegex:/Tomcat[\/ ](?:8\.5\.[0-8][0-9]|9\.0\.[0-8][0-9]|10\.1\.[0-9]+|11\.0\.0-M[0-9])\b/,cvss:7.5,exploitAvailable:false,cwe:'CWE-444',description:'Tomcat trailer header request smuggling'},
+  {id:'CVE-2024-21733',techRegex:/Tomcat[\/ ](?:8\.5\.[0-8][0-9]|9\.0\.[0-8][0-9])/,cvss:5.3,exploitAvailable:false,cwe:'CWE-209',description:'Tomcat information leak via incomplete POST'},
+  {id:'CVE-2016-8735',techRegex:/Tomcat[\/ ](?:6\.0\.[0-9]+|7\.0\.[0-7][0-9]|8\.0\.[0-4][0-9]|8\.5\.[0-9]|9\.0\.[0-1])/,cvss:9.8,exploitAvailable:true,cwe:'CWE-502',description:'Tomcat JMXRemoteLifecycleListener deserialization RCE'},
+  {id:'CVE-2018-1000861',techRegex:/Jenkins[\/ ]2\.(?:1[0-3][0-9])\b/,cvss:9.8,exploitAvailable:true,cwe:'CWE-502',description:'Jenkins Stapler deserialization RCE'},
+  {id:'CVE-2019-1003000',techRegex:/Jenkins[\/ ]2\.(?:1[0-5][0-9])\b/,cvss:8.8,exploitAvailable:true,cwe:'CWE-94',description:'Jenkins Script Security sandbox bypass'},
+  {id:'CVE-2020-2100',techRegex:/Jenkins[\/ ]2\.(?:1[0-9][0-9]|2[0-3][0-9])\b/,cvss:7.5,exploitAvailable:false,cwe:'CWE-918',description:'Jenkins SSRF via DNS resolution'},
+  {id:'CVE-2024-43044',techRegex:/Jenkins[\/ ]2\.(?:4[0-4][0-9]|4[5-6][0-9])/,cvss:8.8,exploitAvailable:true,cwe:'CWE-502',description:'Jenkins Remoting file read to RCE'},
+  {id:'CVE-2023-27898',techRegex:/Jenkins[\/ ]2\.(?:3[0-9][0-9]|4[0-1][0-9])/,cvss:9.8,exploitAvailable:true,cwe:'CWE-79',description:'Jenkins stored XSS to RCE via plugins'},
+  {id:'CVE-2022-20612',techRegex:/Jenkins[\/ ]2\.(?:2[0-9][0-9]|3[0-3][0-9])/,cvss:8.1,exploitAvailable:false,cwe:'CWE-352',description:'Jenkins CSRF protection bypass'},
+  {id:'CVE-2023-2825',techRegex:/GitLab[\/ ]16\.0\.[0-3]\b/,cvss:9.9,exploitAvailable:true,cwe:'CWE-22',description:'GitLab path traversal in attachments'},
+  {id:'CVE-2023-7028',techRegex:/GitLab[\/ ]16\.[1-7]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-640',description:'GitLab account takeover via password reset'},
+  {id:'CVE-2024-5655',techRegex:/GitLab[\/ ](?:1[5-6]\.\d+|17\.[0-1]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-862',description:'GitLab pipeline execution as another user'},
+  {id:'CVE-2022-1162',techRegex:/GitLab[\/ ]1[4]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-798',description:'GitLab hardcoded password for OmniAuth users'},
+  {id:'CVE-2019-8942',techRegex:/WordPress[\/ ]5\.[0-1]\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-22',description:'WordPress crop-image path traversal RCE'},
+  {id:'CVE-2019-8943',techRegex:/WordPress[\/ ]5\.[0-1]\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-22',description:'WordPress media path traversal'},
+  {id:'CVE-2022-21663',techRegex:/WordPress[\/ ]5\.[8-9]\.\d+/,cvss:8.8,exploitAvailable:false,cwe:'CWE-502',description:'WordPress object injection via meta data'},
+  {id:'CVE-2023-2745',techRegex:/WordPress[\/ ]6\.[0-1]\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-22',description:'WordPress directory traversal in core'},
+  {id:'CVE-2024-31210',techRegex:/WordPress[\/ ]6\.[1-5]\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-434',description:'WordPress plugin upload RCE by admin'},
+  {id:'CVE-2023-2982',techRegex:/Yoast[ ]SEO[\/ ](?:[0-9]|1[0-9]|20)\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-288',description:'Yoast SEO auth bypass via social login'},
+  {id:'CVE-2023-28121',techRegex:/WooCommerce[\/ ]7\.[0-5]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-287',description:'WooCommerce Payments auth bypass'},
+  {id:'CVE-2024-4162',techRegex:/WooCommerce[\/ ]9\.[0-8]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-639',description:'WooCommerce unauthorized order access'},
+  {id:'CVE-2021-24300',techRegex:/WooCommerce[\/ ]5\.\d+/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'WooCommerce stored XSS'},
+  {id:'CVE-2022-4111',techRegex:/Elementor[\/ ]3\.[0-9]+\.\d+/,cvss:8.1,exploitAvailable:true,cwe:'CWE-502',description:'Elementor Pro PHP object injection'},
+  {id:'CVE-2023-48777',techRegex:/Elementor[\/ ]3\.[0-9]+\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-434',description:'Elementor arbitrary file upload RCE'},
+  {id:'CVE-2023-6875',techRegex:/Contact[ ]Form[ ]7[\/ ]5\.[0-8]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-502',description:'Contact Form 7 unauthenticated PHP object injection'},
+  {id:'CVE-2024-28000',techRegex:/LiteSpeed[ ]Cache[\/ ](?:[0-6]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-287',description:'LiteSpeed Cache privilege escalation'},
+  {id:'CVE-2023-6553',techRegex:/Backup[ ]Migration[\/ ](?:[0-9]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Backup Migration RCE via backup directory'},
+  {id:'CVE-2024-1071',techRegex:/Ultimate[ ]Member[\/ ]2\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-89',description:'Ultimate Member SQL injection'},
+  {id:'CVE-2018-7602',techRegex:/Drupal[\/ ](?:7\.[0-5][0-9]|8\.[1-5]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Drupalgeddon3 RCE via form API'},
+  {id:'CVE-2020-13671',techRegex:/Drupal[\/ ](?:7\.[0-9]+|8\.[0-9]\.\d+|9\.[0-2]\.\d+)/,cvss:8.8,exploitAvailable:true,cwe:'CWE-434',description:'Drupal file name sanitization RCE'},
+  {id:'CVE-2015-8562',techRegex:/Joomla[!/ ](?:1\.5|2\.5|3\.[0-9])\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-502',description:'Joomla HTTP header object injection RCE'},
+  {id:'CVE-2016-8869',techRegex:/Joomla[!/ ]3\.[0-6]\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-269',description:'Joomla user registration privilege escalation'},
+  {id:'CVE-2019-10945',techRegex:/Joomla[!/ ]3\.[0-9]\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-22',description:'Joomla com_media directory traversal'},
+  {id:'CVE-2022-24086',techRegex:/Magento[\/ ]2\.[3-4]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Magento template filter RCE'},
+  {id:'CVE-2022-35698',techRegex:/Magento[\/ ]2\.[3-4]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-79',description:'Magento stored XSS to RCE'},
+  {id:'CVE-2024-34102',techRegex:/Magento[\/ ]2\.[4]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-611',description:'Magento Cosmic Sting XXE'},
+  {id:'CVE-2023-30150',techRegex:/PrestaShop[\/ ](?:1\.[6-7]\.\d+|8\.[0-1]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-89',description:'PrestaShop SQL injection'},
+  {id:'CVE-2022-22963',techRegex:/Spring[ ]Cloud[ ]Function[\/ ]3\.[0-2]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Spring Cloud Function SpEL RCE'},
+  {id:'CVE-2021-45046',techRegex:/Log4j[\/ ]2\.(?:[0-9]|1[0-5])\.\d+/,cvss:9,exploitAvailable:true,cwe:'CWE-77',description:'Log4j JNDI bypass incomplete fix'},
+  {id:'CVE-2021-45105',techRegex:/Log4j[\/ ]2\.(?:[0-9]|1[0-6])\.\d+/,cvss:5.9,exploitAvailable:false,cwe:'CWE-674',description:'Log4j uncontrolled recursion DoS'},
+  {id:'CVE-2018-11776',techRegex:/Struts[\/ ]2\.[0-4]\.\d+/,cvss:8.1,exploitAvailable:true,cwe:'CWE-20',description:'Struts namespace OGNL RCE'},
+  {id:'CVE-2023-50164',techRegex:/Struts[\/ ](?:2\.[3-5]\.\d+|6\.\d+\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-22',description:'Struts file upload path traversal RCE'},
+  {id:'CVE-2021-3129',techRegex:/Laravel[\/ ](?:[6-8]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-502',description:'Laravel Ignition debug RCE'},
+  {id:'CVE-2021-35042',techRegex:/Django[\/ ](?:3\.[0-2]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-89',description:'Django QuerySet SQL injection'},
+  {id:'CVE-2022-22818',techRegex:/Django[\/ ](?:2\.[2]\.\d+|3\.[0-2]\.\d+)/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'Django template tag XSS'},
+  {id:'CVE-2023-46695',techRegex:/Django[\/ ](?:3\.[2]\.\d+|4\.[0-2]\.\d+)/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Django UsernameField DoS'},
+  {id:'CVE-2022-36359',techRegex:/Django[\/ ](?:3\.[2]\.\d+|4\.[0-1]\.\d+)/,cvss:8.8,exploitAvailable:false,cwe:'CWE-79',description:'Django file upload XSS'},
+  {id:'CVE-2024-3651',techRegex:/Django[\/ ]5\.0\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Django idna DoS'},
+  {id:'CVE-2021-22942',techRegex:/Ruby[ ]on[ ]Rails[\/ ](?:5\.[0-2]\.\d+|6\.[0-1]\.\d+)/,cvss:6.1,exploitAvailable:false,cwe:'CWE-601',description:'Rails redirect_to host header injection'},
+  {id:'CVE-2023-22795',techRegex:/Ruby[ ]on[ ]Rails[\/ ](?:6\.[1]\.\d+|7\.0\.[0-2])/,cvss:7.5,exploitAvailable:false,cwe:'CWE-1333',description:'Rails ReDoS in Action Dispatch'},
+  {id:'CVE-2019-5418',techRegex:/Ruby[ ]on[ ]Rails[\/ ](?:4\.[2]\.\d+|5\.[0-2]\.\d+)/,cvss:7.5,exploitAvailable:true,cwe:'CWE-22',description:'Rails file content disclosure via Accept'},
+  {id:'CVE-2023-46809',techRegex:/Node\.js[\/ ](?:1[6-9]|20)\.\d+/,cvss:8.8,exploitAvailable:false,cwe:'CWE-385',description:'Node.js RSA PKCS#1 v1.5 timing variant'},
+  {id:'CVE-2024-22019',techRegex:/Node\.js[\/ ](?:18|20|21)\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Node.js HTTP chunk extension DoS'},
+  {id:'CVE-2023-30590',techRegex:/Node\.js[\/ ](?:14|16|18|20)\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-439',description:'Node.js generateKeys diffieHellman bypass'},
+  {id:'CVE-2020-8203',techRegex:/Node\.js[\/ ](?:1[0-8])\.\d+/,cvss:7.4,exploitAvailable:false,cwe:'CWE-1321',description:'lodash prototype pollution'},
+  {id:'CVE-2021-23450',techRegex:/Node\.js[\/ ](?:1[0-8])\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-1321',description:'dojo prototype pollution RCE'},
+  {id:'CVE-2021-26857',techRegex:/Exchange[\/ ](?:15\.0[0-2]\.\d+|201[3-9])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-502',description:'ProxyLogon Exchange deserialization'},
+  {id:'CVE-2021-27065',techRegex:/Exchange[\/ ](?:15\.0[0-2]\.\d+|201[3-9])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-22',description:'ProxyLogon arbitrary file write'},
+  {id:'CVE-2022-41040',techRegex:/Exchange[\/ ](?:15\.0[0-2]\.\d+|201[6-9])/,cvss:8.8,exploitAvailable:true,cwe:'CWE-918',description:'ProxyNotShell SSRF'},
+  {id:'CVE-2022-41082',techRegex:/Exchange[\/ ](?:15\.0[0-2]\.\d+|201[6-9])/,cvss:8.8,exploitAvailable:true,cwe:'CWE-502',description:'ProxyNotShell deserialization RCE'},
+  {id:'CVE-2023-23397',techRegex:/Outlook[\/ ](?:16\.\d+|201[3-9])/,cvss:9.8,exploitAvailable:true,cwe:'CWE-294',description:'Outlook NTLM leak zero-click'},
+  {id:'CVE-2022-42475',techRegex:/FortiOS[\/ ](?:6\.[0-4]\.\d+|7\.[0-2]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-787',description:'FortiOS SSL-VPN heap overflow RCE'},
+  {id:'CVE-2018-13379',techRegex:/FortiOS[\/ ](?:5\.[0-9]\.\d+|6\.[0-2]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-22',description:'FortiOS SSL-VPN path traversal credential leak'},
+  {id:'CVE-2023-46747',techRegex:/BIG-IP[\/ ]1[4-7]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-288',description:'F5 BIG-IP configuration utility auth bypass'},
+  {id:'CVE-2024-21793',techRegex:/BIG-IP[\/ ]1[6-7]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-918',description:'F5 BIG-IP iControl SOAP SSRF'},
+  {id:'CVE-2024-8534',techRegex:/Citrix[ ](?:ADC|NetScaler)[\/ ]1[3-4]\.\d+/,cvss:8.8,exploitAvailable:false,cwe:'CWE-787',description:'Citrix ADC memory corruption'},
+  {id:'CVE-2024-20353',techRegex:/Cisco[ ]ASA[\/ ]9\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Cisco ASA/FTD DoS via VPN'},
+  {id:'CVE-2023-34048',techRegex:/VMware[ ]vCenter[\/ ](?:6\.[5-7]|7\.[0-1]|8\.0)\b/,cvss:9.8,exploitAvailable:true,cwe:'CWE-787',description:'vCenter DCERPC out-of-bounds write'},
+  {id:'CVE-2023-20887',techRegex:/VMware[ ]Aria[ ]Operations[\/ ](?:8\.[0-9])/,cvss:9.8,exploitAvailable:true,cwe:'CWE-78',description:'Aria Operations command injection RCE'},
+  {id:'CVE-2024-37085',techRegex:/ESXi[\/ ](?:6\.[5-7]|7\.[0-3]|8\.0)\b/,cvss:7.2,exploitAvailable:true,cwe:'CWE-288',description:'ESXi authentication bypass ransomware'},
+  {id:'CVE-2023-34362',techRegex:/MySQL[\/ ](?:5\.[7]\.\d+|8\.0\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-89',description:'MOVEit SQL injection (MySQL backend)'},
+  {id:'CVE-2016-6662',techRegex:/MySQL[\/ ](?:5\.[5-7]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'MySQL mysqld_safe config injection RCE'},
+  {id:'CVE-2020-14812',techRegex:/MySQL[\/ ](?:5\.[6-7]\.\d+|8\.0\.\d+)/,cvss:6.5,exploitAvailable:false,cwe:'CWE-787',description:'MySQL Server optimizer buffer overflow'},
+  {id:'CVE-2021-2307',techRegex:/MySQL[\/ ]8\.0\.\d+/,cvss:5.5,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server mysys input validation'},
+  {id:'CVE-2022-21270',techRegex:/MySQL[\/ ]8\.0\.[0-2]\d/,cvss:4.9,exploitAvailable:false,cwe:'CWE-20',description:'MySQL FEDERATED input validation'},
+  {id:'CVE-2024-20960',techRegex:/MySQL[\/ ]8\.[0-3]\.\d+/,cvss:4.9,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server optimizer issue'},
+  {id:'CVE-2019-9193',techRegex:/PostgreSQL[\/ ](?:9\.[3-6]|1[0-6])\.\d+/,cvss:7.2,exploitAvailable:true,cwe:'CWE-78',description:'PostgreSQL COPY TO PROGRAM command execution'},
+  {id:'CVE-2023-5869',techRegex:/PostgreSQL[\/ ](?:1[1-6])\.\d+/,cvss:8.8,exploitAvailable:false,cwe:'CWE-787',description:'PostgreSQL array modification overflow'},
+  {id:'CVE-2021-32027',techRegex:/PostgreSQL[\/ ](?:9\.[6]|1[0-3])\.\d+/,cvss:8.8,exploitAvailable:false,cwe:'CWE-787',description:'PostgreSQL array subscript overflow'},
+  {id:'CVE-2023-38545',techRegex:/curl[\/ ](?:7\.[6-9]\d|8\.[0-3])\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-787',description:'curl SOCKS5 heap overflow'},
+  {id:'CVE-2024-3094',techRegex:/xz[\/ ]5\.6\.[01]/,cvss:10,exploitAvailable:true,cwe:'CWE-506',description:'xz-utils backdoor (liblzma)'},
+  {id:'CVE-2022-0543',techRegex:/Redis[\/ ](?:5|6)\.\d+/,cvss:10,exploitAvailable:true,cwe:'CWE-862',description:'Redis Lua sandbox escape RCE (Debian)'},
+  {id:'CVE-2023-45145',techRegex:/Redis[\/ ](?:6\.[0-2]\.\d+|7\.[0-1]\.\d+)/,cvss:3.6,exploitAvailable:false,cwe:'CWE-363',description:'Redis UNIX socket race condition'},
+  {id:'CVE-2024-31449',techRegex:/Redis[\/ ](?:6\.2\.\d+|7\.2\.[0-5]\b|7\.4\.0\b)/,cvss:7,exploitAvailable:false,cwe:'CWE-787',description:'Redis Lua bit library stack overflow'},
+  {id:'CVE-2021-20328',techRegex:/MongoDB[\/ ](?:4\.[0-4]|5\.0)\.\d+/,cvss:6.4,exploitAvailable:false,cwe:'CWE-295',description:'MongoDB TLS certificate validation bypass'},
+  {id:'CVE-2019-2386',techRegex:/MongoDB[\/ ](?:3\.[4-6]|4\.0)\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-384',description:'MongoDB post-auth session reuse'},
+  {id:'CVE-2022-23708',techRegex:/Elasticsearch[\/ ](?:7\.[0-9]|7\.1[0-7]|8\.0)\.\d+/,cvss:4.3,exploitAvailable:false,cwe:'CWE-287',description:'Elasticsearch privilege escalation via snapshot'},
+  {id:'CVE-2023-46673',techRegex:/Elasticsearch[\/ ](?:7\.[0-9]|7\.1[0-7]|8\.[0-9]|8\.1[01])\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-20',description:'Elasticsearch malformed file DoS'},
+  {id:'CVE-2023-31418',techRegex:/Kibana[\/ ](?:7\.[0-9]|7\.1[0-7]|8\.[0-9])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Kibana excessive resource consumption'},
+  {id:'CVE-2023-25826',techRegex:/RabbitMQ[\/ ]3\.(?:[0-9]|1[0-2])\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-863',description:'RabbitMQ improper authorization'},
+  {id:'CVE-2021-22116',techRegex:/RabbitMQ[\/ ]3\.(?:[0-8])\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-400',description:'RabbitMQ DoS via crafted frame'},
+  {id:'CVE-2023-25194',techRegex:/Kafka[\/ ](?:2\.[0-9]|3\.[0-3])\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-502',description:'Kafka Connect JNDI deserialization RCE'},
+  {id:'CVE-2022-34917',techRegex:/Kafka[\/ ](?:3\.[0-2])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Kafka broker memory exhaustion'},
+  {id:'CVE-2022-31107',techRegex:/Grafana[\/ ](?:8\.\d+|9\.0)\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-863',description:'Grafana OAuth account takeover'},
+  {id:'CVE-2021-43798',techRegex:/Grafana[\/ ]8\.[0-3]\.\d+/,cvss:7.5,exploitAvailable:true,cwe:'CWE-22',description:'Grafana plugin path traversal file read'},
+  {id:'CVE-2023-3128',techRegex:/Grafana[\/ ](?:9\.\d+|10\.[0-1])\.\d+/,cvss:9.4,exploitAvailable:true,cwe:'CWE-287',description:'Grafana Azure AD account takeover'},
+  {id:'CVE-2024-9264',techRegex:/Grafana[\/ ]11\.[0-2]\.\d+/,cvss:9.9,exploitAvailable:true,cwe:'CWE-94',description:'Grafana SQL expressions RCE'},
+  {id:'CVE-2024-8698',techRegex:/Keycloak[\/ ](?:2[0-4])\.\d+/,cvss:5,exploitAvailable:false,cwe:'CWE-347',description:'Keycloak SAML signature validation bypass'},
+  {id:'CVE-2023-6134',techRegex:/Keycloak[\/ ]2[0-3]\.\d+/,cvss:5,exploitAvailable:false,cwe:'CWE-79',description:'Keycloak reflected XSS'},
+  {id:'CVE-2024-1132',techRegex:/Keycloak[\/ ](?:2[0-4])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-22',description:'Keycloak path traversal via redirect'},
+  {id:'CVE-2023-20860',techRegex:/Spring[ ]Security[\/ ]6\.0\.\d+/,cvss:8.8,exploitAvailable:false,cwe:'CWE-863',description:'Spring Security mvcRequestMatcher bypass'},
+  {id:'CVE-2020-14882',techRegex:/WebLogic[\/ ](?:12\.[12]\.\d+|14\.[0-1]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-306',description:'WebLogic console auth bypass RCE'},
+  {id:'CVE-2021-2109',techRegex:/WebLogic[\/ ](?:10\.[0-3]|12\.[12]|14\.[0-1])\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-502',description:'WebLogic JNDI deserialization RCE'},
+  {id:'CVE-2023-21839',techRegex:/WebLogic[\/ ](?:12\.[12]|14\.[0-1])\.\d+/,cvss:7.5,exploitAvailable:true,cwe:'CWE-502',description:'WebLogic JNDI data source RCE'},
+  {id:'CVE-2024-21181',techRegex:/WebLogic[\/ ]14\.1\.\d+/,cvss:8.6,exploitAvailable:false,cwe:'CWE-502',description:'WebLogic unauthorized TLS deserialization'},
+  {id:'CVE-2017-12149',techRegex:/JBoss[\/ ](?:5|6)\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-502',description:'JBoss HttpInvoker deserialization RCE'},
+  {id:'CVE-2017-7504',techRegex:/JBoss[\/ ]4\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-502',description:'JBoss JMXInvokerServlet deserialization'},
+  {id:'CVE-2019-3807',techRegex:/WildFly[\/ ]1[0-7]\.\d+/,cvss:7.4,exploitAvailable:false,cwe:'CWE-295',description:'WildFly client certificate validation flaw'},
+  {id:'CVE-2019-15505',techRegex:/Linux[ ]kernel[\/ ](?:3\.\d+|4\.\d+|5\.[0-2])/,cvss:9.8,exploitAvailable:true,cwe:'CWE-129',description:'Linux dvb-usb array over-read RCE'},
+  {id:'CVE-2023-32233',techRegex:/Linux[ ]kernel[\/ ](?:5\.\d+|6\.[0-3])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'Netfilter nf_tables use-after-free privesc'},
+  {id:'CVE-2021-4034',techRegex:/polkit[\/ ]0\.(?:11[0-9]|12[0-9])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'pkexec PwnKit local privilege escalation'},
+  {id:'CVE-2022-0847',techRegex:/Linux[ ]kernel[\/ ](?:5\.[0-9]|5\.1[0-6]|4\.\d+|3\.\d+)/,cvss:7.8,exploitAvailable:true,cwe:'CWE-665',description:'Dirty Pipe pipe buffer overwrite privesc'},
+  {id:'CVE-2021-3156',techRegex:/sudo[\/ ]1\.(?:[0-8]\.[0-9]+|9\.[0-5])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'sudo Baron Samedit heap overflow'},
+  {id:'CVE-2022-0492',techRegex:/Linux[ ]kernel[\/ ](?:4\.\d+|5\.[0-9]|5\.1[0-6])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-863',description:'cgroup v1 release_agent container escape'},
+  {id:'CVE-2020-8554',techRegex:/Kubernetes[\/ ]1\.(?:1[0-9]|2[0-2])\.\d+/,cvss:5,exploitAvailable:false,cwe:'CWE-441',description:'Kubernetes MITM via ExternalIPs'},
+  {id:'CVE-2023-3676',techRegex:/Kubernetes[\/ ]1\.2[0-8]\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-78',description:'Kubernetes kubelet command injection'},
+  {id:'CVE-2024-3177',techRegex:/Kubernetes[\/ ]1\.2[0-9]\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-20',description:'Kubernetes envFrom secret exposure'},
+  {id:'CVE-2022-23940',techRegex:/HAProxy[\/ ]2\.[0-4]\.\d+/,cvss:8.1,exploitAvailable:false,cwe:'CWE-94',description:'HAProxy Lua payload injection'},
+  {id:'CVE-2023-0056',techRegex:/HAProxy[\/ ]2\.[4-7]\.\d+/,cvss:5.9,exploitAvailable:false,cwe:'CWE-400',description:'HAProxy configuration parsing DoS'},
+  {id:'CVE-2019-18836',techRegex:/Traefik[\/ ]1\.[0-7]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-770',description:'Traefik denial of service via header'},
+  {id:'CVE-2022-32149',techRegex:/Traefik[\/ ]2\.[0-8]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'golang.org/x/text ReDoS in Traefik'},
+  {id:'CVE-2021-36740',techRegex:/Varnish[\/ ](?:6\.[0-5])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-444',description:'Varnish HTTP/2 request smuggling'},
+  {id:'CVE-2024-33452',techRegex:/OpenResty[\/ ]1\.2[0-5]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-444',description:'OpenResty HTTP/2 request smuggling'},
+  {id:'CVE-2022-0073',techRegex:/LiteSpeed[\/ ](?:5\.[0-9]|6\.[0-1])\.\d+/,cvss:8.8,exploitAvailable:false,cwe:'CWE-78',description:'LiteSpeed Web Admin console command injection'},
+  {id:'CVE-2021-28652',techRegex:/Squid[\/ ](?:4\.[0-9]|5\.[0-2])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-401',description:'Squid cache manager memory leak DoS'},
+  {id:'CVE-2023-46846',techRegex:/Squid[\/ ](?:5\.[0-8]|6\.[0-3])/,cvss:9.1,exploitAvailable:false,cwe:'CWE-444',description:'Squid HTTP request smuggling'},
+  {id:'CVE-2024-25617',techRegex:/Squid[\/ ](?:6\.[0-8])/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Squid HTTP header DoS'},
+  {id:'CVE-2023-48788',techRegex:/cPanel[\/ ]1[01]\d\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-89',description:'cPanel WHM SQL injection RCE'},
+  {id:'CVE-2023-24044',techRegex:/Plesk[\/ ]1[78]\.\d+/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'Plesk Obsidian stored XSS'},
+  {id:'CVE-2021-45424',techRegex:/DirectAdmin[\/ ]1\.6[0-3]\d/,cvss:7.5,exploitAvailable:false,cwe:'CWE-22',description:'DirectAdmin path traversal'},
+  {id:'CVE-2023-25705',techRegex:/phpMyAdmin[\/ ]5\.[0-2]\.\d+/,cvss:5.4,exploitAvailable:false,cwe:'CWE-79',description:'phpMyAdmin stored XSS'},
+  {id:'CVE-2022-23808',techRegex:/phpMyAdmin[\/ ]5\.[0-1]\.\d+/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'phpMyAdmin XSS via SQL query'},
+  {id:'CVE-2018-12613',techRegex:/phpMyAdmin[\/ ]4\.[0-9]\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-22',description:'phpMyAdmin LFI via index.php'},
+  {id:'CVE-2024-27304',techRegex:/pgx[\/ ]5\.\d+\.\d+/,cvss:8.1,exploitAvailable:false,cwe:'CWE-89',description:'pgx SQL injection via protocol'},
+  {id:'CVE-2021-43008',techRegex:/Adminer[\/ ]4\.[0-8]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-22',description:'Adminer file read via MySQL local infile'},
+  {id:'CVE-2018-7667',techRegex:/Adminer[\/ ]4\.[0-6]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-918',description:'Adminer SSRF via server parameter'},
+  {id:'CVE-2023-46214',techRegex:/Splunk[\/ ](?:8\.[0-9]|9\.[0-1])\.\d+/,cvss:8,exploitAvailable:true,cwe:'CWE-94',description:'Splunk Enterprise RCE via XSLT'},
+  {id:'CVE-2023-40598',techRegex:/Splunk[\/ ](?:8\.[0-9]|9\.[0-1])\.\d+/,cvss:5,exploitAvailable:false,cwe:'CWE-79',description:'Splunk XSS in classic dashboards'},
+  {id:'CVE-2021-33845',techRegex:/Splunk[\/ ]8\.\d+\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-200',description:'Splunk information disclosure via REST'},
+  {id:'CVE-2022-37395',techRegex:/InfluxDB[\/ ]1\.[0-8]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-20',description:'InfluxDB JWT authentication bypass'},
+  {id:'CVE-2023-30859',techRegex:/CouchDB[\/ ]3\.[0-3]\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-79',description:'CouchDB XSS in Fauxton UI'},
+  {id:'CVE-2022-24706',techRegex:/CouchDB[\/ ]3\.[0-2]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-1188',description:'CouchDB default cookie auth RCE'},
+  {id:'CVE-2021-38295',techRegex:/CouchDB[\/ ]3\.[0-1]\.\d+/,cvss:7,exploitAvailable:false,cwe:'CWE-79',description:'CouchDB privilege escalation via attachment'},
+  {id:'CVE-2021-40438',techRegex:/Apache[\/ ]2\.4\.(?:3[89]|4[0-8])\b/,cvss:9,exploitAvailable:true,cwe:'CWE-918',description:'Apache mod_proxy SSRF'},
+  {id:'CVE-2022-22719',techRegex:/Apache[\/ ]2\.4\.(?:4[0-9]|5[0-2])\b/,cvss:7.5,exploitAvailable:false,cwe:'CWE-416',description:'Apache mod_lua use-after-free DoS'},
+  {id:'CVE-2022-22721',techRegex:/Apache[\/ ]2\.4\.(?:4[0-9]|5[0-2])\b/,cvss:9.8,exploitAvailable:false,cwe:'CWE-190',description:'Apache mod_lua integer overflow'},
+  {id:'CVE-2022-36760',techRegex:/Apache[\/ ]2\.4\.(?:5[0-4])\b/,cvss:9,exploitAvailable:false,cwe:'CWE-444',description:'Apache mod_proxy_ajp request smuggling'},
+  {id:'CVE-2022-37436',techRegex:/Apache[\/ ]2\.4\.(?:5[0-4])\b/,cvss:5.3,exploitAvailable:false,cwe:'CWE-444',description:'Apache mod_proxy response splitting'},
+  {id:'CVE-2023-51764',techRegex:/Postfix[\/ ](?:3\.[0-8])\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-20',description:'Postfix SMTP smuggling'},
+  {id:'CVE-2019-10149',techRegex:/Exim[\/ ](?:4\.[8-9][0-9])/,cvss:9.8,exploitAvailable:true,cwe:'CWE-78',description:'Exim RCE via recipient address'},
+  {id:'CVE-2023-42115',techRegex:/Exim[\/ ]4\.9[5-6]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-787',description:'Exim SMTP out-of-bounds write'},
+  {id:'CVE-2020-28021',techRegex:/Exim[\/ ](?:4\.9[0-4])/,cvss:8.1,exploitAvailable:false,cwe:'CWE-287',description:'Exim authenticated remote code execution'},
+  {id:'CVE-2021-3773',techRegex:/Linux[ ]kernel[\/ ]5\.\d+/,cvss:9.8,exploitAvailable:false,cwe:'CWE-918',description:'Linux netfilter NAT bypass'},
+  {id:'CVE-2022-1015',techRegex:/Linux[ ]kernel[\/ ]5\.(?:1[0-7])\.\d+/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'Linux nf_tables stack overflow privesc'},
+  {id:'CVE-2021-4204',techRegex:/Linux[ ]kernel[\/ ]5\.(?:[0-9]|1[0-5])\.\d+/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'Linux eBPF out-of-bounds write privesc'},
+  {id:'CVE-2022-0185',techRegex:/Linux[ ]kernel[\/ ]5\.(?:[0-9]|1[0-6])\.\d+/,cvss:8.4,exploitAvailable:true,cwe:'CWE-190',description:'Linux fs_context heap overflow privesc'},
+  {id:'CVE-2023-0386',techRegex:/Linux[ ]kernel[\/ ](?:5\.\d+|6\.[0-2])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-282',description:'Linux OverlayFS privilege escalation'},
+  {id:'CVE-2023-2640',techRegex:/Ubuntu[ ](?:22\.04|23\.04)/,cvss:7.8,exploitAvailable:true,cwe:'CWE-863',description:'Ubuntu OverlayFS privilege escalation'},
+  {id:'CVE-2020-36518',techRegex:/Jackson[\/ ]2\.(?:[0-9]|1[0-2])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-787',description:'Jackson databind stack overflow DoS'},
+  {id:'CVE-2019-12384',techRegex:/Jackson[\/ ]2\.(?:[0-9]|1[0-1])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-502',description:'Jackson databind deserialization gadget'},
+  {id:'CVE-2023-35116',techRegex:/Jackson[\/ ]2\.1[0-5]\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-400',description:'Jackson databind infinite recursion'},
+  {id:'CVE-2024-22262',techRegex:/Spring[ ]Framework[\/ ]6\.[0-1]\.\d+/,cvss:8.1,exploitAvailable:true,cwe:'CWE-601',description:'Spring URL parsing open redirect'},
+  {id:'CVE-2024-38816',techRegex:/Spring[ ]Framework[\/ ](?:5\.3|6\.[0-1])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-22',description:'Spring WebMvc functional endpoint traversal'},
+  {id:'CVE-2022-25845',techRegex:/Fastjson[\/ ]1\.[0-9]+\.\d+/,cvss:8.1,exploitAvailable:true,cwe:'CWE-502',description:'Fastjson autoType deserialization RCE'},
+  {id:'CVE-2017-18349',techRegex:/Fastjson[\/ ]1\.[0-9]+\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-502',description:'Fastjson parseObject RCE'},
+  {id:'CVE-2021-27568',techRegex:/json-smart[\/ ]2\.[0-3]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-125',description:'json-smart out-of-bounds read'},
+  {id:'CVE-2022-1471',techRegex:/SnakeYAML[\/ ]1\.[0-9]+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-502',description:'SnakeYAML constructor deserialization RCE'},
+  {id:'CVE-2020-10673',techRegex:/jackson-databind[\/ ]2\.\d+\.\d+/,cvss:8.8,exploitAvailable:false,cwe:'CWE-502',description:'Jackson databind gadget deserialization'},
+  {id:'CVE-2021-22118',techRegex:/Spring[ ]Framework[\/ ]5\.[0-3]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-668',description:'Spring WebFlux unauthorized access'},
+  {id:'CVE-2022-42003',techRegex:/jackson-databind[\/ ]2\.1[0-3]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Jackson databind nested wrapper DoS'},
+  {id:'CVE-2023-20863',techRegex:/Spring[ ]Framework[\/ ]5\.[0-3]\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-400',description:'Spring SpEL DoS via regex'},
+  {id:'CVE-2021-30465',techRegex:/runc[\/ ]1\.[0-1]\.\d+/,cvss:5.3,exploitAvailable:true,cwe:'CWE-22',description:'runc symlink mount container escape'},
+  {id:'CVE-2024-24790',techRegex:/Go[\/ ]1\.2[0-2]\.\d+/,cvss:9.8,exploitAvailable:false,cwe:'CWE-20',description:'Go net/netip IPv4-mapped bypass'},
+  {id:'CVE-2023-24538',techRegex:/Go[\/ ]1\.(?:19|20)\.\d+/,cvss:9.8,exploitAvailable:false,cwe:'CWE-94',description:'Go html/template code injection'},
+  {id:'CVE-2022-41723',techRegex:/Go[\/ ]1\.(?:18|19|20)\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Go net/http HPACK DoS'},
+  {id:'CVE-2021-34550',techRegex:/Python[\/ ]3\.[6-9]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-20',description:'Python asyncio improper input validation'},
+  {id:'CVE-2020-10735',techRegex:/Python[\/ ]3\.[6-9]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-1333',description:'Python int conversion DoS'},
+  {id:'CVE-2024-0450',techRegex:/Python[\/ ]3\.(?:[8-9]|1[0-2])\.\d+/,cvss:6.2,exploitAvailable:false,cwe:'CWE-1333',description:'Python zipfile quoted-overlap DoS'},
+  {id:'CVE-2021-31799',techRegex:/Ruby[\/ ]2\.[5-7]\.\d+/,cvss:7.8,exploitAvailable:false,cwe:'CWE-78',description:'RDoc command injection'},
+  {id:'CVE-2023-28755',techRegex:/Ruby[\/ ](?:2\.[7]|3\.[0-2])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-1333',description:'Ruby URI ReDoS'},
+  {id:'CVE-2024-27282',techRegex:/Ruby[\/ ]3\.[0-3]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-125',description:'Ruby regex out-of-bounds read'},
+  {id:'CVE-2022-24856',techRegex:/Flysystem[\/ ]1\.[0-9]+\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-22',description:'Flysystem path traversal'},
+  {id:'CVE-2024-3273',techRegex:/D-Link[\/ ](?:DNS-320L|DNS-325|DNS-327L)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-78',description:'D-Link NAS command injection backdoor'},
+  {id:'CVE-2024-3272',techRegex:/D-Link[\/ ](?:DNS-320L|DNS-325|DNS-327L)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-798',description:'D-Link NAS hardcoded credential'},
+  {id:'CVE-2021-36260',techRegex:/Hikvision[\/ ](?:IPC|DS-2)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-78',description:'Hikvision IP camera command injection'},
+  {id:'CVE-2017-7921',techRegex:/Hikvision[\/ ](?:IPC|DS-2)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-287',description:'Hikvision improper authentication backdoor'},
+  {id:'CVE-2020-25078',techRegex:/D-Link[ ]DCS-[0-9]+/,cvss:7.5,exploitAvailable:true,cwe:'CWE-798',description:'D-Link DCS camera credential disclosure'},
+  {id:'CVE-2018-10561',techRegex:/GPON[\/ ]\S*\d/,cvss:9.8,exploitAvailable:true,cwe:'CWE-287',description:'GPON router authentication bypass RCE'},
+  {id:'CVE-2023-22518',techRegex:/Confluence[\/ ](?:7\.[0-9]|8\.[0-5])\.\d+/,cvss:9.1,exploitAvailable:true,cwe:'CWE-863',description:'Confluence Data Center improper authorization'},
+  {id:'CVE-2022-26138',techRegex:/Confluence[\/ ]7\.1[0-9]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-798',description:'Confluence Questions hardcoded password'},
+  {id:'CVE-2023-0266',techRegex:/Linux[ ]kernel[\/ ]5\.\d+/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'ALSA use-after-free privesc'},
+  {id:'CVE-2023-1077',techRegex:/Linux[ ]kernel[\/ ]6\.[0-2]\.\d+/,cvss:5.5,exploitAvailable:false,cwe:'CWE-843',description:'Linux sched_setattr type confusion'},
+  {id:'CVE-2024-26925',techRegex:/Linux[ ]kernel[\/ ]6\.[0-8]\.\d+/,cvss:5.5,exploitAvailable:false,cwe:'CWE-667',description:'Linux kprobes locking issue'},
+  {id:'CVE-2024-34351',techRegex:/Next\.js[\/ ]1[3-4]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-918',description:'Next.js Server Actions SSRF'},
+  {id:'CVE-2023-44270',techRegex:/PostCSS[\/ ]8\.[0-9]+\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-20',description:'PostCSS parsing error injection'},
+  {id:'CVE-2024-21538',techRegex:/cross-spawn[\/ ](?:[5-7])\.\d+\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-1333',description:'cross-spawn ReDoS'},
+  {id:'CVE-2024-28863',techRegex:/tar[\/ ]6\.\d+\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-400',description:'node-tar DoS via crafted archive'},
+  {id:'CVE-2024-37890',techRegex:/ws[\/ ]8\.[0-9]+\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'ws DoS via many headers'},
+  {id:'CVE-2024-4068',techRegex:/braces[\/ ]3\.\d+\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-1333',description:'braces ReDoS'},
+  {id:'CVE-2021-44906',techRegex:/minimist[\/ ]1\.[0-2]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-1321',description:'minimist prototype pollution'},
+  {id:'CVE-2021-3807',techRegex:/ansi-regex[\/ ](?:[4-6])\.\d+\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-1333',description:'ansi-regex ReDoS'},
+  {id:'CVE-2021-23343',techRegex:/path-parse[\/ ]1\.0\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-1333',description:'path-parse ReDoS'},
+  {id:'CVE-2020-7788',techRegex:/ini[\/ ]1\.3\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-1321',description:'ini prototype pollution'},
+  {id:'CVE-2021-33623',techRegex:/trim-newlines[\/ ]3\.[0-1]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-1333',description:'trim-newlines ReDoS'},
+  {id:'CVE-2022-3517',techRegex:/minimatch[\/ ]3\.[0-4]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-1333',description:'minimatch ReDoS'},
+  {id:'CVE-2023-26115',techRegex:/word-wrap[\/ ]1\.0\.[0-4]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-1333',description:'word-wrap ReDoS'},
+  {id:'CVE-2024-21501',techRegex:/serve-static[\/ ]1\.1[0-9]\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-22',description:'serve-static path traversal'},
+  {id:'CVE-2024-4067',techRegex:/micromatch[\/ ]4\.[0-9]+\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-1333',description:'micromatch ReDoS'},
+  {id:'CVE-2020-15168',techRegex:/node-fetch[\/ ]2\.[0-6]\.\d+/,cvss:3.7,exploitAvailable:false,cwe:'CWE-20',description:'node-fetch unauthorized size'},
+  {id:'CVE-2022-0235',techRegex:/node-fetch[\/ ]2\.[0-6]\.\d+/,cvss:6.1,exploitAvailable:false,cwe:'CWE-200',description:'node-fetch cookie leak on redirect'},
+  {id:'CVE-2024-28849',techRegex:/follow-redirects[\/ ]1\.1[0-5]\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-200',description:'follow-redirects credential leak'},
+  {id:'CVE-2024-27198',techRegex:/TeamCity[\/ ]202[0-3]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-288',description:'TeamCity auth bypass RCE'},
+  {id:'CVE-2023-42793',techRegex:/TeamCity[\/ ]202[0-3]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-288',description:'TeamCity auth bypass RCE (CVE-2023-42793)'},
+  {id:'CVE-2024-32002',techRegex:/Git[\/ ]2\.(?:[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-3])\.\d+/,cvss:9,exploitAvailable:true,cwe:'CWE-22',description:'Git submodule RCE on case-insensitive FS'},
+  {id:'CVE-2022-39253',techRegex:/Git[\/ ]2\.(?:[0-9]|1[0-9]|2[0-9]|3[0-7])\.\d+/,cvss:5.5,exploitAvailable:false,cwe:'CWE-59',description:'Git local clone symlink attack'},
+  {id:'CVE-2024-32004',techRegex:/Git[\/ ]2\.(?:[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-3])\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-22',description:'Git partial clone RCE'},
+  {id:'CVE-2023-27536',techRegex:/libcurl[\/ ](?:7\.[8-9]\d|8\.[0-2])\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-287',description:'libcurl GSS delegation bypass'},
+  {id:'CVE-2023-28322',techRegex:/libcurl[\/ ](?:7\.[6-9]\d|8\.[0-2])\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-863',description:'libcurl POST after redirect'},
+  {id:'CVE-2024-2398',techRegex:/libcurl[\/ ]8\.[0-6]\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-772',description:'libcurl HTTP/2 memory leak'},
+  {id:'CVE-2024-0853',techRegex:/libcurl[\/ ]8\.[0-5]\.\d+/,cvss:3.7,exploitAvailable:false,cwe:'CWE-295',description:'libcurl OCSP verification bypass'},
+  {id:'CVE-2023-35945',techRegex:/Envoy[\/ ]1\.2[4-7]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Envoy HTTP/2 memory leak'},
+  {id:'CVE-2024-23324',techRegex:/Envoy[\/ ]1\.2[89]\.\d+/,cvss:8.1,exploitAvailable:false,cwe:'CWE-863',description:'Envoy ext_authz bypass'},
+  {id:'CVE-2022-24112',techRegex:/Apache[ ]APISIX[\/ ]2\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-290',description:'APISIX admin API auth bypass RCE'},
+  {id:'CVE-2024-27919',techRegex:/Kong[\/ ]3\.[0-6]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Kong Gateway memory exhaustion'},
+  {id:'CVE-2024-38021',techRegex:/Kong[\/ ]3\.[0-6]\.\d+/,cvss:8.1,exploitAvailable:false,cwe:'CWE-918',description:'Kong Gateway SSRF via plugin'},
+  {id:'CVE-2017-0143',techRegex:/SMB[\/ ](?:v?1|Windows[ ](?:7|2008|XP))/,cvss:9.8,exploitAvailable:true,cwe:'CWE-20',description:'EternalBlue SMBv1 remote code execution'},
+  {id:'CVE-2017-0144',techRegex:/SMB[\/ ](?:v?1|Windows[ ](?:7|2008|XP))/,cvss:9.8,exploitAvailable:true,cwe:'CWE-20',description:'EternalBlue SMBv1 RCE (MS17-010)'},
+  {id:'CVE-2020-1472',techRegex:/Netlogon[\/ ](?:Windows[ ]Server[ ](?:2008|2012|2016|2019))/,cvss:10,exploitAvailable:true,cwe:'CWE-330',description:'Zerologon Netlogon privilege escalation'},
+  {id:'CVE-2019-0708',techRegex:/RDP[\/ ](?:Windows[ ](?:7|2008|XP))/,cvss:9.8,exploitAvailable:true,cwe:'CWE-416',description:'BlueKeep RDP pre-auth RCE'},
+  {id:'CVE-2019-11815',techRegex:/RDP[\/ ](?:Windows[ ](?:7|2008|2012))/,cvss:8.1,exploitAvailable:false,cwe:'CWE-362',description:'RDP race condition use-after-free'},
+  {id:'CVE-2023-48795',techRegex:/OpenSSH[\/ ](?:[6-9]\.\d+|9\.[0-5])/,cvss:5.9,exploitAvailable:true,cwe:'CWE-354',description:'Terrapin SSH prefix truncation attack'},
+  {id:'CVE-2024-6387',techRegex:/OpenSSH[\/ ](?:8\.[5-9]|9\.[0-7])/,cvss:8.1,exploitAvailable:true,cwe:'CWE-364',description:'regreSSHion OpenSSH signal handler race RCE'},
+  {id:'CVE-2023-38408',techRegex:/OpenSSH[\/ ](?:[8-9]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-428',description:'OpenSSH PKCS#11 remote code execution'},
+  {id:'CVE-2016-6210',techRegex:/OpenSSH[\/ ](?:[5-7]\.\d+)/,cvss:5.3,exploitAvailable:false,cwe:'CWE-208',description:'OpenSSH user enumeration via timing'},
+  {id:'CVE-2018-15473',techRegex:/OpenSSH[\/ ](?:[5-7]\.\d+)/,cvss:5.3,exploitAvailable:false,cwe:'CWE-362',description:'OpenSSH username enumeration'},
+  {id:'CVE-2015-3306',techRegex:/ProFTPD[\/ ]1\.3\.[0-5]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-284',description:'ProFTPD mod_copy unauthenticated file copy'},
+  {id:'CVE-2021-46854',techRegex:/ProFTPD[\/ ]1\.3\.[0-6]/,cvss:7.7,exploitAvailable:true,cwe:'CWE-787',description:'ProFTPD mod_sql buffer overflow'},
+  {id:'CVE-2011-2523',techRegex:/vsftpd[\/ ]2\.3\.4/,cvss:9.8,exploitAvailable:true,cwe:'CWE-78',description:'vsftpd 2.3.4 backdoor command execution'},
+  {id:'CVE-2019-12815',techRegex:/ProFTPD[\/ ]1\.3\.[0-5]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-787',description:'ProFTPD mod_copy arbitrary file copy'},
+  {id:'CVE-2021-41091',techRegex:/Docker[\/ ](?:19|20)\.10\.\d+/,cvss:6.3,exploitAvailable:true,cwe:'CWE-281',description:'Moby data directory permission bypass'},
+  {id:'CVE-2019-14271',techRegex:/Docker[\/ ](?:18|19)\.\d+/,cvss:7.5,exploitAvailable:true,cwe:'CWE-502',description:'Docker cp chroot escape'},
+  {id:'CVE-2024-41110',techRegex:/Docker[\/ ](?:1[89]|2[0-7])\.\d+/,cvss:9.9,exploitAvailable:true,cwe:'CWE-863',description:'Docker AuthZ plugin bypass'},
+  {id:'CVE-2023-28842',techRegex:/Docker[\/ ](?:2[0-3])\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-284',description:'Docker Swarm encrypted overlay bypass'},
+  {id:'CVE-2021-3762',techRegex:/BIND[\/ ]9\.(?:1[0-9])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-20',description:'BIND resolver cache poisoning'},
+  {id:'CVE-2020-8625',techRegex:/BIND[\/ ]9\.(?:1[0-7])\.\d+/,cvss:8.1,exploitAvailable:true,cwe:'CWE-120',description:'BIND GSSAPI buffer overflow'},
+  {id:'CVE-2023-2828',techRegex:/BIND[\/ ]9\.(?:1[6-9])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-770',description:'BIND cache size limit DoS'},
+  {id:'CVE-2024-1737',techRegex:/BIND[\/ ]9\.(?:1[6-9])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-770',description:'BIND key file DoS'},
+  {id:'CVE-2018-5175',techRegex:/NTP[\/ ]4\.2\.8p\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-20',description:'NTP origin timestamp bypass'},
+  {id:'CVE-2015-1799',techRegex:/NTP[\/ ]4\.2\.\d+/,cvss:5.9,exploitAvailable:false,cwe:'CWE-362',description:'NTP authentication bypass by spoofing'},
+  {id:'CVE-2017-6742',techRegex:/SNMP[\/ ](?:v?[12]c?|3)/,cvss:8.8,exploitAvailable:true,cwe:'CWE-120',description:'Cisco SNMP buffer overflow'},
+  {id:'CVE-2002-0013',techRegex:/SNMP[\/ ](?:v?1|2c)/,cvss:7.5,exploitAvailable:true,cwe:'CWE-20',description:'SNMPv1 community string bypass'},
+  {id:'CVE-2021-45960',techRegex:/Expat[\/ ]2\.[0-4]\.\d+/,cvss:8.8,exploitAvailable:false,cwe:'CWE-190',description:'Expat integer overflow'},
+  {id:'CVE-2022-25235',techRegex:/Expat[\/ ]2\.[0-4]\.\d+/,cvss:9.8,exploitAvailable:false,cwe:'CWE-116',description:'Expat encoding XML injection'},
+  {id:'CVE-2024-2961',techRegex:/glibc[\/ ]2\.(?:3[0-9]|4[0-9])/,cvss:8.8,exploitAvailable:true,cwe:'CWE-787',description:'glibc iconv ISO-2022-CN-EXT overflow'},
+  {id:'CVE-2016-10228',techRegex:/glibc[\/ ]2\.(?:[12][0-9])/,cvss:5.9,exploitAvailable:false,cwe:'CWE-20',description:'glibc iconv invalid multibyte DoS'},
+  {id:'CVE-2023-6246',techRegex:/glibc[\/ ]2\.(?:3[0-9]|4[0-9])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'glibc syslog heap overflow privesc'},
+  {id:'CVE-2022-2588',techRegex:/Linux[ ]kernel[\/ ]5\.\d+/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'cls_route filter use-after-free privesc'},
+  {id:'CVE-2022-2586',techRegex:/Linux[ ]kernel[\/ ]5\.\d+/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'nf_tables use-after-free privesc'},
+  {id:'CVE-2023-0179',techRegex:/Linux[ ]kernel[\/ ](?:5\.[0-9]|6\.[0-1])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'netfilter nft_payload stack overflow'},
+  {id:'CVE-2023-1829',techRegex:/Linux[ ]kernel[\/ ](?:5\.[0-9]|6\.[0-2])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'tcindex classifier use-after-free privesc'},
+  {id:'CVE-2024-0582',techRegex:/Linux[ ]kernel[\/ ](?:6\.[0-7])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'io_uring UAF privilege escalation'},
+  {id:'CVE-2024-26581',techRegex:/Linux[ ]kernel[\/ ]6\.[0-8]\.\d+/,cvss:5.5,exploitAvailable:false,cwe:'CWE-416',description:'netfilter nft_set_rbtree UAF'},
+  {id:'CVE-2023-42753',techRegex:/Linux[ ]kernel[\/ ]6\.[0-6]\.\d+/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'netfilter ipset array overflow privesc'},
+  {id:'CVE-2023-3269',techRegex:/Linux[ ]kernel[\/ ](?:5\.[1-9]|6\.[0-4])/,cvss:7,exploitAvailable:true,cwe:'CWE-416',description:'Linux StackRot UAF privesc'},
+  {id:'CVE-2022-47939',techRegex:/Linux[ ]kernel[\/ ]5\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-416',description:'ksmbd use-after-free RCE'},
+  {id:'CVE-2021-33909',techRegex:/Linux[ ]kernel[\/ ](?:4\.\d+|5\.[0-9]|5\.1[0-3])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'Sequoia seq_file privesc'},
+  {id:'CVE-2021-3493',techRegex:/Ubuntu[ ](?:18\.04|19\.10|20\.04)/,cvss:7.8,exploitAvailable:true,cwe:'CWE-863',description:'Ubuntu OverlayFS privesc'},
+  {id:'CVE-2021-22555',techRegex:/Linux[ ]kernel[\/ ](?:4\.\d+|5\.[0-9]|5\.1[0-2])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'netfilter x_tables heap overflow privesc'},
+  {id:'CVE-2022-32250',techRegex:/Linux[ ]kernel[\/ ]5\.\d+/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'netfilter nft_set_elem UAF privesc'},
+  {id:'CVE-2023-0461',techRegex:/Linux[ ]kernel[\/ ]6\.[0-2]\.\d+/,cvss:6.7,exploitAvailable:false,cwe:'CWE-416',description:'Linux TLS UAF local privilege'},
+  {id:'CVE-2024-1085',techRegex:/Linux[ ]kernel[\/ ]5\.\d+/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'netfilter nft_pipapo UAF privesc'},
+  {id:'CVE-2020-14386',techRegex:/Linux[ ]kernel[\/ ]5\.[0-8]\.\d+/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'AF_PACKET tpacket_rcv overflow privesc'},
+  {id:'CVE-2019-2215',techRegex:/Android[\/ ](?:8|9|10)\b/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'Android binder use-after-free privesc'},
+  {id:'CVE-2023-45866',techRegex:/Android[\/ ]1[0-4]\b/,cvss:8.8,exploitAvailable:false,cwe:'CWE-287',description:'Android Bluetooth HID keystroke injection'},
+  {id:'CVE-2021-39698',techRegex:/Android[\/ ]1[0-2]\b/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'Android binder UAF privesc'},
+  {id:'CVE-2022-20421',techRegex:/Android[\/ ]1[2-3]\b/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'Android binder UAF privesc'},
+  {id:'CVE-2023-20938',techRegex:/Android[\/ ]1[2-3]\b/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'Android binder UAF privesc'},
+  {id:'CVE-2020-0041',techRegex:/Android[\/ ](?:9|10)\b/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'Android binder out-of-bounds write'},
+  {id:'CVE-2019-2025',techRegex:/Android[\/ ](?:8|9)\b/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'Android binder UAF privesc'},
+  {id:'CVE-2021-34527',techRegex:/Print[ ]Spooler[\/ ]Windows[ ]Server[ ](?:2012|2016|2019)/,cvss:8.8,exploitAvailable:true,cwe:'CWE-269',description:'PrintNightmare spooler RCE'},
+  {id:'CVE-2019-1388',techRegex:/Windows[ ](?:7|10|Server[ ]2019)/,cvss:7.8,exploitAvailable:true,cwe:'CWE-269',description:'Windows UAC certificate dialog elevation'},
+  {id:'CVE-2020-0796',techRegex:/SMBv3[\/ ]Windows[ ](?:10|Server[ ]2019)/,cvss:10,exploitAvailable:true,cwe:'CWE-787',description:'SMBGhost SMBv3 compression RCE'},
+  {id:'CVE-2020-1350',techRegex:/DNS[ ]Server[\/ ]Windows[ ]Server[ ](?:2008|2012|2016|2019)/,cvss:10,exploitAvailable:true,cwe:'CWE-400',description:'SIGRed Windows DNS server RCE'},
+  {id:'CVE-2022-30190',techRegex:/Windows[ ](?:10|11|Server[ ]2022)/,cvss:7.8,exploitAvailable:true,cwe:'CWE-78',description:'Follina MSDT remote code execution'},
+  {id:'CVE-2023-36884',techRegex:/Office[\/ ](?:2013|2016|2019|2021)/,cvss:7.5,exploitAvailable:true,cwe:'CWE-20',description:'Office HTML RCE (Storm-0978)'},
+  {id:'CVE-2021-42287',techRegex:/Windows[ ]Server[ ](?:2012|2016|2019|2022)/,cvss:8.8,exploitAvailable:true,cwe:'CWE-269',description:'NoPac AD privilege escalation'},
+  {id:'CVE-2021-42278',techRegex:/Windows[ ]Server[ ](?:2012|2016|2019|2022)/,cvss:8.8,exploitAvailable:true,cwe:'CWE-269',description:'sAMAccountName spoofing (NoPac)'},
+  {id:'CVE-2022-26923',techRegex:/Windows[ ]Server[ ](?:2012|2016|2019|2022)/,cvss:8.8,exploitAvailable:true,cwe:'CWE-295',description:'Certifried AD certificate spoofing'},
+  {id:'CVE-2022-21882',techRegex:/Windows[ ](?:10|11|Server[ ]2022)/,cvss:7.8,exploitAvailable:true,cwe:'CWE-269',description:'Win32k privilege escalation'},
+  {id:'CVE-2021-1732',techRegex:/Windows[ ](?:10|Server[ ]2019)/,cvss:7.8,exploitAvailable:true,cwe:'CWE-269',description:'Win32k privilege escalation'},
+  {id:'CVE-2020-17087',techRegex:/Windows[ ](?:10|Server[ ]2019)/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'cng.sys pool overflow privesc'},
+  {id:'CVE-2019-1458',techRegex:/Windows[ ](?:7|10|Server[ ]2019)/,cvss:7.8,exploitAvailable:true,cwe:'CWE-269',description:'Win32k privilege escalation'},
+  {id:'CVE-2022-24521',techRegex:/Windows[ ](?:10|11|Server[ ]2022)/,cvss:7.8,exploitAvailable:true,cwe:'CWE-269',description:'CLFS driver privilege escalation'},
+  {id:'CVE-2024-26234',techRegex:/Windows[ ](?:10|11|Server[ ]2022)/,cvss:6.7,exploitAvailable:false,cwe:'CWE-295',description:'Windows Proxy driver spoofing'},
+  {id:'CVE-2023-46604',techRegex:/ActiveMQ[\/ ](?:5\.1[0-8]|6\.0)\.\d+/,cvss:10,exploitAvailable:true,cwe:'CWE-502',description:'ActiveMQ OpenWire deserialization RCE'},
+  {id:'CVE-2015-5254',techRegex:/ActiveMQ[\/ ]5\.[0-9]+\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-502',description:'ActiveMQ JMS deserialization RCE'},
+  {id:'CVE-2023-33246',techRegex:/RocketMQ[\/ ](?:4\.[0-9]|5\.[0-1])\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'RocketMQ broker RCE'},
+  {id:'CVE-2023-37582',techRegex:/RocketMQ[\/ ](?:4\.[0-9]|5\.[0-1])\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'RocketMQ namesrv RCE'},
+  {id:'CVE-2021-25646',techRegex:/Druid[\/ ]0\.(?:1[0-9]|2[0-2])\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-94',description:'Apache Druid JavaScript RCE'},
+  {id:'CVE-2021-36749',techRegex:/Druid[\/ ]0\.2[0-2]\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-918',description:'Druid SSRF via input source'},
+  {id:'CVE-2020-9484',techRegex:/Tomcat[\/ ](?:8\.[5]|9\.[0-2])\.\d+/,cvss:7,exploitAvailable:true,cwe:'CWE-502',description:'Tomcat session persistence deserialization'},
+  {id:'CVE-2019-0230',techRegex:/Struts[\/ ]2\.[0-5]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Struts forced double OGNL evaluation RCE'},
+  {id:'CVE-2020-17530',techRegex:/Struts[\/ ]2\.[0-5]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Struts S2-061 OGNL injection RCE'},
+  {id:'CVE-2021-31805',techRegex:/Struts[\/ ]2\.[0-5]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Struts S2-062 OGNL injection RCE'},
+  {id:'CVE-2023-35708',techRegex:/MOVEit[\/ ](?:20[12][0-9]|2023)\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-89',description:'MOVEit SQL injection follow-up'},
+  {id:'CVE-2024-5806',techRegex:/MOVEit[\/ ]202[34]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-287',description:'MOVEit SFTP authentication bypass'},
+  {id:'CVE-2023-25157',techRegex:/GeoServer[\/ ]2\.(?:1[7-9]|2[0-3])\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-89',description:'GeoServer OGC filter SQL injection'},
+  {id:'CVE-2024-36401',techRegex:/GeoServer[\/ ]2\.(?:2[0-5]|1[5-9])\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'GeoServer unauthenticated RCE'},
+  {id:'CVE-2022-24816',techRegex:/GeoServer[\/ ]2\.(?:1[5-9]|2[0-1])\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'GeoServer JAI-EXT RCE'},
+  {id:'CVE-2021-40822',techRegex:/GeoServer[\/ ]2\.(?:1[5-9]|20)\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-918',description:'GeoServer SSRF via TestWfsPost'},
+  {id:'CVE-2023-34468',techRegex:/NiFi[\/ ]1\.(?:[0-9]|1[0-9]|2[0-1])\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-94',description:'NiFi H2 connection string RCE'},
+  {id:'CVE-2021-26084',techRegex:/Confluence[\/ ](?:6\.[0-9]|7\.[0-9])\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Confluence OGNL injection RCE (CVE-2021-26084)'},
+  {id:'CVE-2020-14179',techRegex:/Jira[\/ ](?:7\.[0-9]|8\.[0-9])\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-200',description:'Jira information disclosure via dashboard'},
+  {id:'CVE-2019-8442',techRegex:/Jira[\/ ](?:7\.[0-9]|8\.[0-4])\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-22',description:'Jira path traversal information disclosure'},
+  {id:'CVE-2017-9506',techRegex:/Jira[\/ ](?:7\.[0-6])\.\d+/,cvss:6.1,exploitAvailable:false,cwe:'CWE-918',description:'Jira SSRF via icon URL'},
+  {id:'CVE-2021-26085',techRegex:/Bamboo[\/ ](?:7\.[0-9]|8\.[0-9])\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-22',description:'Bamboo path traversal'},
+  {id:'CVE-2022-31197',techRegex:/PostgreSQL[ ]JDBC[\/ ]42\.[0-9]+\.\d+/,cvss:8.8,exploitAvailable:false,cwe:'CWE-89',description:'PostgreSQL JDBC SQL injection'},
+  {id:'CVE-2024-1597',techRegex:/PostgreSQL[ ]JDBC[\/ ]42\.[0-9]+\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-89',description:'PostgreSQL JDBC SQL injection via PreparedStatement'},
+  {id:'CVE-2023-22102',techRegex:/MySQL[ ]Connector[\/ ]8\.[0-9]+\.\d+/,cvss:8.3,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Connector/J takeover'},
+  {id:'CVE-2022-21363',techRegex:/MySQL[ ]Connector[\/ ]8\.[0-9]+\.\d+/,cvss:7.7,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Connector/J input validation'},
+  {id:'CVE-2024-21090',techRegex:/MySQL[ ]Connector[\/ ]8\.[0-9]+\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Connector/J partial DoS'},
+  {id:'CVE-2023-21971',techRegex:/MySQL[ ]Connector[\/ ]8\.[0-9]+\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Connector/J unauthorized access'},
+  {id:'CVE-2023-22103',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-20',description:'MySQL optimizer input validation'},
+  {id:'CVE-2023-21980',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server optimizer issue'},
+  {id:'CVE-2024-21096',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:4.9,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server mysqldump issue'},
+  {id:'CVE-2024-21109',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:4.9,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server optimizer issue'},
+  {id:'CVE-2023-21912',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server replication DoS'},
+  {id:'CVE-2022-21595',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:4.9,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server optimizer issue'},
+  {id:'CVE-2022-21367',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:4.9,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server optimizer issue'},
+  {id:'CVE-2021-2291',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:4.9,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server InnoDB issue'},
+  {id:'CVE-2020-14765',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-20',description:'MySQL FEDERATED input validation'},
+  {id:'CVE-2019-2805',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:4.9,exploitAvailable:false,cwe:'CWE-20',description:'MySQL optimizer issue'},
+  {id:'CVE-2018-2767',techRegex:/MySQL[ ]Server[\/ ]5\.7\.\d+/,cvss:3.1,exploitAvailable:false,cwe:'CWE-310',description:'MySQL yaSSL TLS downgrade'},
+  {id:'CVE-2016-6663',techRegex:/MySQL[\/ ]5\.[5-7]\.\d+/,cvss:5.3,exploitAvailable:true,cwe:'CWE-362',description:'MySQL race condition privilege escalation'},
+  {id:'CVE-2016-6664',techRegex:/MySQL[\/ ]5\.[5-7]\.\d+/,cvss:7,exploitAvailable:true,cwe:'CWE-59',description:'MySQL mysqld_safe symlink privilege escalation'},
+  {id:'CVE-2012-2122',techRegex:/MySQL[\/ ]5\.[1-5]\.\d+/,cvss:5.1,exploitAvailable:true,cwe:'CWE-287',description:'MySQL authentication bypass (1 in 256 tries)'},
 ];
 
 
@@ -1385,24 +1740,24 @@ const SECURITY_HEADERS = ['Strict-Transport-Security','Content-Security-Policy',
 const WAF_PATTERNS: Record<string, { headers: string[]; body: RegExp[]; anyHeaderRegex?: RegExp }> = {
   'Cloudflare': { headers: ['CF-RAY','CF-Cache-Status','CF-Visitor'], body: [/cdn-cgi\/challenge-platform/i, /\/cdn-cgi\//i, /__cf_bm/i, /cf.challenge.js/i, /cf-browser-revive/i] },
   'Akamai': { headers: ['X-Akamai-Transformed','X-Akamai-Request-ID'], body: [], anyHeaderRegex: /AkamaiGHost/i },
-  'AWS CloudFront': { headers: ['X-Amz-Cf-Id','X-Amz-Cf-Pop','Via'], body: [/CloudFront/i] },
+  'AWS CloudFront': { headers: ['X-Amz-Cf-Id','X-Amz-Cf-Pop'], body: [/CloudFront/i] },
   'Sucuri': { headers: ['X-Sucuri-ID','X-Sucuri-Cache','X-Sucuri-Block'], body: [/sucuri/i] },
-  'Fastly': { headers: ['X-Served-By','X-Cache-Hits','X-Cache'], body: [/fastly/i] },
+  'Fastly': { headers: ['X-Served-By','X-Cache-Hits'], body: [/fastly/i] },
   'Azure CDN': { headers: ['X-Azure-Ref'], body: [/azureedge/i] },
   'Vercel': { headers: ['X-Vercel-Cache','X-Vercel-Id'], body: [/vercel/i] },
   'Netlify': { headers: ['X-NF-Request-ID','X-Netlify-Cache'], body: [/netlify/i] },
   'Heroku': { headers: ['X-Heroku-Request-Id'], body: [/herokuapp/i] },
-  'GitHub Pages': { headers: ['Server'], body: [/GitHub\.com/i] },
-  'Imperva/Incapsula': { headers: ['X-Iinfo','X-CDN','Set-Cookie'], body: [/incapsula/i, /imperva/i], anyHeaderRegex: /incap_ses/i },
+  'GitHub Pages': { headers: [], body: [/GitHub\.com/i], anyHeaderRegex: /^GitHub\.com/i },
+  'Imperva/Incapsula': { headers: ['X-Iinfo','X-CDN'], body: [/incapsula/i, /imperva/i], anyHeaderRegex: /incap_ses/i },
   'Wordfence': { headers: [], body: [/wordfence/i] },
-  'ModSecurity': { headers: ['Server'], anyHeaderRegex: /mod_security/i, body: [] },
+  'ModSecurity': { headers: [], anyHeaderRegex: /mod_security/i, body: [] },
   'BunnyCDN': { headers: ['CDN-Provider'], body: [/BunnyCDN/i] },
   'StackPath': { headers: ['X-StackPath-Edge'], body: [/stackpath/i] },
-  'ArvanCloud': { headers: ['Server'], anyHeaderRegex: /ArvanCloud/i, body: [/arvancloud/i] },
+  'ArvanCloud': { headers: [], anyHeaderRegex: /ArvanCloud/i, body: [/arvancloud/i] },
   'KeyCDN': { headers: ['X-CDN'], anyHeaderRegex: /keycdn/i, body: [] },
   'Reblaze': { headers: ['X-Reblaze-SOAR'], body: [/reblaze/i] },
   'F5 ASM': { headers: ['X-WA-Info'], body: [/F5/i] },
-  'Citrix NetScaler': { headers: ['Via'], anyHeaderRegex: /NetScaler/i, body: [] },
+  'Citrix NetScaler': { headers: [], anyHeaderRegex: /NetScaler/i, body: [] },
   'Radware': { headers: ['X-RDWR-CE'], body: [/radware/i] },
   'Fortinet FortiWeb': { headers: ['X-FW-CE'], body: [/fortiweb/i] },
   'Barracuda': { headers: ['X-Barracuda-'], body: [/barracuda/i] },
@@ -1447,7 +1802,7 @@ async function fetchURL(url: string, method: string = 'GET', headers?: Record<st
   }
 }
 
-interface ProbeResult { body: string; headers: Record<string,string> }
+interface ProbeResult { status: number; body: string; headers: Record<string,string> }
 function bannerGrab(host: string, port: number, timeout = 10000, payload?: string, hostHeader?: string): Promise<ProbeResult> {
   return new Promise((resolve) => {
     const isHttps = port === 443 || port === 8443;
@@ -1459,11 +1814,11 @@ function bannerGrab(host: string, port: number, timeout = 10000, payload?: strin
       const rh = res.headers || {};
       for (const [k,v] of Object.entries(rh)) { hdrs[k.toLowerCase()] = Array.isArray(v) ? v.join(', ') : String(v); }
       res.on('data',c=>data+=c); 
-      res.on('end',()=>resolve({body: data.slice(0,1024), headers: hdrs})); 
-      res.on('error',()=>resolve({body:'', headers: hdrs})); 
+      res.on('end',()=>resolve({status: res.statusCode || 200, body: data.slice(0,1024), headers: hdrs})); 
+      res.on('error',()=>resolve({status: 0, body:'', headers: hdrs})); 
     });
-    req.setTimeout(timeout, () => { req.destroy(); resolve({body:'', headers: hdrs}); });
-    req.on('error', () => resolve({body:'', headers: hdrs}));
+    req.setTimeout(timeout, () => { req.destroy(); resolve({status: 0, body:'', headers: hdrs}); });
+    req.on('error', () => resolve({status: 0, body:'', headers: hdrs}));
     req.end();
   });
 }
@@ -1516,18 +1871,34 @@ function detectWAF(responseHeaders: Record<string, string>, body: string): strin
 // would match ANY version of the product — a guaranteed false positive. Skip those.
 function hasVersionPattern(re: RegExp): boolean {
   const src = re.source;
-  return src.includes('\\d') || /[0-9]/.test(src);
+  // A real version anchor is one of:
+  //   \d            -> generic digit
+  //   [0-9] [0-6] … -> digit character class
+  //   \.4           -> literal dotted version segment
+  // A bare digit inside a product name (log4j, http2, smb1) is NOT a version anchor.
+  return src.includes('\\d')
+    || /\[[^\]]*[0-9][^\]]*\]/.test(src)
+    || /\\\.[0-9]/.test(src)
+    || /\([^)]*[0-9][^)]*\)/.test(src);
 }
 
 function mapCVEs(techs: Array<{ name: string; version?: string }>): Array<{ id: string; cvss: number; cwe: string; description: string; exploitAvailable: boolean }> {
   const matches: Array<{ id: string; cvss: number; cwe: string; description: string; exploitAvailable: boolean }> = [];
   const seen = new Set<string>();
   for (const tech of techs) {
-    const techStr = tech.name + (tech.version ? ' ' + tech.version : '');
-    for (const cve of CVE_DB) {
-      if (hasVersionPattern(cve.techRegex) && cve.techRegex.test(techStr) && !seen.has(cve.id)) {
-        seen.add(cve.id);
-        matches.push({ id: cve.id, cvss: cve.cvss, cwe: cve.cwe, description: cve.description, exploitAvailable: cve.exploitAvailable });
+    const name = (tech.name || '').trim();
+    const ver = (tech.version || '').trim();
+    // Test both "Name 1.2.3" and "Name/1.2.3" so slash-style and space-style regexes both match
+    const techStrs = ver ? [`${name} ${ver}`, `${name}/${ver}`] : [name];
+    for (const techStr of techStrs) {
+      for (const cve of CVE_DB) {
+        // Reject any rule that already matches the product name alone (e.g. /log4j|Log4j/):
+        // that is an any-version rule and therefore a guaranteed false positive.
+        if (!hasVersionPattern(cve.techRegex) || cve.techRegex.test(name)) continue;
+        if (cve.techRegex.test(techStr) && !seen.has(cve.id)) {
+          seen.add(cve.id);
+          matches.push({ id: cve.id, cvss: cve.cvss, cwe: cve.cwe, description: cve.description, exploitAvailable: cve.exploitAvailable });
+        }
       }
     }
   }
@@ -1601,21 +1972,19 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
     /<details[^>]*ontoggle\s*=/i, /<summary[^>]*onclick\s*=/i,
     /<marquee[^>]*onstart\s*=/i, /<blink[^>]*onclick\s*=/i,
   ];
-  if (!headers['content-security-policy'] || headers['content-security-policy'].includes('unsafe-inline') || headers['content-security-policy'].includes('unsafe-eval')) {
-    for (const rx of xssPatterns) {
-      if (rx.test(body)) { vulns.push({ type: 'xss', severity: 'high', url: baseUrl, description: 'Reflected/stored XSS vector detected in response', evidence: body.slice(0,200), confidence: 'likely' }); break; }
-    }
+  // Passive XSS markup match is only 'potential': identical markup (demo alert() code, security articles, stored sample code) occurs in benign content. Real XSS is confirmed by the active reflection probe.
+  for (const rx of xssPatterns) {
+    if (rx.test(body)) { vulns.push({ type: 'xss', severity: 'medium', url: baseUrl, description: 'Injector-style XSS markup (alert/event-handler patterns) present in response — possible stored XSS or benign sample code; verify source', evidence: body.slice(0,200), confidence: 'potential' }); break; }
   }
 
   // LFI / Path Traversal (only strong signals: actual file content or encoded traversal echoes)
   const lfiPatterns = [
     /root\s*:\s*x\s*:\s*0\s*:\s*0\s*:/i,
-    /Windows\s+Directory/i, /win\.ini/i, /boot\.ini/i,
     /system32\/drivers\/etc\/hosts/i, /\[extensions\]/i, /\[fonts\]/i,
     /\[MCPI\]/i, /\[PADDING\]/i, /\[Mail\]/i, /\[MCI Extensions\]/i,
     /\[files\]/i, /\[windows\]/i, /type\s+\w+\s*:\s*directory/i,
     /php:\/\/filter/i, /php:\/\/input/i, /data:\/\/text\/plain/i,
-    /\.\.\/%2f/i, /%2e%2e%2f/i, /\.\.\\/i, /%252e%252e%252f/i,
+    /\.\.\/%2f/i, /%2e%2e%2f/i, /%252e%252e%252f/i,
     new RegExp('%252e%252e', 'i'), new RegExp('..\\..\\..\\..\\etc\/passwd', 'i'),
     /..%c0%af..%c0%af..%c0%afetc\/passwd/i,
     /..%c1%9c..%c1%9c..%c1%9cetc\/passwd/i,
@@ -1625,97 +1994,114 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
     if (rx.test(body)) { vulns.push({ type: 'lfi', severity: 'critical', url: baseUrl, description: 'Path traversal / LFI vector — sensitive system content in response', evidence: body.slice(0,200), confidence: 'likely' }); break; }
   }
 
-  // RCE / Command Injection patterns
+  // RCE / Command Injection patterns — ONLY distinctive shell/cmd output artifacts.
+  // Removed: drwxr-xr-x / -rw-r--r-- (these are directory-listing/permission lines, NOT command output — they caused false 'RCE' hits),
+  // and bare 'Server:/Address:' IP lines which occur in ordinary page text. Active probes confirm real command injection with control comparison.
   const rcePatterns = [
     /uid\s*=\s*\d+\s*\(\w+\)\s*gid\s*=\s*\d+\s*\(\w+\)/i,
-    /drwxr-xr-x/i, /-rw-r--r--/i,
     /Microsoft Windows \[Version\s+\d+\.\d+\]/i,
-    /Pinging\s+.*?with\s+\d+\s+bytes\s+of\s+data:/i,
-    /Reply\s+from\s+\d+\.\d+\.\d+\.\d+:/i,
-    /\d+\s+bytes\s+from\s+.*?ttl\s*=\s*\d+/i,
-    new RegExp('Total\s+time\s*=\s*\d+ms', 'i'),
-    new RegExp('nslookup\s+.*?\d+\.\d+\.\d+\.\d+', 'i'),
-    /Server:\s+\d+\.\d+\.\d+\.\d+/i,
-    /Address:\s+\d+\.\d+\.\d+\.\d+/i,
-    /traceroute\s+to\s+.*?\d+\.\d+\.\d+\.\d+/i,
+    /Pinging\s+[^\s<]+?\s+with\s+\d+\s+bytes\s+of\s+data:/i,
+    /Reply\s+from\s+\d+\.\d+\.\d+\.\d+:\s*bytes=\d+/i,
+    /traceroute\s+to\s+[^\s<]+?\s*\(?\d+\.\d+\.\d+\.\d+/i,
   ];
   for (const rx of rcePatterns) {
-    if (rx.test(body)) { vulns.push({ type: 'rce', severity: 'critical', url: baseUrl, description: 'Potential RCE / command injection output detected in response', evidence: body.slice(0,200), confidence: 'potential' }); break; }
+    if (rx.test(body)) { vulns.push({ type: 'rce', severity: 'high', url: baseUrl, description: 'Response contains command-execution output artifacts (shell id / ping / cmd banner) — verify whether these result from an injected command or from benign page content', evidence: body.slice(0,200), confidence: 'potential' }); break; }
   }
 
-  // SSRF Detection
-  if (/169\.254\.169\.254/.test(body) || /169\.254\.169\.254/.test(url) || /metadata\.google\.internal/.test(body) || /metadata\.google\.internal/.test(url)) {
-    vulns.push({ type: 'ssrf', severity: 'critical', url: baseUrl, description: 'Potential SSRF — cloud metadata endpoint reflected in response', evidence: body.slice(0,200), confidence: 'likely' });
+  // SSRF Detection — fired ONLY when we actively probed the metadata endpoint (payload in URL) AND the response carries definitive cloud-metadata content.
+  // A body merely mentioning 169.254.169.254 / metadata.google.internal (docs, config examples) is NOT SSRF.
+  if ((/169\.254\.169\.254/.test(url) && /(?:ami-id|instance-id|local-ipv4|iam\/security-credentials|meta-data|user-data)/i.test(body)) || (/metadata\.google\.internal/.test(url) && /computeMetadata|numeric-project-id|project\/project-id/i.test(body))) {
+    vulns.push({ type: 'ssrf', severity: 'critical', url: baseUrl, description: 'SSRF confirmed — cloud metadata endpoint reflected with metadata content', evidence: body.slice(0,200), confidence: 'confirmed' });
   }
 
-  // XXE Detection
+  // XXE Detection — entity declarations can appear in documentation/sample XML, so this is 'potential' unless proven by the active XXE probe
   if (/<!ENTITY\s+.*?SYSTEM\s+["']file:\/\//i.test(body) || /<!DOCTYPE\s+.*?\[.*?<!ENTITY\s+.*?SYSTEM\s+["']file:\/\//i.test(body)) {
-    vulns.push({ type: 'xxe', severity: 'critical', url: baseUrl, description: 'Potential XXE — external entity declaration detected in response', evidence: body.slice(0,200), confidence: 'likely' });
+    vulns.push({ type: 'xxe', severity: 'medium', url: baseUrl, description: 'External entity declaration (file://) present in response — may indicate XXE or documentation/sample XML; verify whether the server reflects attacker-controlled input', evidence: body.slice(0,200), confidence: 'potential' });
   }
 
-  // Open Redirect
-  const location = headers['location'] || '';
-  if (location && /^https?:\/\//.test(location) && !location.includes(new URL(url).hostname)) {
-    vulns.push({ type: 'open_redirect', severity: 'medium', url: baseUrl, description: 'Open redirect — Location header points to external domain', evidence: location, confidence: 'confirmed' });
-  }
-  if (body.includes('<meta http-equiv="refresh"') && /url\s*=\s*https?:\/\//i.test(body)) {
-    vulns.push({ type: 'open_redirect', severity: 'medium', url: baseUrl, description: 'Meta refresh redirect to external domain detected', evidence: body.slice(0,200), confidence: 'likely' });
-  }
+  // Open Redirect — intentionally NOT reported from passive analysis. Site-level external redirects (domain migration, locale switching)
+  // are the site's own behavior and are NOT attacker-controlled redirects, so they caused false positives.
+  // Open redirects are only reported by the active parameter probe, which compares against a baseline Location and
+  // cross-validates multiple payloads (payload echo or >=2 distinct external destinations).
 
-  // CORS Misconfiguration
+  // CORS Misconfiguration — NOTE: 'Access-Control-Allow-Origin: *' alone is STANDARD for public APIs/CDNs and is not flagged.
+  // The active probe (Origin: https://evil.com) confirms arbitrary-origin reflection.
   const acao = headers['access-control-allow-origin'] || '';
   const acac = headers['access-control-allow-credentials'] || '';
   if (acao === '*' && /true|1/i.test(acac)) {
-    vulns.push({ type: 'cors', severity: 'high', url: baseUrl, description: 'CORS wildcard + credentials enabled — allows authenticated cross-origin attacks', evidence: `Origin: ${acao}, Credentials: ${acac}`, confidence: 'confirmed' });
+    vulns.push({ type: 'cors', severity: 'medium', url: baseUrl, description: 'CORS wildcard + credentials header combination — browsers block credentialed requests with a wildcard, but the combination signals a configuration error', evidence: `Origin: ${acao}, Credentials: ${acac}`, confidence: 'confirmed' });
   }
   if (acao && acao.includes('evil.com') && /true|1/i.test(acac)) {
     vulns.push({ type: 'cors', severity: 'high', url: baseUrl, description: 'CORS reflects attacker-controlled origin with credentials — allows authenticated cross-origin attacks', evidence: `Origin: ${acao}, Credentials: ${acac}`, confidence: 'confirmed' });
   }
 
-  // CSRF (missing token detection)
+  // CSRF (missing token detection) — heuristic only. Modern frameworks (Next.js, Laravel, Rails, Django)
+  // add CSRF tokens client-side or rely on SameSite cookies, so a token absent from HTML is NOT proof of
+  // a vulnerability. Reported as low/'potential' with honest wording.
   if (/<form[^>]*method=["']?(post|put|delete|patch)["']?/i.test(body) && !/<input[^>]*name=["']?(_token|csrf|csrfmiddlewaretoken|authenticity_token|__RequestVerificationToken)["']?/i.test(body)) {
     const samesite = ( headers['set-cookie'] || '' ).toLowerCase();
     if (!samesite.includes('samesite=strict') && !samesite.includes('samesite=lax')) {
-      vulns.push({ type: 'csrf', severity: 'high', url: baseUrl, description: 'Form submission without CSRF token + missing SameSite cookie policy', evidence: body.slice(0,200), confidence: 'likely' });
+      vulns.push({ type: 'csrf', severity: 'low', url: baseUrl, description: 'Form with state-changing method but no visible CSRF token and no SameSite cookie policy — possible CSRF; modern frameworks often protect client-side, not confirmed by scan', evidence: body.slice(0,200), confidence: 'potential' });
     }
   }
 
-  // Missing Security Headers
-  for (const h of SECURITY_HEADERS) {
-    if (!headers[h.toLowerCase()] && !headers[h]) {
-      const severity: 'high' | 'medium' | 'low' = h === 'Strict-Transport-Security' ? 'high' : h === 'Content-Security-Policy' ? 'high' : h === 'X-Frame-Options' ? 'medium' : h === 'X-Content-Type-Options' ? 'medium' : 'low';
-      vulns.push({ type: 'missing_header', severity, url: baseUrl, description: `Missing security header: ${h}`, evidence: 'Header not present in response', confidence: 'confirmed' });
+  // Cookie security issues — ONLY session-like cookies are audited. Tracking/analytics/consent cookies
+  // (GA, cookie banners, ad pixels) legitimately lack HttpOnly/Secure/SameSite and caused false positives.
+  // Note: fetchURL joins multiple Set-Cookie headers into one ', '-separated string (and lowercases all
+  // header names), so cookies are re-segmented with Expires-aware splitting before evaluation.
+  const sessionCookieNameRx = /(?:^|([a-z0-9_.-]*?(?:session|sid|token|auth|jwt|login|remember|csrf|xsrf|logged)[a-z0-9_.-]*?))\s*=/i;
+  const setCookieRaw = headers['set-cookie'] || '';
+  const isHttps = url.startsWith('https://');
+  if (setCookieRaw) {
+    const segments: string[] = [];
+    for (const seg of setCookieRaw.split(/,\s*/).filter(Boolean)) {
+      if (/^\d{1,2}\s+[A-Za-z]{3}\s+\d{4}/.test(seg) && segments.length) segments[segments.length - 1] += ', ' + seg; // Expires date continuation
+      else segments.push(seg);
     }
-  }
-
-  // Cookie security issues
-  const setCookie = headers['set-cookie'] || '';
-  if (setCookie) {
-    const cookies = Array.isArray(setCookie) ? setCookie : [setCookie];
-    for (const c of cookies) {
+    for (const c of segments) {
+      const name = c.split('=')[0].trim().toLowerCase();
+      if (!sessionCookieNameRx.test(name)) continue;
       const lower = c.toLowerCase();
-      if (!lower.includes('httponly')) vulns.push({ type: 'cookie_issue', severity: 'medium', url: baseUrl, description: 'Cookie missing HttpOnly flag', evidence: c.slice(0,100), confidence: 'confirmed' });
-      if (!lower.includes('secure')) vulns.push({ type: 'cookie_issue', severity: 'medium', url: baseUrl, description: 'Cookie missing Secure flag', evidence: c.slice(0,100), confidence: 'confirmed' });
-      if (!lower.includes('samesite')) vulns.push({ type: 'cookie_issue', severity: 'medium', url: baseUrl, description: 'Cookie missing SameSite attribute', evidence: c.slice(0,100), confidence: 'confirmed' });
+      if (!lower.includes('httponly')) vulns.push({ type: 'cookie_issue', severity: 'medium', url: baseUrl, description: `Session cookie ${name} missing HttpOnly flag`, evidence: c.slice(0,100), confidence: 'confirmed' });
+      if (isHttps && !lower.includes('secure')) vulns.push({ type: 'cookie_issue', severity: 'medium', url: baseUrl, description: `Session cookie ${name} missing Secure flag`, evidence: c.slice(0,100), confidence: 'confirmed' });
+      if (!lower.includes('samesite')) vulns.push({ type: 'cookie_issue', severity: 'medium', url: baseUrl, description: `Session cookie ${name} missing SameSite attribute`, evidence: c.slice(0,100), confidence: 'confirmed' });
     }
   }
 
-  // Insecure HTTP Methods
+  // Insecure HTTP Methods — the Allow header only advertises supported methods; it does NOT prove they
+  // are enabled or enforced. Reported as low/'potential' with honest wording.
   const allow = headers['allow'] || '';
   if (/PUT|DELETE|TRACE|PATCH|CONNECT/.test(allow)) {
-    vulns.push({ type: 'insecure_method', severity: 'medium', url: baseUrl, description: 'Server advertises potentially dangerous HTTP methods', evidence: `Allow: ${allow}`, confidence: 'confirmed' });
+    vulns.push({ type: 'insecure_method', severity: 'low', url: baseUrl, description: `Server advertises potentially dangerous HTTP methods in Allow header — advertisement only, actual method behavior not verified`, evidence: `Allow: ${allow}`, confidence: 'potential' });
   }
 
-  // Info Disclosure
-  if (/.env/i.test(body) || /DB_HOST|DB_PASSWORD|API_KEY|SECRET_KEY|AWS_ACCESS_KEY|AKIA|private_key/i.test(body)) {
-    vulns.push({ type: 'info_disclosure', severity: 'critical', url: baseUrl, description: 'Sensitive configuration or credential leakage detected in response', evidence: body.slice(0,200), confidence: 'likely' });
+  // Info Disclosure — high-confidence secret formats only; skip login pages (they legitimately mention passwords)
+  const hasLoginForm = /<input[^>]*type=["']?password["']?/i.test(body);
+  if (!hasLoginForm) {
+    const secretRx = [
+      /\bAKIA[0-9A-Z]{16}\b/,
+      /-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----/,
+      /\bsk_live_[0-9a-zA-Z]{16,}/,
+      /\bghp_[0-9A-Za-z]{36}\b/,
+      /\bxox[baprs]-[0-9A-Za-z-]{10,}/,
+      /\bAIza[0-9A-Za-z_-]{35}\b/,
+      /\b(?:DB_|DATABASE_)?(?:PASSWORD|PASSWD)\s*=\s*["'][^"']{4,}["']/,
+      /\b(?:API_KEY|SECRET_KEY|ACCESS_KEY|PRIVATE_KEY|CLIENT_SECRET|APP_KEY|AUTH_TOKEN)\s*[:=]\s*["'][^"']{6,}["']/,
+    ];
+    if (secretRx.some(rx => rx.test(body))) {
+      vulns.push({ type: 'info_disclosure', severity: 'critical', url: baseUrl, description: 'Sensitive configuration or credential leakage detected in response', evidence: body.slice(0,200), confidence: 'likely' });
+    }
   }
 
-  // Sensitive Files / Directory Listing
-  const sensitivePaths = ['.git','.svn','.hg','.env','.htaccess','web.config','config.php','config.ini','settings.php','phpinfo.php','info.php','test.php','adminer.php','phpmyadmin','wp-config.php','.DS_Store','.bak','.old','.swp','.zip','.sql','.tar.gz','backup','dump.sql','database.sql'];
+  // Sensitive Files — only when the page actually REFERENCES such a path in href/src/action attributes.
+  // Checking the URL itself caused false positives (any URL containing 'backup', '.sql', '.zip', 'test.php'
+  // fired). Direct exposure of e.g. /.env is validated by the active path fuzzer with content markers.
+  const sensitivePaths = ['.git','.svn','.hg','.env','.htaccess','web.config','config.php','config.ini','settings.php','phpinfo.php','info.php','test.php','adminer.php','phpmyadmin','wp-config.php','.DS_Store','.bak','.old','.swp','.sql','.tar.gz','backup','dump.sql','database.sql'];
   for (const sp of sensitivePaths) {
-    if (body.toLowerCase().includes(sp.toLowerCase()) || url.toLowerCase().includes(sp.toLowerCase())) {
-      vulns.push({ type: 'sensitive_file', severity: 'high', url: baseUrl, description: `Sensitive file/path reference: ${sp}`, evidence: body.slice(0,200), confidence: 'likely' });
+    const esc = sp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const refRx = new RegExp(`(?:href|src|action|srcset|data-[a-z-]+)\\s*=\\s*["'][^"']*${esc}`, 'i');
+    if (refRx.test(body)) {
+      vulns.push({ type: 'sensitive_file', severity: 'medium', url: baseUrl, description: `Sensitive file/path referenced in page source: ${sp}`, evidence: body.slice(0,200), confidence: 'likely' });
       break;
     }
   }
@@ -1725,36 +2111,49 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
 
   // Weak Auth / Basic Auth without HTTPS
   if (headers['www-authenticate'] && !url.startsWith('https://')) {
-    vulns.push({ type: 'weak_auth', severity: 'high', url: baseUrl, description: 'HTTP Basic/Digest authentication over plaintext HTTP', evidence: headers['www-authenticate'], confidence: 'confirmed' });
+    vulns.push({ type: 'weak_auth', severity: 'medium', url: baseUrl, description: 'HTTP Basic/Digest authentication over plaintext HTTP', evidence: headers['www-authenticate'], confidence: 'confirmed' });
   }
 
-  // API Exposure
-  if (/\/__graphql/i.test(url) || /\/graphql/i.test(url) || body.includes('__schema') || body.includes('__type')) {
+  // API Exposure — GraphQL: plain body.includes('__schema') matched JavaScript bundles (type definitions);
+  // Swagger: /swagger|openapi/ word matches matched documentation text. Both now need real endpoint signals.
+  const graphqlUrl = /\/graphql|graphiql|playground|altair/i.test(url);
+  const graphqlSchemaBody = /__schema\s*[:{]|"query"\s*:\s*"IntrospectionQuery"|"__typename"/i.test(body);
+  if ((graphqlUrl && status === 200) || graphqlSchemaBody) {
     vulns.push({ type: 'graphql_issue', severity: 'medium', url: baseUrl, description: 'GraphQL endpoint detected — introspection may expose schema', evidence: url, confidence: 'likely' });
   }
-  if (/swagger|openapi|api-docs|\.swagger\.io/i.test(body) || /\/v\d+\/api-docs/i.test(url)) {
-    vulns.push({ type: 'api_exposure', severity: 'medium', url: baseUrl, description: 'API documentation exposed (Swagger/OpenAPI)', evidence: url, confidence: 'likely' });
+  const swaggerSchema = /"swagger"\s*:\s*"2\.0"|"openapi"\s*:\s*"3\.|"paths"\s*:\s*\{|"info"\s*:\s*\{/.test(body);
+  const swaggerUi = /swagger-ui|swagger ui|swagger-ui\.(?:js|css)|swagger\.(?:json|ya?ml)/i.test(body);
+  if (swaggerSchema || swaggerUi || (/\/v\d+\/api-docs|\/swagger\.(json|ya?ml)/i.test(url) && status === 200)) {
+    vulns.push({ type: 'api_exposure', severity: 'medium', url: baseUrl, description: 'API documentation exposed (Swagger/OpenAPI schema or UI)', evidence: url, confidence: 'likely' });
   }
 
   // WordPress Specific
-  if (/xmlrpc\.php/i.test(url) || body.includes('xmlrpc.php')) {
+  // XML-RPC — body.includes('xmlrpc.php') matched error pages that merely echo the requested path.
+  // Require either a pingback <link> reference or a genuine XML-RPC response at the xmlrpc.php URL.
+  const wpxmlrpcUrl = /xmlrpc\.php/i.test(url);
+  const pingbackRef = /rel=["']pingback["'][^>]*xmlrpc\.php|<link[^>]*xmlrpc\.php[^>]*rel=["']pingback["']/i.test(body);
+  const xmlrpcResp = wpxmlrpcUrl && status === 200 && /<\?xml|<methodResponse|<methodCall|<fault/i.test(body.slice(0, 500));
+  if (pingbackRef || xmlrpcResp) {
     vulns.push({ type: 'wordpress_issue', severity: 'medium', url: baseUrl, description: 'WordPress XML-RPC exposed — potential for brute-force / pingback abuse', evidence: url, confidence: 'confirmed' });
   }
   if (/\/wp-content\/uploads\//i.test(body) || /\/wp-includes\//i.test(body)) {
-    if (body.includes('wp-config.php') || body.includes('.env')) {
-      vulns.push({ type: 'wordpress_issue', severity: 'high', url: baseUrl, description: 'WordPress sensitive configuration file accessible', evidence: body.slice(0,200), confidence: 'likely' });
+    // Require actual wp-config constants — merely mentioning 'wp-config.php' or '.env' (docs, articles) is not exposure.
+    if (/define\s*\(\s*["'](?:DB_NAME|DB_USER|DB_PASSWORD|DB_HOST|AUTH_KEY|SECURE_AUTH_KEY|LOGGED_IN_KEY|NONCE_KEY|AUTH_SALT)["']/i.test(body)) {
+      vulns.push({ type: 'wordpress_issue', severity: 'high', url: baseUrl, description: 'WordPress configuration constants (DB credentials/keys) exposed in response', evidence: body.slice(0,200), confidence: 'likely' });
     }
   }
 
-  // Brute-force protection absence (login forms without rate limiting hints)
+  // Brute-force protection — header absence does NOT prove missing server-side rate limiting; keep as a
+  // low confidence heuristic with honest wording.
   if (/<input[^>]*type=["']?password["']?/i.test(body) && !headers['x-ratelimit-limit'] && !headers['retry-after']) {
-    vulns.push({ type: 'brute_force', severity: 'low', url: baseUrl, description: 'Login form without visible rate-limiting headers', evidence: 'Password input found, no X-RateLimit-* or Retry-After header', confidence: 'potential' });
+    vulns.push({ type: 'brute_force', severity: 'low', url: baseUrl, description: 'Login form found but no rate-limit headers observed — possible brute-force exposure; server-side limiting may still exist and was not verified', evidence: 'Password input found, no X-RateLimit-* or Retry-After header', confidence: 'potential' });
   }
 
-  // IDOR pattern (numeric IDs in URL with no auth check indication)
+  // IDOR heuristic — numeric IDs in URLs are normal REST design; authorization is NOT testable passively.
+  // Downgraded to low/'potential' with explicit "not validated" wording.
   const idMatch = url.match(/\/(\d{1,10})(\/|$)/);
   if (idMatch && status === 200 && !headers['www-authenticate'] && !body.includes('access denied') && !body.includes('unauthorized')) {
-    vulns.push({ type: 'idor', severity: 'medium', url: baseUrl, description: 'Sequential numeric ID in URL with no apparent authorization barrier — possible IDOR', evidence: `ID: ${idMatch[1]}`, confidence: 'potential' });
+    vulns.push({ type: 'idor', severity: 'low', url: baseUrl, description: `Sequential numeric ID in URL (${idMatch[1]}) with no apparent authorization barrier — possible IDOR, not validated by scan`, evidence: `ID: ${idMatch[1]}`, confidence: 'potential' });
   }
 
   return vulns;
@@ -1799,6 +2198,12 @@ async function probePaths(baseUrl: string, timeout=8000): Promise<WebVuln[]> {
   const u = new URL(baseUrl);
   const proto = u.protocol;
   const tests = COMMON_PATHS.slice(0,40); // limit for serverless performance
+  // Baseline: random path response — detects soft-404 / SPA fallback where ANY path returns the same content
+  let baselineBody = '';
+  try {
+    const ctrl = await fetchURL(`${proto}//${u.host}/__ss_control_${Math.random().toString(36).slice(2,8)}`, 'GET', { 'Connection': 'close' }, undefined, timeout);
+    baselineBody = ctrl.body;
+  } catch {}
   await Promise.all(tests.map(async (p) => {
     try {
       const testUrl = `${proto}//${u.host}${p}`;
@@ -1806,14 +2211,19 @@ async function probePaths(baseUrl: string, timeout=8000): Promise<WebVuln[]> {
       if (res.status >= 200 && res.status < 400) {
         foundPaths.push(testUrl);
         const bodyLower = res.body.toLowerCase();
-        if (p === '/.env' && (res.body.includes('DB_HOST') || res.body.includes('API_KEY') || res.body.includes('SECRET'))) {
+        const isSoft404 = baselineBody.length > 0 && res.body === baselineBody;
+        if (p === '/.env' && !isSoft404 && /(?:DB_HOST|DB_PASSWORD|DB_USER|DB_NAME|API_KEY|SECRET_KEY|APP_KEY|AWS_ACCESS_KEY_ID|DATABASE_URL|JWT_SECRET)\s*=/i.test(res.body)) {
           vulns.push({ type: 'info_disclosure', severity: 'critical', url: testUrl, description: 'Environment file (.env) exposed — contains secrets/credentials', evidence: res.body.slice(0,200), confidence: 'confirmed' });
         }
-        if (p === '/.git/config' && res.body.includes('[core]')) {
+        if (p === '/.git/config' && !isSoft404 && res.body.includes('[core]')) {
           vulns.push({ type: 'info_disclosure', severity: 'critical', url: testUrl, description: 'Git repository exposed — source code and history accessible', evidence: res.body.slice(0,200), confidence: 'confirmed' });
         }
         if (p === '/config.php' || p === '/config.json' || p === '/web.config') {
-          if (res.body.includes('password') || res.body.includes('key') || res.body.includes('secret')) {
+          const b = res.body;
+          const isPhp = p === '/config.php' && /<\?php/i.test(b) && /(?:password|passwd|secret|api[_-]?key|token|db[_-]?(?:host|name|user|pass))\s*=\s*["']?[^"';\s]{3,}/i.test(b);
+          const isJson = p === '/config.json' && (b.trim().startsWith('{') || b.trim().startsWith('[')) && /"(?:password|passwd|secret|api[_-]?key|token|private[_-]?key|access[_-]?key|client[_-]?secret)"\s*:/i.test(b);
+          const isWebConfig = p === '/web.config' && /<configuration/i.test(b) && /(?:password|connectionString|apiKey|secret|token)/i.test(b);
+          if (!isSoft404 && (isPhp || isJson || isWebConfig)) {
             vulns.push({ type: 'info_disclosure', severity: 'critical', url: testUrl, description: `Config file ${p} exposed with sensitive data`, evidence: res.body.slice(0,200), confidence: 'confirmed' });
           }
         }
@@ -1855,6 +2265,37 @@ async function probePaths(baseUrl: string, timeout=8000): Promise<WebVuln[]> {
 }
 
 // ─── Active Parameter Injection Tester ──────────────────────────────────────
+// ─── Lightweight same-origin crawler (endpoint discovery) ──────────────────
+// Passive and bounded: it parses links, forms and inline API paths already present in the
+// fetched HTML, stays on-origin, skips static assets and destructive verbs. No extra crawling
+// beyond the page that was already retrieved, so scan time and request volume stay predictable.
+async function crawlEndpoints(baseUrl: string, html: string): Promise<string[]> {
+  const found = new Set<string>();
+  let base: URL;
+  try { base = new URL(baseUrl); } catch { return []; }
+  const origin = `${base.protocol}//${base.host}`;
+  const skipAsset = /\.(?:png|jpe?g|gif|svg|webp|ico|css|js|mjs|map|woff2?|ttf|eot|mp4|webm|mp3|pdf|zip|gz|tgz|rar|7z|apk|exe|dmg|iso)$/i;
+  const destructive = /^\/(?:logout|signout|logoff|delete|remove|destroy|revoke|unsubscribe|drop)(?:\/|$)/i;
+  const push = (raw: string) => {
+    if (!raw || raw.length > 500) return;
+    if (/^(?:javascript:|mailto:|tel:|data:|#)/i.test(raw)) return;
+    let u: URL;
+    try { u = new URL(raw, baseUrl); } catch { return; }
+    if (u.origin !== origin) return;
+    if (skipAsset.test(u.pathname)) return;
+    if (destructive.test(u.pathname)) return;
+    u.hash = '';
+    found.add(u.toString());
+  };
+  const attrRx = /(?:href|action)\s*=\s*["']([^"']+)["']/gi;
+  let m: RegExpExecArray | null;
+  while ((m = attrRx.exec(html)) !== null) push(m[1]);
+  // Same-origin API paths referenced from inline JS or JSON config blobs
+  const apiRx = /["'](\/(?:api|v1|v2|v3|graphql|rest|admin|internal|oauth|auth)\/[A-Za-z0-9._~\-\/%]{1,200})["']/g;
+  while ((m = apiRx.exec(html)) !== null) push(m[1]);
+  return Array.from(found).slice(0, 60);
+}
+
 async function testParameterInjection(baseUrl: string, headers: Record<string, string>, body: string, status: number, timeout=8000): Promise<WebVuln[]> {
   const vulns: WebVuln[] = [];
   const u = new URL(baseUrl);
@@ -1913,15 +2354,19 @@ async function testParameterInjection(baseUrl: string, headers: Record<string, s
     }
   }));
 
-  // Active SSRF probe
-  const ssrfPayloads = ['http://169.254.169.254/latest/meta-data/', 'http://localhost/', 'http://127.0.0.1/', 'file:///etc/passwd'];
+  // Active SSRF probe — only definitive internal-content markers + control comparison (no bare localhost/127.0.0.1 body matches)
+  const ssrfPayloads = ['http://169.254.169.254/latest/meta-data/', 'http://169.254.169.254/latest/meta-data/iam/security-credentials/', 'file:///etc/passwd'];
   const ssrfParams = ['url','path','file','image','avatar','logo','photo','doc','download','redirect','return','callback','next','target','link','href','src','uri','host','domain','site','page','web','api','endpoint','service','proxy','fetch','load','import','include','require','source','origin','referer','request'];
+  let ssrfControlBody = '';
+  try { const ctrl = await fetchURL(base, 'GET', { 'Connection': 'close' }, undefined, timeout); ssrfControlBody = ctrl.body; } catch {}
   await Promise.all(ssrfParams.slice(0,10).map(async (param) => {
-    for (const payload of ssrfPayloads.slice(0,2)) {
+    for (const payload of ssrfPayloads) {
       try {
         const testUrl = `${base}?${param}=${encodeURIComponent(payload)}`;
         const res = await fetchURL(testUrl, 'GET', { 'Connection': 'close' }, undefined, timeout);
-        if (res.body.includes('ami-id') || res.body.includes('instance-id') || res.body.includes('local-ipv4') || res.body.includes('root:x:') || res.status === 200 && /localhost|127\.0\.0\.1|internal/.test(res.body)) {
+        const rb = res.body;
+        const definitive = /ami-id|instance-id|local-ipv4|iam\/security-credentials|root:x:0:0|daemon:x:|bin:x:|sys:x:/i.test(rb);
+        if (definitive && rb !== ssrfControlBody) {
           vulns.push({ type: 'ssrf', severity: 'critical', url: testUrl, description: `SSRF confirmed — parameter "${param}" fetches internal resource: "${payload}"`, evidence: res.body.slice(0,200), confidence: 'confirmed' });
           return;
         }
@@ -1929,18 +2374,25 @@ async function testParameterInjection(baseUrl: string, headers: Record<string, s
     }
   }));
 
-  // Open Redirect probe
+  // Open Redirect probe — baseline Location comparison + external-host check
   const redirectPayloads = ['https://evil.com', '//evil.com', '/\\evil.com', 'http://evil.com', 'https://www.google.com'];
   const redirectParams = ['redirect','return','next','url','link','target','goto','return_url','callback','continue','forward','dest','destination','redir','uri','path','to','from','source','ref','referrer'];
+  let baselineLoc = '';
+  try { const baseRes = await fetchURL(base, 'GET', { 'Connection': 'close' }, undefined, timeout); baselineLoc = baseRes.headers['location'] || ''; } catch {}
   await Promise.all(redirectParams.slice(0,10).map(async (param) => {
     for (const payload of redirectPayloads) {
       try {
         const testUrl = `${base}?${param}=${encodeURIComponent(payload)}`;
         const res = await fetchURL(testUrl, 'GET', { 'Connection': 'close' }, undefined, timeout);
         const loc = res.headers['location'] || '';
-        if (loc.includes('evil.com') || loc.includes('google.com') && !loc.includes(u.hostname)) {
-          vulns.push({ type: 'open_redirect', severity: 'high', url: testUrl, description: `Open redirect confirmed — parameter "${param}" redirects to external domain without validation`, evidence: `Location: ${loc}`, confidence: 'confirmed' });
-          return;
+        if (res.status >= 300 && res.status < 400 && loc && loc !== baselineLoc) {
+          let locHost = '';
+          try { locHost = new URL(loc, testUrl).hostname; } catch {}
+          const isExternal = !!locHost && locHost !== u.hostname && !locHost.endsWith('.' + u.hostname) && !u.hostname.endsWith('.' + locHost);
+          if (isExternal) {
+            vulns.push({ type: 'open_redirect', severity: 'high', url: testUrl, description: `Open redirect confirmed — parameter "${param}" redirects to external domain without validation`, evidence: `Location: ${loc}`, confidence: 'confirmed' });
+            return;
+          }
         }
       } catch {}
     }
@@ -1954,7 +2406,7 @@ async function testParameterInjection(baseUrl: string, headers: Record<string, s
       try {
         const testUrl = `${base}?${param}=${encodeURIComponent(payload)}`;
         const res = await fetchURL(testUrl, 'GET', { 'Connection': 'close' }, undefined, timeout);
-        if (/root:x:0:0|root:x:0:0|daemon:x|bin:x|sys:x|nogroup|nobody|passwd|shadow|win.ini|\[fonts\]|\[extensions\]|\[mci extensions\]|for 16-bit app support/i.test(res.body)) {
+        if (/root:x:0:0|daemon:x:|bin:x:|sys:x:|nogroup:|nobody:|\[fonts\]|\[extensions\]|\[mci extensions\]|for 16-bit app support/i.test(res.body)) {
           vulns.push({ type: 'lfi', severity: 'critical', url: testUrl, description: `Local File Inclusion (LFI) confirmed — parameter "${param}" reads system files with "${payload}"`, evidence: res.body.slice(0,200), confidence: 'confirmed' });
           return;
         }
@@ -2220,62 +2672,64 @@ async function analyzeSSLInfo(headers: Record<string, string>, url: string): Pro
   info.beastPoodle = info.tls10 || info.tls11;
   info.heartbleed = /OpenSSL\/(0\.9\.[a-f]|1\.0\.1[a-f])/.test(headers['server'] || '');
   info.logjam = /DH\s*1024|DHE_EXPORT/i.test(cipher);
-  info.crime = /deflate/i.test(headers['content-encoding'] || '');
-  info.breach = /gzip/i.test(headers['content-encoding'] || '');
   info.renegotiationSecure = !(/OpenSSL\/(0\.9\.[a-f]|1\.0\.0[a-f])/.test(headers['server'] || ''));
   info.selfSigned = /self signed/i.test(headers['subject'] || '');
   info.valid = true;
   info.tlsVersion = info.tls13 ? 'TLSv1.3' : info.tls12 ? 'TLSv1.2' : info.tls11 ? 'TLSv1.1' : info.tls10 ? 'TLSv1.0' : 'Unknown';
 
-  // Real TLS certificate fetch via openssl CLI (bypasses HTTP proxies)
+  // Real TLS certificate fetch via Node tls.connect (no external binaries — works on serverless runtimes)
   if (url.startsWith('https')) {
     try {
       const u = new URL(url);
       const host = u.hostname;
       const port = parseInt(u.port || '443');
-
-      // Get cert details
-      const { stdout: certOut } = await execAsync(`echo | timeout 5 openssl s_client -connect ${host}:${port} -servername ${host} 2>/dev/null | timeout 3 openssl x509 -noout -subject -issuer -dates -ext subjectAltName`, { timeout: 8000, maxBuffer: 1024 * 1024 });
-      const certLines = certOut.split('\n');
-      for (const line of certLines) {
-        if (line.startsWith('subject=')) {
-          info.certSubject = line.replace(/^subject=/, '').trim();
-          info.subject = info.certSubject;
+      const cert = await new Promise<{ subject: any; issuer: any; valid_from: string; valid_to: string; subjectaltname: string; protocol: string | null; cipher: string } | null>((resolve) => {
+        const socket = tlsConnect({ host, port, servername: host, rejectUnauthorized: false, timeout: 5000 });
+        const timer = setTimeout(() => { try { socket.destroy(); } catch {} resolve(null); }, 5000);
+        socket.once('secureConnect', () => {
+          try {
+            const c = socket.getPeerCertificate();
+            const proto = socket.getProtocol();
+            const cipher = socket.getCipher();
+            clearTimeout(timer);
+            socket.end();
+            resolve({ subject: c.subject, issuer: c.issuer, valid_from: c.valid_from, valid_to: c.valid_to, subjectaltname: c.subjectaltname || '', protocol: proto, cipher: cipher.name });
+          } catch { clearTimeout(timer); try { socket.destroy(); } catch {} resolve(null); }
+        });
+        socket.once('error', () => { clearTimeout(timer); resolve(null); });
+        socket.once('timeout', () => { clearTimeout(timer); try { socket.destroy(); } catch {} resolve(null); });
+      });
+      if (cert) {
+        const fmtSubject = (s: any) => s ? Object.entries(s).map(([k, v]) => `${k}=${v}`).join(', ') : '';
+        info.certSubject = fmtSubject(cert.subject);
+        info.subject = info.certSubject;
+        info.certIssuer = fmtSubject(cert.issuer);
+        info.issuer = info.certIssuer;
+        info.certValidFrom = cert.valid_from;
+        info.validFrom = cert.valid_from;
+        info.certValidTo = cert.valid_to;
+        info.validTo = cert.valid_to;
+        if (cert.subjectaltname) {
+          info.certSANs = cert.subjectaltname.split(', ').map(s => s.replace(/^DNS:/i, '')).filter(Boolean);
         }
-        if (line.startsWith('issuer=')) {
-          info.certIssuer = line.replace(/^issuer=/, '').trim();
-          info.issuer = info.certIssuer;
+        if (info.certValidTo) {
+          const toDate = new Date(info.certValidTo);
+          info.certDaysLeft = Math.max(0, Math.ceil((toDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+          info.daysRemaining = info.certDaysLeft;
+          info.certExpired = info.certDaysLeft <= 0;
         }
-        if (line.startsWith('notBefore=')) {
-          info.certValidFrom = line.replace(/^notBefore=/, '').trim();
-          info.validFrom = info.certValidFrom;
+        info.selfSigned = (cert.subject && cert.issuer && cert.subject.CN === cert.issuer.CN) || (cert.subject && cert.issuer && cert.subject.O && cert.subject.O === cert.issuer.O);
+        if (cert.protocol) {
+          info.tlsVersion = cert.protocol;
+          if (cert.protocol === 'TLSv1.3') info.tls13 = true;
+          else if (cert.protocol === 'TLSv1.2') info.tls12 = true;
+          else if (cert.protocol === 'TLSv1.1') info.tls11 = true;
+          else if (cert.protocol === 'TLSv1') info.tls10 = true;
         }
-        if (line.startsWith('notAfter=')) {
-          info.certValidTo = line.replace(/^notAfter=/, '').trim();
-          info.validTo = info.certValidTo;
+        if (cert.cipher) {
+          info.cipherSuite = cert.cipher;
+          info.weakCipher = /RC4|DES|3DES|MD5|NULL|EXPORT|anon/i.test(cert.cipher);
         }
-        if (line.includes('DNS:')) {
-          const sans = line.split(',').map(s => s.trim().replace(/^DNS:/i, '')).filter(Boolean);
-          info.certSANs = sans;
-        }
-      }
-      if (info.certValidTo) {
-        const toDate = new Date(info.certValidTo);
-        info.certDaysLeft = Math.max(0, Math.ceil((toDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-        info.daysRemaining = info.certDaysLeft;
-        info.certExpired = info.certDaysLeft <= 0;
-      }
-      info.selfSigned = info.certSubject === info.certIssuer || (info.certIssuer || '').includes(info.certSubject || '');
-
-      // Get TLS version and cipher
-      const { stdout: tlsOut } = await execAsync(`echo | timeout 5 openssl s_client -connect ${host}:${port} -servername ${host} 2>/dev/null | grep -E "(Protocol|Cipher)" | head -2`, { timeout: 8000, maxBuffer: 1024 * 1024 });
-      const protoMatch = tlsOut.match(/Protocol:\s*(TLSv[\d.]+)/i);
-      if (protoMatch) {
-        info.tlsVersion = protoMatch[1];
-        if (info.tlsVersion === 'TLSv1.3') info.tls13 = true;
-        else if (info.tlsVersion === 'TLSv1.2') info.tls12 = true;
-        else if (info.tlsVersion === 'TLSv1.1') info.tls11 = true;
-        else if (info.tlsVersion === 'TLSv1.0') info.tls10 = true;
       }
     } catch {}
   }
@@ -2483,6 +2937,7 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                 if (DANGEROUS_PORTS.has(port)) findings.push({ type:'dangerous_service', severity:'high', port, service:svc, description:`${svc} exposed on port ${port}`, evidence: probe.body.slice(0,120)});
                 if (EXPOSABLE_DB_PORTS.has(port)) findings.push({ type:'exposed_database', severity:'critical', port, service:svc, description:`Database ${svc} exposed on port ${port}`, evidence: probe.body.slice(0,120)});
                 let webVulns: WebVuln[] = [];
+                let discoveredEndpoints: string[] = [];
                 let sslInfo: SSLInfo | null = null;
                 let sslGrade: DiscoveredAsset['sslGrade'] = undefined;
                 let sslChecked = false;
@@ -2498,13 +2953,15 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                     try { const pathVulns = await probePaths(finalUrl, timeout); webVulns.push(...pathVulns); } catch {}
                     // Active parameter injection testing
                     try { const injectVulns = await testParameterInjection(finalUrl, web.headers, web.body, web.status, timeout); webVulns.push(...injectVulns); } catch {}
+                    // Lightweight same-origin endpoint discovery (links, forms, inline API paths)
+                    try { discoveredEndpoints = await crawlEndpoints(finalUrl, web.body); } catch {}
                     // CMS / framework deep probe
                     try { const cmsRes = await probeCMS(finalUrl, web.body, web.headers, timeout); if (cmsRes.techs.length) { techs.push(...cmsRes.techs.map(t => ({...t, category: 'CMS'}))); cves.push(...mapCVEs(cmsRes.techs.map(t => ({...t, category: 'CMS'}))).filter(c=>!cves.some(ex=>ex.id===c.id))); } webVulns.push(...cmsRes.vulns); } catch {}
                     const techsWeb = detectTechnologies(web.headers, web.body);
                     cves.push(...mapCVEs(techsWeb).filter(c=>!cves.some(ex=>ex.id===c.id)));
                     waf = detectWAF(web.headers, web.body);
-                    // SSL cert check: only for first HTTPS asset to avoid timeout
-                    if (!sslChecked) {
+                    // SSL cert check: only for HTTPS assets to avoid timeouts and false findings on plain HTTP
+                    if (!sslChecked && (port===443 || port===8443 || finalUrl.startsWith('https://'))) {
                       sslChecked = true;
                       sslInfo = await analyzeSSLInfo(web.headers, finalUrl);
                     }
@@ -2515,29 +2972,52 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                       const m = serverHdrWeb.match(/^([A-Za-z][A-Za-z0-9._\-]+)(?:\/(\d[\d.]+))?/i);
                       if (m) { svc = m[1]; svcVersion = m[2] || null; }
                     }
-                    // Security header findings
+                    // Security header findings — skip on 3xx responses (headers belong to the redirect target)
                     const secHeaders = web.headers;
-                    if (!secHeaders['strict-transport-security']) findings.push({ type:'missing_header', severity:'medium', port, service:svc, description:'HSTS header missing', evidence:'No Strict-Transport-Security header' });
-                    if (!secHeaders['content-security-policy']) findings.push({ type:'missing_header', severity:'medium', port, service:svc, description:'CSP header missing', evidence:'No Content-Security-Policy header' });
-                    if (!secHeaders['x-frame-options']) findings.push({ type:'missing_header', severity:'medium', port, service:svc, description:'X-Frame-Options header missing (clickjacking)', evidence:'No X-Frame-Options header' });
-                    if (!secHeaders['x-content-type-options']) findings.push({ type:'missing_header', severity:'low', port, service:svc, description:'X-Content-Type-Options header missing', evidence:'No X-Content-Type-Options header' });
-                    if (!secHeaders['referrer-policy']) findings.push({ type:'missing_header', severity:'info', port, service:svc, description:'Referrer-Policy header missing', evidence:'No Referrer-Policy header' });
-                    if (!secHeaders['permissions-policy']) findings.push({ type:'missing_header', severity:'info', port, service:svc, description:'Permissions-Policy header missing', evidence:'No Permissions-Policy header' });
+                    if (web.status < 300 || web.status >= 400) {
+                      const headerSeverity: Record<string, string> = {
+                        'Strict-Transport-Security': 'medium',
+                        'Content-Security-Policy': 'medium',
+                        'X-Frame-Options': 'medium',
+                        'X-Content-Type-Options': 'low',
+                        'Referrer-Policy': 'info',
+                        'Permissions-Policy': 'info',
+                        'Cross-Origin-Embedder-Policy': 'info',
+                        'Cross-Origin-Opener-Policy': 'info',
+                        'Cross-Origin-Resource-Policy': 'info',
+                      };
+                      for (const h of SECURITY_HEADERS) {
+                        if (h === 'Strict-Transport-Security' && !(port===443 || port===8443 || finalUrl.startsWith('https://'))) continue;
+                        if (!secHeaders[h.toLowerCase()]) findings.push({ type:'missing_header', severity: headerSeverity[h] as any, port, service:svc, description:`${h} header missing`, evidence:`No ${h} header` });
+                      }
+                    }
                     if (serverHdrWeb && /\d/.test(serverHdrWeb)) findings.push({ type:'info_disclosure', severity:'low', port, service:svc, description:'Server header exposes version information', evidence: serverHdrWeb.slice(0,60) });
-                    // SSL findings from analyzeSSLInfo
+                    // SSL findings from analyzeSSLInfo (HSTS covered by the missing_header loop above)
                     if (sslInfo) {
-                      if (!sslInfo.hsts) findings.push({ type:'ssl_weakness', severity:'medium', port, service:svc, description:'HSTS not enforced on HTTPS connection', evidence:'No Strict-Transport-Security' });
                       if (sslInfo.tls10 || sslInfo.tls11 || sslInfo.weakCipher || sslInfo.beastPoodle) findings.push({ type:'ssl_weakness', severity:'critical', port, service:svc, description:'Weak TLS protocol or cipher suite detected', evidence: `TLS=${sslInfo.tlsVersion}, weakCipher=${sslInfo.weakCipher}` });
                       if (sslInfo.certExpired || sslInfo.selfSigned) findings.push({ type:'ssl_weakness', severity:'high', port, service:svc, description:'Certificate expired or self-signed', evidence: `expired=${sslInfo.certExpired}, selfSigned=${sslInfo.selfSigned}` });
                     }
                   } catch {}
                 } else if ([80,443,8080,8443,3000,5000,8000,9000].includes(port)) {
-                  // Even if fetchURL failed, create findings from bannerGrab headers
+                  // Even if fetchURL failed, create findings from bannerGrab headers (skip on redirects)
                   const ph = probe.headers;
-                  if (ph['strict-transport-security'] === undefined && (port===443||port===8443)) findings.push({ type:'missing_header', severity:'medium', port, service:svc, description:'HSTS header missing', evidence:'No Strict-Transport-Security in probe' });
-                  if (ph['x-frame-options'] === undefined) findings.push({ type:'missing_header', severity:'medium', port, service:svc, description:'X-Frame-Options header missing', evidence:'No X-Frame-Options in probe' });
-                  if (ph['content-security-policy'] === undefined) findings.push({ type:'missing_header', severity:'medium', port, service:svc, description:'CSP header missing', evidence:'No Content-Security-Policy in probe' });
-                  if (ph['x-content-type-options'] === undefined) findings.push({ type:'missing_header', severity:'low', port, service:svc, description:'X-Content-Type-Options header missing', evidence:'No X-Content-Type-Options in probe' });
+                  if (probe.status < 300 || probe.status >= 400) {
+                    const headerSeverity: Record<string, string> = {
+                      'Strict-Transport-Security': 'medium',
+                      'Content-Security-Policy': 'medium',
+                      'X-Frame-Options': 'medium',
+                      'X-Content-Type-Options': 'low',
+                      'Referrer-Policy': 'info',
+                      'Permissions-Policy': 'info',
+                      'Cross-Origin-Embedder-Policy': 'info',
+                      'Cross-Origin-Opener-Policy': 'info',
+                      'Cross-Origin-Resource-Policy': 'info',
+                    };
+                    for (const h of SECURITY_HEADERS) {
+                      if (h === 'Strict-Transport-Security' && !(port===443 || port===8443)) continue;
+                      if (ph[h.toLowerCase()] === undefined) findings.push({ type:'missing_header', severity: headerSeverity[h] as any, port, service:svc, description:`${h} header missing`, evidence:`No ${h} in probe` });
+                    }
+                  }
                   if ((ph['server'] || '').match(/\d/)) findings.push({ type:'info_disclosure', severity:'low', port, service:svc, description:'Server header exposes version', evidence: (ph['server']||'').slice(0,60) });
                   // Skip SSL cert check for subdomains to prevent timeout
                 }
@@ -2560,7 +3040,7 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                   version: techVer,
                   cves: cves.map(c=>c.id), cveConfidence: cves.length>0 ? 'high' : 'low',
                   cloudProvider: null, riskScore: 0, findings, headers: (web && web.headers) ? web.headers : { server: (probe.headers['server'] || probe.body.slice(0,80)) }, sslInfo, sslGrade, waf,
-                  webVulns, firstSeen: new Date().toISOString(),
+                  webVulns, discoveredEndpoints, firstSeen: new Date().toISOString(),
                   complianceStatus: { owasp:[], pciDss:[], gdpr:[] },
                   cvssMax: cves.length ? Math.max(...cves.map(c=>c.cvss)) : 0,
                   exploitAvailable: cves.some(c=>c.exploitAvailable),
@@ -2587,60 +3067,60 @@ function calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[
     let score = 0;
     // Baseline: internet-exposed service on public IP
     score += 12;
-    score += a.port && a.port < 1024 ? 6 : 3;
+    score += a.port && a.port < 1024 ? 4 : 2;
     // Banner/technology enrichment bonus
-    if (a.banner && a.banner.length > 5) score += 6;
-    if (a.technology && a.technology !== 'Unknown' && a.technology !== 'HTTP' && a.technology !== 'HTTPS') score += 10;
-    if (a.version) score += 8;
+    if (a.banner && a.banner.length > 5) score += 3;
+    if (a.technology && a.technology !== 'Unknown' && a.technology !== 'HTTP' && a.technology !== 'HTTPS') score += 5;
+    if (a.version) score += 4;
     // Non-standard web port
-    if ([3000,5000,8000,8080,8081,9000,9090].includes(a.port)) score += 8;
+    if ([3000,5000,8000,8080,8081,9000,9090].includes(a.port)) score += 4;
     // CVE impact
     const cvssMax = a.cvssMax || 0;
-    const exploitBonus = a.exploitAvailable ? (cvssMax >= 9 ? 15 : cvssMax >= 7 ? 10 : cvssMax >= 5 ? 6 : 3) : 0;
-    score += Math.min(a.cves.length * 3, 24);
-    score += Math.min(cvssMax * 2.5, 45);
+    const exploitBonus = a.exploitAvailable ? (cvssMax >= 9 ? 8 : cvssMax >= 7 ? 6 : cvssMax >= 5 ? 4 : 2) : 0;
+    score += Math.min(a.cves.length * 2, 12);
+    score += Math.min(cvssMax * 1.5, 20);
     score += exploitBonus;
     // Port-based penalties
-    if (EXPOSABLE_DB_PORTS.has(a.port)) score += 35;
-    if (DANGEROUS_PORTS.has(a.port)) score += 28;
-    if ([21,23,3389,5900].includes(a.port)) score += 22;
+    if (EXPOSABLE_DB_PORTS.has(a.port)) score += 25;
+    if (DANGEROUS_PORTS.has(a.port)) score += 15;
+    if ([21,23,3389,5900].includes(a.port)) score += 10;
     // Web vulnerabilities (active scan results)
     let webScore = 0;
     for (const w of (a.webVulns||[])) {
-      if (w.severity === 'critical') webScore += 20;
-      else if (w.severity === 'high') webScore += 12;
-      else if (w.severity === 'medium') webScore += 5;
-      else webScore += 2;
+      if (w.severity === 'critical') webScore += 18;
+      else if (w.severity === 'high') webScore += 10;
+      else if (w.severity === 'medium') webScore += 4;
+      else webScore += 1;
     }
-    score += Math.min(webScore, 45);
-    // Missing security headers penalty (consolidated = high severity usually)
+    score += Math.min(webScore, 40);
+    // Missing security headers penalty
     const missingHeaders = a.findings.filter(f=>f.type==='missing_header').length;
-    score += Math.min(missingHeaders * 18, 35);
-    // SSL weakness penalty (consolidated)
+    score += Math.min(missingHeaders * 4, 12);
+    // SSL weakness penalty
     const sslWeak = a.findings.filter(f=>f.type==='ssl_weakness').length;
-    score += Math.min(sslWeak * 20, 35);
+    score += Math.min(sslWeak * 6, 15);
     // Info disclosure penalty
     const infoDisc = a.findings.filter(f=>f.type==='info_disclosure').length;
-    score += infoDisc * 18;
+    score += Math.min(infoDisc * 6, 15);
     // Exposed admin panel
     const exposedAdmin = a.findings.filter(f=>f.type==='exposed_admin').length;
-    score += exposedAdmin * 30;
+    score += exposedAdmin * 20;
     // DNS weakness
     const dnsWeak = a.findings.filter(f=>f.type==='dns_weakness').length;
-    score += dnsWeak * 12;
+    score += dnsWeak * 8;
     // Subdomain takeover
     const subTake = a.findings.filter(f=>f.type==='subdomain_takeover').length;
-    score += subTake * 40;
+    score += subTake * 30;
     // Findings severity direct sum
     const critFindings = a.findings.filter(f=>f.severity==='critical').length;
     const highFindings = a.findings.filter(f=>f.severity==='high').length;
     const medFindings = a.findings.filter(f=>f.severity==='medium').length;
-    score += Math.min(critFindings*25 + highFindings*15 + medFindings*6, 50);
+    score += Math.min(critFindings*20 + highFindings*10 + medFindings*4, 35);
     // SSL grade penalty
-    const sslPenalty = a.sslGrade==='F' ? 20 : a.sslGrade==='E' ? 14 : a.sslGrade==='D' ? 10 : a.sslGrade==='C' ? 5 : a.sslGrade==='T'?20 : a.sslGrade==='X'?20 : 0;
+    const sslPenalty = a.sslGrade==='F' ? 15 : a.sslGrade==='E' ? 10 : a.sslGrade==='D' ? 8 : a.sslGrade==='C' ? 4 : a.sslGrade==='T'?15 : a.sslGrade==='X'?15 : 0;
     score += sslPenalty;
     // WAF bonus
-    if (a.waf) score -= 6;
+    if (a.waf) score -= 5;
     a.riskScore = Math.min(Math.max(Math.round(score), 0), 95);
   }
   for (const c of cloudAssets) {

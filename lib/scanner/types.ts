@@ -116,6 +116,7 @@ export interface DiscoveredAsset {
   waf?: string | null;
   dnsRecords?: DNSRecord[];
   webVulns?: WebVuln[];
+  discoveredEndpoints?: string[];
   title?: string;
   redirects?: string[];
   firstSeen: string;
