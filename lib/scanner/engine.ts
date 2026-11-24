@@ -1956,26 +1956,9 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
     }
   }
 
-  // XSS Detection (reflected + stored patterns)
-  const xssPatterns = [
-    /<script[^>]*>.*?alert\(/i, /onerror\s*=\s*alert\(/i, /onload\s*=\s*alert\(/i,
-    /<img[^>]*src\s*=\s*[^>]*onerror/i, /<iframe[^>]*src\s*=\s*javascript:/i,
-    /<body[^>]*onload\s*=/i, /<input[^>]*onfocus\s*=/i, /<svg[^>]*onload\s*=/i,
-    /<div[^>]*style\s*=\s*[^>]*expression\(/i, /<a[^>]*href\s*=\s*javascript:/i,
-    /<object[^>]*data\s*=\s*javascript:/i, /<embed[^>]*src\s*=\s*javascript:/i,
-    /<link[^>]*rel\s*=\s*stylesheet[^>]*href\s*=\s*javascript:/i,
-    /<meta[^>]*http-equiv\s*=\s*refresh[^>]*content\s*=[^>]*url\s*=\s*javascript:/i,
-    /<form[^>]*action\s*=\s*javascript:/i, /<button[^>]*formaction\s*=\s*javascript:/i,
-    /<textarea[^>]*onfocus\s*=/i, /<select[^>]*onfocus\s*=/i,
-    /<video[^>]*onerror\s*=/i, /<audio[^>]*onerror\s*=/i,
-    /<source[^>]*onerror\s*=/i, /<track[^>]*onerror\s*=/i,
-    /<details[^>]*ontoggle\s*=/i, /<summary[^>]*onclick\s*=/i,
-    /<marquee[^>]*onstart\s*=/i, /<blink[^>]*onclick\s*=/i,
-  ];
-  // Passive XSS markup match is only 'potential': identical markup (demo alert() code, security articles, stored sample code) occurs in benign content. Real XSS is confirmed by the active reflection probe.
-  for (const rx of xssPatterns) {
-    if (rx.test(body)) { vulns.push({ type: 'xss', severity: 'medium', url: baseUrl, description: 'Injector-style XSS markup (alert/event-handler patterns) present in response — possible stored XSS or benign sample code; verify source', evidence: body.slice(0,200), confidence: 'potential' }); break; }
-  }
+  // XSS Detection
+  // Passive XSS markup is NOT reported: identical markup (demo alert() code, security articles, stored samples)
+  // occurs in benign pages, so a passive match is speculation. XSS is only reported by the active reflection probe.
 
   // LFI / Path Traversal (only strong signals: actual file content or encoded traversal echoes)
   const lfiPatterns = [
@@ -1994,19 +1977,9 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
     if (rx.test(body)) { vulns.push({ type: 'lfi', severity: 'critical', url: baseUrl, description: 'Path traversal / LFI vector — sensitive system content in response', evidence: body.slice(0,200), confidence: 'likely' }); break; }
   }
 
-  // RCE / Command Injection patterns — ONLY distinctive shell/cmd output artifacts.
-  // Removed: drwxr-xr-x / -rw-r--r-- (these are directory-listing/permission lines, NOT command output — they caused false 'RCE' hits),
-  // and bare 'Server:/Address:' IP lines which occur in ordinary page text. Active probes confirm real command injection with control comparison.
-  const rcePatterns = [
-    /uid\s*=\s*\d+\s*\(\w+\)\s*gid\s*=\s*\d+\s*\(\w+\)/i,
-    /Microsoft Windows \[Version\s+\d+\.\d+\]/i,
-    /Pinging\s+[^\s<]+?\s+with\s+\d+\s+bytes\s+of\s+data:/i,
-    /Reply\s+from\s+\d+\.\d+\.\d+\.\d+:\s*bytes=\d+/i,
-    /traceroute\s+to\s+[^\s<]+?\s*\(?\d+\.\d+\.\d+\.\d+/i,
-  ];
-  for (const rx of rcePatterns) {
-    if (rx.test(body)) { vulns.push({ type: 'rce', severity: 'high', url: baseUrl, description: 'Response contains command-execution output artifacts (shell id / ping / cmd banner) — verify whether these result from an injected command or from benign page content', evidence: body.slice(0,200), confidence: 'potential' }); break; }
-  }
+  // RCE / Command Injection
+  // Passive RCE artifacts are NOT reported: ping/id banners appear in ordinary documentation and status pages.
+  // Command injection is only reported by the active probe with a control comparison.
 
   // SSRF Detection — fired ONLY when we actively probed the metadata endpoint (payload in URL) AND the response carries definitive cloud-metadata content.
   // A body merely mentioning 169.254.169.254 / metadata.google.internal (docs, config examples) is NOT SSRF.
@@ -2014,10 +1987,8 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
     vulns.push({ type: 'ssrf', severity: 'critical', url: baseUrl, description: 'SSRF confirmed — cloud metadata endpoint reflected with metadata content', evidence: body.slice(0,200), confidence: 'confirmed' });
   }
 
-  // XXE Detection — entity declarations can appear in documentation/sample XML, so this is 'potential' unless proven by the active XXE probe
-  if (/<!ENTITY\s+.*?SYSTEM\s+["']file:\/\//i.test(body) || /<!DOCTYPE\s+.*?\[.*?<!ENTITY\s+.*?SYSTEM\s+["']file:\/\//i.test(body)) {
-    vulns.push({ type: 'xxe', severity: 'medium', url: baseUrl, description: 'External entity declaration (file://) present in response — may indicate XXE or documentation/sample XML; verify whether the server reflects attacker-controlled input', evidence: body.slice(0,200), confidence: 'potential' });
-  }
+  // XXE is NOT inferred passively: entity declarations legitimately appear in documentation and sample XML.
+  // It is only reported when the active XXE probe confirms entity expansion.
 
   // Open Redirect — intentionally NOT reported from passive analysis. Site-level external redirects (domain migration, locale switching)
   // are the site's own behavior and are NOT attacker-controlled redirects, so they caused false positives.
@@ -2035,15 +2006,9 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
     vulns.push({ type: 'cors', severity: 'high', url: baseUrl, description: 'CORS reflects attacker-controlled origin with credentials — allows authenticated cross-origin attacks', evidence: `Origin: ${acao}, Credentials: ${acac}`, confidence: 'confirmed' });
   }
 
-  // CSRF (missing token detection) — heuristic only. Modern frameworks (Next.js, Laravel, Rails, Django)
-  // add CSRF tokens client-side or rely on SameSite cookies, so a token absent from HTML is NOT proof of
-  // a vulnerability. Reported as low/'potential' with honest wording.
-  if (/<form[^>]*method=["']?(post|put|delete|patch)["']?/i.test(body) && !/<input[^>]*name=["']?(_token|csrf|csrfmiddlewaretoken|authenticity_token|__RequestVerificationToken)["']?/i.test(body)) {
-    const samesite = ( headers['set-cookie'] || '' ).toLowerCase();
-    if (!samesite.includes('samesite=strict') && !samesite.includes('samesite=lax')) {
-      vulns.push({ type: 'csrf', severity: 'low', url: baseUrl, description: 'Form with state-changing method but no visible CSRF token and no SameSite cookie policy — possible CSRF; modern frameworks often protect client-side, not confirmed by scan', evidence: body.slice(0,200), confidence: 'potential' });
-    }
-  }
+  // CSRF is NOT inferred from HTML: tokens are frequently issued in headers, double-submit cookies, or
+  // enforced by SameSite defaults. A token absent from markup is not evidence of a vulnerability, so the
+  // passive heuristic was removed rather than reported as a speculative finding.
 
   // Cookie security issues — ONLY session-like cookies are audited. Tracking/analytics/consent cookies
   // (GA, cookie banners, ad pixels) legitimately lack HttpOnly/Secure/SameSite and caused false positives.
@@ -2145,18 +2110,9 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
     }
   }
 
-  // Brute-force protection — header absence does NOT prove missing server-side rate limiting; keep as a
-  // low confidence heuristic with honest wording.
-  if (/<input[^>]*type=["']?password["']?/i.test(body) && !headers['x-ratelimit-limit'] && !headers['retry-after']) {
-    vulns.push({ type: 'brute_force', severity: 'low', url: baseUrl, description: 'Login form found but no rate-limit headers observed — possible brute-force exposure; server-side limiting may still exist and was not verified', evidence: 'Password input found, no X-RateLimit-* or Retry-After header', confidence: 'potential' });
-  }
-
-  // IDOR heuristic — numeric IDs in URLs are normal REST design; authorization is NOT testable passively.
-  // Downgraded to low/'potential' with explicit "not validated" wording.
-  const idMatch = url.match(/\/(\d{1,10})(\/|$)/);
-  if (idMatch && status === 200 && !headers['www-authenticate'] && !body.includes('access denied') && !body.includes('unauthorized')) {
-    vulns.push({ type: 'idor', severity: 'low', url: baseUrl, description: `Sequential numeric ID in URL (${idMatch[1]}) with no apparent authorization barrier — possible IDOR, not validated by scan`, evidence: `ID: ${idMatch[1]}`, confidence: 'potential' });
-  }
+  // Brute-force protection and IDOR are NOT inferred passively: the absence of rate-limit headers does not
+  // prove missing server-side limiting, and a numeric URL segment does not prove missing authorization.
+  // Both require targeted, authorized active testing and are therefore omitted instead of guessed.
 
   return vulns;
 }
@@ -2997,10 +2953,18 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                         'Cross-Origin-Opener-Policy': 'info',
                         'Cross-Origin-Resource-Policy': 'info',
                       };
+                      const missingHdrs: string[] = [];
+                      let hdrWorst: 'medium' | 'low' | 'info' = 'info';
                       for (const h of SECURITY_HEADERS) {
                         if (h === 'Strict-Transport-Security' && !(port===443 || port===8443 || finalUrl.startsWith('https://'))) continue;
-                        if (!secHeaders[h.toLowerCase()]) findings.push({ type:'missing_header', severity: headerSeverity[h] as any, port, service:svc, description:`${h} header missing`, evidence:`No ${h} header` });
+                        if (secHeaders[h.toLowerCase()]) continue;
+                        missingHdrs.push(h);
+                        const sev = headerSeverity[h];
+                        if (sev === 'medium') hdrWorst = 'medium';
+                        else if (sev === 'low' && hdrWorst !== 'medium') hdrWorst = 'low';
                       }
+                      // One consolidated finding per asset instead of one line per header
+                      if (missingHdrs.length) findings.push({ type:'missing_header', severity: hdrWorst, port, service:svc, description:`Missing security headers (${missingHdrs.length}): ${missingHdrs.join(', ')}`, evidence:`Absent: ${missingHdrs.join(', ')}` });
                     }
                     if (serverHdrWeb && /\d/.test(serverHdrWeb)) findings.push({ type:'info_disclosure', severity:'low', port, service:svc, description:'Server header exposes version information', evidence: serverHdrWeb.slice(0,60) });
                     // SSL findings from analyzeSSLInfo (HSTS covered by the missing_header loop above)
@@ -3024,10 +2988,17 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                       'Cross-Origin-Opener-Policy': 'info',
                       'Cross-Origin-Resource-Policy': 'info',
                     };
+                    const missingHdrsProbe: string[] = [];
+                    let hdrWorstProbe: 'medium' | 'low' | 'info' = 'info';
                     for (const h of SECURITY_HEADERS) {
                       if (h === 'Strict-Transport-Security' && !(port===443 || port===8443)) continue;
-                      if (ph[h.toLowerCase()] === undefined) findings.push({ type:'missing_header', severity: headerSeverity[h] as any, port, service:svc, description:`${h} header missing`, evidence:`No ${h} in probe` });
+                      if (ph[h.toLowerCase()] !== undefined) continue;
+                      missingHdrsProbe.push(h);
+                      const sev = headerSeverity[h];
+                      if (sev === 'medium') hdrWorstProbe = 'medium';
+                      else if (sev === 'low' && hdrWorstProbe !== 'medium') hdrWorstProbe = 'low';
                     }
+                    if (missingHdrsProbe.length) findings.push({ type:'missing_header', severity: hdrWorstProbe, port, service:svc, description:`Missing security headers (${missingHdrsProbe.length}): ${missingHdrsProbe.join(', ')}`, evidence:`Absent (probe): ${missingHdrsProbe.join(', ')}` });
                   }
                   if ((ph['server'] || '').match(/\d/)) findings.push({ type:'info_disclosure', severity:'low', port, service:svc, description:'Server header exposes version', evidence: (ph['server']||'').slice(0,60) });
                   // Skip SSL cert check for subdomains to prevent timeout
@@ -3106,7 +3077,7 @@ function calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[
     score += Math.min(webScore, 40);
     // Missing security headers penalty
     const missingHeaders = a.findings.filter(f=>f.type==='missing_header').length;
-    score += Math.min(missingHeaders * 4, 12);
+    score += Math.min(missingHeaders * 6, 12);
     // SSL weakness penalty
     const sslWeak = a.findings.filter(f=>f.type==='ssl_weakness').length;
     score += Math.min(sslWeak * 6, 15);
