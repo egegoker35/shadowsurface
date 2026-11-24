@@ -1193,9 +1193,6 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2019-11041',techRegex:/PHP[\/ ]7\.1\.(?:[0-9]|[12][0-9]|30)\b|PHP[\/ ]7\.2\.(?:[0-9]|1[0-9])\b|PHP[\/ ]7\.3\.[0-6]\b/,cvss:7.5,exploitAvailable:true,cwe:'CWE-190',description:'PHP exif integer overflow leading to heap overflow'},
   {id:'CVE-2018-19518',techRegex:/PHP[\/ ]5\.[4-6]\.\d+|PHP[\/ ]7\.[01]\.\d+|PHP[\/ ]7\.2\.(?:[0-9]|1[0-2])\b/,cvss:8.1,exploitAvailable:true,cwe:'CWE-78',description:'PHP imap_open remote command execution'},
   // cPanel/WHM CVEs
-  {id:'CVE-2022-44877',techRegex:/cPanel[\/ ]11\.\d+/,cvss:6.1,exploitAvailable:true,cwe:'CWE-79',description:'cPanel & WHM stored XSS'},
-  {id:'CVE-2021-20486',techRegex:/cPanel[\/ ]11\.[0-9]+\d/,cvss:7.8,exploitAvailable:true,cwe:'CWE-269',description:'cPanel privilege escalation via arbitrary file write'},
-  {id:'CVE-2020-10124',techRegex:/cPanel[\/ ]11\.\d+/,cvss:8.1,exploitAvailable:true,cwe:'CWE-89',description:'cPanel SQL injection in API'},
   {id:'CVE-2021-41773',techRegex:/Apache\/2\.4\.4[0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-22',description:'Apache 2.4.49 path traversal and RCE'},
   {id:'CVE-2021-42013',techRegex:/Apache\/2\.4\.50/,cvss:9.8,exploitAvailable:true,cwe:'CWE-22',description:'Apache 2.4.50 path traversal and RCE'},
   {id:'CVE-2017-9805',techRegex:/Struts[\/ ]2\.[0-5]\.\d+/,cvss:8.1,exploitAvailable:true,cwe:'CWE-502',description:'Apache Struts REST plugin XStream RCE'},
@@ -1221,17 +1218,14 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2023-20198',techRegex:/Cisco[ ]IOS[ ]XE[\/ ]1[7-8]\.\d+/,cvss:10,exploitAvailable:true,cwe:'CWE-306',description:'Cisco IOS XE Web UI privilege escalation'},
   {id:'CVE-2024-21762',techRegex:/FortiOS.*7\.[0-4]\.[0-2]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-787',description:'FortiOS out-of-bounds write in SSL VPN'},
   {id:'CVE-2022-40684',techRegex:/FortiOS.*7\.[0-2]\.[0-4]|FortiOS.*6\.[0-4]\.[0-9]/,cvss:9.6,exploitAvailable:true,cwe:'CWE-306',description:'FortiOS/FortiProxy/FortiSwitchManager auth bypass'},
-  {id:'CVE-2021-22105',techRegex:/FortiOS.*6\.[0-4]\.[0-9]/,cvss:8.8,exploitAvailable:false,cwe:'CWE-502',description:'FortiOS log4j deserialization'},
   {id:'CVE-2022-26134',techRegex:/Confluence.*7\.[0-1][0-8]|Confluence.*8\.[0-3]\./,cvss:9.8,exploitAvailable:true,cwe:'CWE-78',description:'Confluence OGNL injection RCE'},
   {id:'CVE-2023-22515',techRegex:/Confluence.*8\.[0-4]\./,cvss:9.8,exploitAvailable:true,cwe:'CWE-287',description:'Confluence broken access control leading to RCE'},
   {id:'CVE-2023-22527',techRegex:/Confluence.*7\.[0-1][0-9]|Confluence.*8\.[0-4]\./,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Confluence template injection RCE'},
-  {id:'CVE-2024-21647',techRegex:/Confluence.*8\.[0-5]\./,cvss:9.8,exploitAvailable:true,cwe:'CWE-78',description:'Confluence Velocity template injection RCE'},
   {id:'CVE-2022-2884',techRegex:/GitLab.*1[0-4]/,cvss:9.9,exploitAvailable:true,cwe:'CWE-94',description:'GitLab RCE via ImportRepository'},
   {id:'CVE-2021-22205',techRegex:/GitLab.*13\.[0-1][0-9]|GitLab.*14\.0/,cvss:10,exploitAvailable:true,cwe:'CWE-78',description:'GitLab RCE via ExifTool'},
   {id:'CVE-2022-2185',techRegex:/GitLab.*1[0-5]/,cvss:9.9,exploitAvailable:true,cwe:'CWE-94',description:'GitLab RCE via Project Import'},
   {id:'CVE-2024-0402',techRegex:/GitLab.*1[0-6]/,cvss:9.6,exploitAvailable:true,cwe:'CWE-94',description:'GitLab RCE via pipeline job token'},
   {id:'CVE-2024-23897',techRegex:/Jenkins[\/ ]2\.4[0-4][0-9]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-22',description:'Jenkins CLI arbitrary file read (leads to RCE)'},
-  {id:'CVE-2024-22243',techRegex:/Jenkins.*2\.[0-4][0-2][0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-22',description:'Jenkins CLI arbitrary file read (follow-up)'},
   {id:'CVE-2022-34174',techRegex:/Jenkins.*2\.[0-3][0-5][0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-77',description:'Jenkins agent-to-controller escape'},
   {id:'CVE-2024-20295',techRegex:/Cisco.*IOS.*XE.*17\.[0-1][0-3]/,cvss:8.6,exploitAvailable:true,cwe:'CWE-78',description:'Cisco IOS XE Web UI command injection'},
   {id:'CVE-2023-20273',techRegex:/Cisco[ ]IOS[ ]XE[\/ ]1[7-8]\.\d+/,cvss:7.2,exploitAvailable:true,cwe:'CWE-78',description:'Cisco IOS XE Web UI command injection'},
@@ -1269,22 +1263,9 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2024-21626',techRegex:/runc.*1\.1\.[0-1][0-1]/,cvss:8.6,exploitAvailable:true,cwe:'CWE-22',description:'runc container breakout via workdir fd'},
   {id:'CVE-2023-24329',techRegex:/Python.*3\.[0-9]\.[0-1][0-5]|Python.*3\.10\.[0-9]|Python.*3\.11\.[0-3]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-20',description:'Python urllib request smuggling'},
   {id:'CVE-2024-29041',techRegex:/express.*4\.[1][0-9]/,cvss:6.1,exploitAvailable:true,cwe:'CWE-1321',description:'Express qs prototype pollution (follow-up)'},
-  {id:'CVE-2024-1318',techRegex:/OpenSSL.*3\.0\.[0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-295',description:'OpenSSL X.509 verify chain denial of service'},
-  {id:'CVE-2024-22231',techRegex:/Jira.*9\.[0-1][0-2]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-89',description:'Jira SQL injection via JQL function'},
-  {id:'CVE-2024-1397',techRegex:/Laravel.*10\.[0-4]|Laravel.*11\.0/,cvss:7.5,exploitAvailable:false,cwe:'CWE-918',description:'Laravel HTTP client SSRF'},
-  {id:'CVE-2024-23367',techRegex:/Nuxt.*3\.[0-9]|Nuxt.*2\.[1][0-5]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-200',description:'Nuxt.js information disclosure'},
-  {id:'CVE-2024-23346',techRegex:/Django.*4\.[0-2]\.[0-9]|Django.*5\.0\.[0-1]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-89',description:'Django SQL injection via Trunc'},
   {id:'CVE-2024-26141',techRegex:/Rails.*7\.[0-1]\.|Rails.*6\.1\./,cvss:5.3,exploitAvailable:false,cwe:'CWE-20',description:'Rails DoS via Range header'},
-  {id:'CVE-2024-23368',techRegex:/Vue.*3\.[0-3]\.[0-4]/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'Vue.js XSS via v-html directive'},
-  {id:'CVE-2024-28102',techRegex:/Angular.*1[0-7]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-79',description:'Angular XSS via bypassSecurityTrustHtml'},
-  {id:'CVE-2024-23369',techRegex:/React.*18\.[0-2]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-79',description:'React XSS via server component rendering'},
-  {id:'CVE-2024-23370',techRegex:/jquery.*3\.[0-7]/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'jQuery XSS via HTML parsing'},
   {id:'CVE-2024-23444',techRegex:/Elasticsearch.*8\.[0-1][0-1]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-78',description:'Elasticsearch script engine RCE'},
-  {id:'CVE-2024-23372',techRegex:/Redis.*7\.0\.[0-1][0-5]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-77',description:'Redis Lua sandbox escape via bitop'},
   {id:'CVE-2024-0985',techRegex:/PostgreSQL[\/ ](?:11\.(?:[0-9]|1[0-9]|2[0-2])\b|12\.(?:[0-9]|1[0-7])\b|13\.(?:[0-9]|1[0-3])\b|14\.(?:[0-9]|10)\b|15\.[0-5]\b|16\.[0-1]\b)/,cvss:7.5,exploitAvailable:false,cwe:'CWE-89',description:'PostgreSQL SQL injection via MERGE'},
-  {id:'CVE-2024-23374',techRegex:/MySQL.*8\.0\.[0-3][0-5]/,cvss:5.9,exploitAvailable:false,cwe:'CWE-200',description:'MySQL InnoDB data leak via FTS'},
-  {id:'CVE-2024-23375',techRegex:/MongoDB.*6\.[0-3]\.|MongoDB.*7\.0\.[0-2]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-89',description:'MongoDB $where SQL injection'},
-  {id:'CVE-2024-23376',techRegex:/Nginx.*1\.[0-2][0-5]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-200',description:'Nginx HTTP/2 Rapid Reset variant'},
   {id:'CVE-2023-4911',techRegex:/glibc.*2\.[0-3][0-9]/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'glibc ld.so buffer overflow (Looney Tunables)'},
   {id:'CVE-2024-1086',techRegex:/Linux.*5\.[0-1][0-5]|Linux.*6\.[0-6]/,cvss:7.8,exploitAvailable:true,cwe:'CWE-362',description:'Linux kernel use-after-free in netfilter (privesc)'},
   {id:'CVE-2023-29331',techRegex:/\.NET.*[4-7]\./,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'.NET Kestrel HTTP/2 rapid reset'},
@@ -1294,9 +1275,6 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2023-3824',techRegex:/PHP\/8\.[0-2]\.[0-9]/,cvss:7.5,exploitAvailable:false,cwe:'CWE-125',description:'PHP buffer over-read in exif'},
   {id:'CVE-2024-22245',techRegex:/VMware.*vCenter.*7\.0|VMware.*vCenter.*8\.0/,cvss:8.8,exploitAvailable:true,cwe:'CWE-200',description:'vCenter Server SSRF via content library'},
   {id:'CVE-2024-20716',techRegex:/Magento.*2\.4\.[0-6]/,cvss:8.1,exploitAvailable:true,cwe:'CWE-89',description:'Magento SQL injection via CMS block'},
-  {id:'CVE-2024-1398',techRegex:/PrestaShop.*8\.[0-1]/,cvss:8.8,exploitAvailable:true,cwe:'CWE-94',description:'PrestaShop RCE via module controller'},
-  {id:'CVE-2023-0299',techRegex:/WordPress.*6\.[0-1]\./,cvss:6.5,exploitAvailable:false,cwe:'CWE-352',description:'WordPress CSRF via plugin deletion'},
-  {id:'CVE-2021-24891',techRegex:/Yoast[ ]SEO[\/ ]1[4-8]\.\d+/,cvss:6.1,exploitAvailable:true,cwe:'CWE-79',description:'Yoast SEO XSS'},
   {id:'CVE-2020-11984',techRegex:/mod_proxy/i,cvss:7.5,exploitAvailable:false,cwe:'CWE-918',description:'mod_proxy_uwsgi info disclosure'},
   {id:'CVE-2021-21285',techRegex:/Docker.*19|Docker.*20\.10\.[0-2]/,cvss:6.5,exploitAvailable:false,cwe:'CWE-400',description:'Docker daemon denial of service'},
   {id:'CVE-2019-5736',techRegex:/runc.*1\.[0-9]/,cvss:8.6,exploitAvailable:true,cwe:'CWE-78',description:'runc container escape via overwritten host binary'},
@@ -1310,7 +1288,6 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2022-3602',techRegex:/OpenSSL.*3\.0\.[0-6]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-787',description:'OpenSSL X.509 email address buffer overflow'},
   {id:'CVE-2023-0286',techRegex:/OpenSSL.*1\.1\.[0-1]|OpenSSL.*3\.0\.[0-7]/,cvss:7.4,exploitAvailable:true,cwe:'CWE-476',description:'OpenSSL NULL pointer deref in X.509 policy'},
   {id:'CVE-2021-3177',techRegex:/Python.*3\.[0-9]\.[0-9]|Python.*3\.10\.[0-1]|Python.*3.11\.0/,cvss:9.8,exploitAvailable:true,cwe:'CWE-120',description:'Python buffer overflow in ctypes'},
-  {id:'CVE-2022-37454',techRegex:/Python.*3\.[0-9]\.[0-1][0-5]|Python.*3\.10\.[0-7]|Python.*3.11\.0/,cvss:9.8,exploitAvailable:true,cwe:'CWE-190',description:'Python hashlib SHA3 buffer overflow'},
   {id:'CVE-2022-28738',techRegex:/Ruby.*3\.[0-1]\.[0-1]/,cvss:9.8,exploitAvailable:true,cwe:'CWE-416',description:'Ruby Regexp double free'},
   {id:'CVE-2022-30635',techRegex:/go.*1\.[0-1][0-7]\./,cvss:7.5,exploitAvailable:true,cwe:'CWE-400',description:'Go archive/zip resource exhaustion'},
   {id:'CVE-2022-41715',techRegex:/go.*1\.[0-1][0-8]\./,cvss:7.5,exploitAvailable:true,cwe:'CWE-400',description:'Go regexp ReDoS'},
@@ -1318,12 +1295,7 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2023-30861',techRegex:/Flask.*2\.[0-2]\.[0-2]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-200',description:'Flask sensitive cookie exposure via cache'},
   {id:'CVE-2022-24999',techRegex:/Express[\/ ]4\.[0-9]+\.\d+/,cvss:7.5,exploitAvailable:true,cwe:'CWE-1321',description:'Express qs prototype pollution'},
   {id:'CVE-2024-24762',techRegex:/fastapi.*0\.[0-1][0-9][0-9]/,cvss:7.5,exploitAvailable:false,cwe:'CWE-200',description:'FastAPI DoS via multipart form parsing'},
-  {id:'CVE-2022-32229',techRegex:/Next\.js.*12\.[0-2]\.[0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-918',description:'Next.js SSRF via image optimization'},
-  {id:'CVE-2023-28431',techRegex:/Next\.js.*13\.[0-2]\.[0-9]/,cvss:6.5,exploitAvailable:false,cwe:'CWE-918',description:'Next.js information exposure via middleware'},
-  {id:'CVE-2022-2687',techRegex:/Nuxt.*2\.[0-1][0-5]/,cvss:6.5,exploitAvailable:false,cwe:'CWE-200',description:'Nuxt.js server-side request forgery'},
   {id:'CVE-2022-25844',techRegex:/Angular.*1[0-5]/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'Angular XSS via HTML sanitizer bypass'},
-  {id:'CVE-2021-23346',techRegex:/React.*17\.[0-1]|React.*18\.0/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'React XSS via dangerouslySetInnerHTML'},
-  {id:'CVE-2023-22467',techRegex:/React.*18\.[0-2]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-20',description:'React DoS via useId hook'},
   {id:'CVE-2019-0211',techRegex:/Apache\/2\.4/,cvss:7.8,exploitAvailable:true,cwe:'CWE-362',description:'Apache root privilege escalation'},
   {id:'CVE-2022-41741',techRegex:/Nginx[\/ ]1\.(?:[0-9]|1[0-9]|2[0-2])\.\d+|Nginx[\/ ]1\.23\.[0-1]\b/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'Nginx mp4 module memory corruption'},
   {id:'CVE-2019-9511',techRegex:/Nginx[\/ ]1\.(?:[0-9]|1[0-5])\.\d+|Nginx[\/ ]1\.16\.0\b|Nginx[\/ ]1\.17\.[0-2]\b/,cvss:7.5,exploitAvailable:true,cwe:'CWE-770',description:'Nginx HTTP/2 resource loop (Data Dribble)'},
@@ -1331,17 +1303,14 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2019-9516',techRegex:/Nginx[\/ ]1\.(?:[0-9]|1[0-5])\.\d+|Nginx[\/ ]1\.16\.0\b|Nginx[\/ ]1\.17\.[0-2]\b/,cvss:7.5,exploitAvailable:true,cwe:'CWE-770',description:'Nginx HTTP/2 resource loop (Zero Length)'},
   {id:'CVE-2022-1552',techRegex:/PostgreSQL[\/ ](?:10\.(?:[0-9]|1[0-9]|20)\b|11\.(?:[0-9]|1[0-5])\b|12\.(?:[0-9]|10)\b|13\.[0-6]\b|14\.[0-2]\b)/,cvss:8.8,exploitAvailable:false,cwe:'CWE-250',description:'PostgreSQL privilege escalation via CREATE TRIGGER'},
   {id:'CVE-2022-41862',techRegex:/PostgreSQL[\/ ](?:10\.(?:[0-9]|1[0-9]|2[0-3])\b|11\.(?:[0-9]|1[0-8])\b|12\.(?:[0-9]|1[0-3])\b|13\.[0-9]\b|14\.[0-6]\b|15\.[0-1]\b)/,cvss:5.9,exploitAvailable:false,cwe:'CWE-200',description:'PostgreSQL client password memory exposure'},
-  {id:'CVE-2020-22265',techRegex:/Memcached.*1\.[0-5]\.[0-9]/,cvss:5.9,exploitAvailable:true,cwe:'CWE-200',description:'Memcached info disclosure via SASL auth'},
   {id:'CVE-2021-22132',techRegex:/Elasticsearch.*7\.[0-1][0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-78',description:'Elasticsearch script RCE via SearchTemplate'},
   {id:'CVE-2023-28856',techRegex:/Redis.*7\.0\.[0-8]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-200',description:'Redis Lua script info leak via HINCRBYFLOAT'},
   {id:'CVE-2021-20330',techRegex:/MongoDB.*4\.[0-4]\./,cvss:6.5,exploitAvailable:false,cwe:'CWE-89',description:'MongoDB $regex SQL-like injection'},
   {id:'CVE-2022-21454',techRegex:/MySQL.*8\.0\.[0-2][0-9]/,cvss:5.9,exploitAvailable:false,cwe:'CWE-200',description:'MySQL information leak via InnoDB FTS'},
   {id:'CVE-2023-27522',techRegex:/Apache\/2\.4\.[0-5][0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-113',description:'Apache HTTP Server mod_proxy response splitting'},
-  {id:'CVE-2023-31124',techRegex:/Apache\/2\.4\.[0-5][0-9]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-200',description:'Apache HTTP Server info disclosure'},
   {id:'CVE-2023-24998',techRegex:/Tomcat.*10\.[0-1]\.[0-1][0-5]|Tomcat.*9\.0\.[0-7][0-9]|Tomcat.*8\.5\.[0-8][0-9]/,cvss:7.5,exploitAvailable:true,cwe:'CWE-400',description:'Tomcat denial of service via file upload'},
   {id:'CVE-2023-28709',techRegex:/Tomcat.*11\.0\.0-M[0-5]|Tomcat.*10\.1\.[0-8]|Tomcat.*9\.0\.[0-7][0-9]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-200',description:'Tomcat information disclosure via error page'},
   {id:'CVE-2023-41080',techRegex:/Tomcat.*11\.0\.0-M[0-9]|Tomcat.*10\.1\.[0-1][0-2]|Tomcat.*9\.0\.[0-7][0-9]/,cvss:8.8,exploitAvailable:false,cwe:'CWE-639',description:'Tomcat WebDAV privilege escalation'},
-  {id:'CVE-2022-21803',techRegex:/node.*v1[0-7]\./,cvss:7.5,exploitAvailable:false,cwe:'CWE-1321',description:'Node.js prototype pollution in URL parsing'},
   {id:'CVE-2023-23918',techRegex:/node.*v1[4-9]\./,cvss:7.5,exploitAvailable:false,cwe:'CWE-20',description:'Node.js permission bypass via process.binding'},
   {id:'CVE-2021-44790',techRegex:/Apache[\/ ]2\.4\.(?:4[0-9]|5[01])\b/,cvss:9.8,exploitAvailable:false,cwe:'CWE-787',description:'Apache mod_lua buffer overflow'},
   {id:'CVE-2022-22720',techRegex:/Apache[\/ ]2\.4\.(?:4[0-9]|5[0-2])\b/,cvss:9.8,exploitAvailable:false,cwe:'CWE-444',description:'Apache HTTP request smuggling via mod_proxy'},
@@ -1378,9 +1347,6 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2015-0235',techRegex:/glibc[\/ ]2\.(?:[0-9]|1[0-7])\b/,cvss:10,exploitAvailable:true,cwe:'CWE-787',description:'glibc gethostbyname buffer overflow (GHOST)'},
   {id:'CVE-2015-1635',techRegex:/IIS[\/ ](?:7|8)\.[05]\b/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'IIS HTTP.sys remote code execution'},
   {id:'CVE-2017-7269',techRegex:/IIS[\/ ]6\.0\b/,cvss:9.8,exploitAvailable:true,cwe:'CWE-120',description:'IIS 6.0 WebDAV ScStoragePathFromUrl overflow'},
-  {id:'CVE-2023-36478',techRegex:/IIS[\/ ]10\.0\b/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'HTTP/2 HPACK DoS (Windows)'},
-  {id:'CVE-2018-8174',techRegex:/ASP\.NET[\/ ]4\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-416',description:'VBScript engine use-after-free RCE'},
-  {id:'CVE-2020-0688',techRegex:/ASP\.NET[\/ ]4\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-798',description:'Exchange static machine key deserialization RCE'},
   {id:'CVE-2017-12617',techRegex:/Tomcat[\/ ](?:7\.0\.[0-7][0-9]|8\.[05]\.[0-9]+|9\.0\.[0-1][0-9])/,cvss:8.1,exploitAvailable:true,cwe:'CWE-434',description:'Tomcat JSP upload RCE via PUT'},
   {id:'CVE-2019-0232',techRegex:/Tomcat[\/ ](?:7\.0\.[0-5][0-9]|8\.5\.[0-3][0-9]|9\.0\.[0-1][0-9])/,cvss:8.1,exploitAvailable:true,cwe:'CWE-78',description:'Tomcat CGI Servlet command injection (Windows)'},
   {id:'CVE-2021-25329',techRegex:/Tomcat[\/ ](?:7\.0\.[0-9]+|8\.5\.[0-5][0-9]|9\.0\.[0-3][0-9])/,cvss:7.8,exploitAvailable:false,cwe:'CWE-1188',description:'Tomcat session persistence bypass'},
@@ -1403,13 +1369,9 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2022-21663',techRegex:/WordPress[\/ ]5\.[8-9]\.\d+/,cvss:8.8,exploitAvailable:false,cwe:'CWE-502',description:'WordPress object injection via meta data'},
   {id:'CVE-2023-2745',techRegex:/WordPress[\/ ]6\.[0-1]\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-22',description:'WordPress directory traversal in core'},
   {id:'CVE-2024-31210',techRegex:/WordPress[\/ ]6\.[1-5]\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-434',description:'WordPress plugin upload RCE by admin'},
-  {id:'CVE-2023-2982',techRegex:/Yoast[ ]SEO[\/ ](?:[0-9]|1[0-9]|20)\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-288',description:'Yoast SEO auth bypass via social login'},
   {id:'CVE-2023-28121',techRegex:/WooCommerce[\/ ]7\.[0-5]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-287',description:'WooCommerce Payments auth bypass'},
-  {id:'CVE-2024-4162',techRegex:/WooCommerce[\/ ]9\.[0-8]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-639',description:'WooCommerce unauthorized order access'},
   {id:'CVE-2021-24300',techRegex:/WooCommerce[\/ ]5\.\d+/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'WooCommerce stored XSS'},
-  {id:'CVE-2022-4111',techRegex:/Elementor[\/ ]3\.[0-9]+\.\d+/,cvss:8.1,exploitAvailable:true,cwe:'CWE-502',description:'Elementor Pro PHP object injection'},
   {id:'CVE-2023-48777',techRegex:/Elementor[\/ ]3\.[0-9]+\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-434',description:'Elementor arbitrary file upload RCE'},
-  {id:'CVE-2023-6875',techRegex:/Contact[ ]Form[ ]7[\/ ]5\.[0-8]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-502',description:'Contact Form 7 unauthenticated PHP object injection'},
   {id:'CVE-2024-28000',techRegex:/LiteSpeed[ ]Cache[\/ ](?:[0-6]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-287',description:'LiteSpeed Cache privilege escalation'},
   {id:'CVE-2023-6553',techRegex:/Backup[ ]Migration[\/ ](?:[0-9]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Backup Migration RCE via backup directory'},
   {id:'CVE-2024-1071',techRegex:/Ultimate[ ]Member[\/ ]2\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-89',description:'Ultimate Member SQL injection'},
@@ -1421,7 +1383,6 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2022-24086',techRegex:/Magento[\/ ]2\.[3-4]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Magento template filter RCE'},
   {id:'CVE-2022-35698',techRegex:/Magento[\/ ]2\.[3-4]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-79',description:'Magento stored XSS to RCE'},
   {id:'CVE-2024-34102',techRegex:/Magento[\/ ]2\.[4]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-611',description:'Magento Cosmic Sting XXE'},
-  {id:'CVE-2023-30150',techRegex:/PrestaShop[\/ ](?:1\.[6-7]\.\d+|8\.[0-1]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-89',description:'PrestaShop SQL injection'},
   {id:'CVE-2022-22963',techRegex:/Spring[ ]Cloud[ ]Function[\/ ]3\.[0-2]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Spring Cloud Function SpEL RCE'},
   {id:'CVE-2021-45046',techRegex:/Log4j[\/ ]2\.(?:[0-9]|1[0-5])\.\d+/,cvss:9,exploitAvailable:true,cwe:'CWE-77',description:'Log4j JNDI bypass incomplete fix'},
   {id:'CVE-2021-45105',techRegex:/Log4j[\/ ]2\.(?:[0-9]|1[0-6])\.\d+/,cvss:5.9,exploitAvailable:false,cwe:'CWE-674',description:'Log4j uncontrolled recursion DoS'},
@@ -1432,15 +1393,10 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2022-22818',techRegex:/Django[\/ ](?:2\.[2]\.\d+|3\.[0-2]\.\d+)/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'Django template tag XSS'},
   {id:'CVE-2023-46695',techRegex:/Django[\/ ](?:3\.[2]\.\d+|4\.[0-2]\.\d+)/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Django UsernameField DoS'},
   {id:'CVE-2022-36359',techRegex:/Django[\/ ](?:3\.[2]\.\d+|4\.[0-1]\.\d+)/,cvss:8.8,exploitAvailable:false,cwe:'CWE-79',description:'Django file upload XSS'},
-  {id:'CVE-2024-3651',techRegex:/Django[\/ ]5\.0\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Django idna DoS'},
-  {id:'CVE-2021-22942',techRegex:/Ruby[ ]on[ ]Rails[\/ ](?:5\.[0-2]\.\d+|6\.[0-1]\.\d+)/,cvss:6.1,exploitAvailable:false,cwe:'CWE-601',description:'Rails redirect_to host header injection'},
   {id:'CVE-2023-22795',techRegex:/Ruby[ ]on[ ]Rails[\/ ](?:6\.[1]\.\d+|7\.0\.[0-2])/,cvss:7.5,exploitAvailable:false,cwe:'CWE-1333',description:'Rails ReDoS in Action Dispatch'},
-  {id:'CVE-2019-5418',techRegex:/Ruby[ ]on[ ]Rails[\/ ](?:4\.[2]\.\d+|5\.[0-2]\.\d+)/,cvss:7.5,exploitAvailable:true,cwe:'CWE-22',description:'Rails file content disclosure via Accept'},
   {id:'CVE-2023-46809',techRegex:/Node\.js[\/ ](?:1[6-9]|20)\.\d+/,cvss:8.8,exploitAvailable:false,cwe:'CWE-385',description:'Node.js RSA PKCS#1 v1.5 timing variant'},
   {id:'CVE-2024-22019',techRegex:/Node\.js[\/ ](?:18|20|21)\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Node.js HTTP chunk extension DoS'},
   {id:'CVE-2023-30590',techRegex:/Node\.js[\/ ](?:14|16|18|20)\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-439',description:'Node.js generateKeys diffieHellman bypass'},
-  {id:'CVE-2020-8203',techRegex:/Node\.js[\/ ](?:1[0-8])\.\d+/,cvss:7.4,exploitAvailable:false,cwe:'CWE-1321',description:'lodash prototype pollution'},
-  {id:'CVE-2021-23450',techRegex:/Node\.js[\/ ](?:1[0-8])\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-1321',description:'dojo prototype pollution RCE'},
   {id:'CVE-2021-26857',techRegex:/Exchange[\/ ](?:15\.0[0-2]\.\d+|201[3-9])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-502',description:'ProxyLogon Exchange deserialization'},
   {id:'CVE-2021-27065',techRegex:/Exchange[\/ ](?:15\.0[0-2]\.\d+|201[3-9])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-22',description:'ProxyLogon arbitrary file write'},
   {id:'CVE-2022-41040',techRegex:/Exchange[\/ ](?:15\.0[0-2]\.\d+|201[6-9])/,cvss:8.8,exploitAvailable:true,cwe:'CWE-918',description:'ProxyNotShell SSRF'},
@@ -1469,12 +1425,9 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2022-0543',techRegex:/Redis[\/ ](?:5|6)\.\d+/,cvss:10,exploitAvailable:true,cwe:'CWE-862',description:'Redis Lua sandbox escape RCE (Debian)'},
   {id:'CVE-2023-45145',techRegex:/Redis[\/ ](?:6\.[0-2]\.\d+|7\.[0-1]\.\d+)/,cvss:3.6,exploitAvailable:false,cwe:'CWE-363',description:'Redis UNIX socket race condition'},
   {id:'CVE-2024-31449',techRegex:/Redis[\/ ](?:6\.2\.\d+|7\.2\.[0-5]\b|7\.4\.0\b)/,cvss:7,exploitAvailable:false,cwe:'CWE-787',description:'Redis Lua bit library stack overflow'},
-  {id:'CVE-2021-20328',techRegex:/MongoDB[\/ ](?:4\.[0-4]|5\.0)\.\d+/,cvss:6.4,exploitAvailable:false,cwe:'CWE-295',description:'MongoDB TLS certificate validation bypass'},
   {id:'CVE-2019-2386',techRegex:/MongoDB[\/ ](?:3\.[4-6]|4\.0)\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-384',description:'MongoDB post-auth session reuse'},
   {id:'CVE-2022-23708',techRegex:/Elasticsearch[\/ ](?:7\.[0-9]|7\.1[0-7]|8\.0)\.\d+/,cvss:4.3,exploitAvailable:false,cwe:'CWE-287',description:'Elasticsearch privilege escalation via snapshot'},
   {id:'CVE-2023-46673',techRegex:/Elasticsearch[\/ ](?:7\.[0-9]|7\.1[0-7]|8\.[0-9]|8\.1[01])\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-20',description:'Elasticsearch malformed file DoS'},
-  {id:'CVE-2023-31418',techRegex:/Kibana[\/ ](?:7\.[0-9]|7\.1[0-7]|8\.[0-9])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Kibana excessive resource consumption'},
-  {id:'CVE-2023-25826',techRegex:/RabbitMQ[\/ ]3\.(?:[0-9]|1[0-2])\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-863',description:'RabbitMQ improper authorization'},
   {id:'CVE-2021-22116',techRegex:/RabbitMQ[\/ ]3\.(?:[0-8])\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-400',description:'RabbitMQ DoS via crafted frame'},
   {id:'CVE-2023-25194',techRegex:/Kafka[\/ ](?:2\.[0-9]|3\.[0-3])\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-502',description:'Kafka Connect JNDI deserialization RCE'},
   {id:'CVE-2022-34917',techRegex:/Kafka[\/ ](?:3\.[0-2])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Kafka broker memory exhaustion'},
@@ -1492,7 +1445,6 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2024-21181',techRegex:/WebLogic[\/ ]14\.1\.\d+/,cvss:8.6,exploitAvailable:false,cwe:'CWE-502',description:'WebLogic unauthorized TLS deserialization'},
   {id:'CVE-2017-12149',techRegex:/JBoss[\/ ](?:5|6)\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-502',description:'JBoss HttpInvoker deserialization RCE'},
   {id:'CVE-2017-7504',techRegex:/JBoss[\/ ]4\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-502',description:'JBoss JMXInvokerServlet deserialization'},
-  {id:'CVE-2019-3807',techRegex:/WildFly[\/ ]1[0-7]\.\d+/,cvss:7.4,exploitAvailable:false,cwe:'CWE-295',description:'WildFly client certificate validation flaw'},
   {id:'CVE-2019-15505',techRegex:/Linux[ ]kernel[\/ ](?:3\.\d+|4\.\d+|5\.[0-2])/,cvss:9.8,exploitAvailable:true,cwe:'CWE-129',description:'Linux dvb-usb array over-read RCE'},
   {id:'CVE-2023-32233',techRegex:/Linux[ ]kernel[\/ ](?:5\.\d+|6\.[0-3])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'Netfilter nf_tables use-after-free privesc'},
   {id:'CVE-2021-4034',techRegex:/polkit[\/ ]0\.(?:11[0-9]|12[0-9])/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'pkexec PwnKit local privilege escalation'},
@@ -1502,20 +1454,14 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2020-8554',techRegex:/Kubernetes[\/ ]1\.(?:1[0-9]|2[0-2])\.\d+/,cvss:5,exploitAvailable:false,cwe:'CWE-441',description:'Kubernetes MITM via ExternalIPs'},
   {id:'CVE-2023-3676',techRegex:/Kubernetes[\/ ]1\.2[0-8]\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-78',description:'Kubernetes kubelet command injection'},
   {id:'CVE-2024-3177',techRegex:/Kubernetes[\/ ]1\.2[0-9]\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-20',description:'Kubernetes envFrom secret exposure'},
-  {id:'CVE-2022-23940',techRegex:/HAProxy[\/ ]2\.[0-4]\.\d+/,cvss:8.1,exploitAvailable:false,cwe:'CWE-94',description:'HAProxy Lua payload injection'},
   {id:'CVE-2023-0056',techRegex:/HAProxy[\/ ]2\.[4-7]\.\d+/,cvss:5.9,exploitAvailable:false,cwe:'CWE-400',description:'HAProxy configuration parsing DoS'},
-  {id:'CVE-2019-18836',techRegex:/Traefik[\/ ]1\.[0-7]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-770',description:'Traefik denial of service via header'},
-  {id:'CVE-2022-32149',techRegex:/Traefik[\/ ]2\.[0-8]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'golang.org/x/text ReDoS in Traefik'},
   {id:'CVE-2021-36740',techRegex:/Varnish[\/ ](?:6\.[0-5])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-444',description:'Varnish HTTP/2 request smuggling'},
   {id:'CVE-2024-33452',techRegex:/OpenResty[\/ ]1\.2[0-5]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-444',description:'OpenResty HTTP/2 request smuggling'},
   {id:'CVE-2022-0073',techRegex:/LiteSpeed[\/ ](?:5\.[0-9]|6\.[0-1])\.\d+/,cvss:8.8,exploitAvailable:false,cwe:'CWE-78',description:'LiteSpeed Web Admin console command injection'},
   {id:'CVE-2021-28652',techRegex:/Squid[\/ ](?:4\.[0-9]|5\.[0-2])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-401',description:'Squid cache manager memory leak DoS'},
   {id:'CVE-2023-46846',techRegex:/Squid[\/ ](?:5\.[0-8]|6\.[0-3])/,cvss:9.1,exploitAvailable:false,cwe:'CWE-444',description:'Squid HTTP request smuggling'},
   {id:'CVE-2024-25617',techRegex:/Squid[\/ ](?:6\.[0-8])/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Squid HTTP header DoS'},
-  {id:'CVE-2023-48788',techRegex:/cPanel[\/ ]1[01]\d\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-89',description:'cPanel WHM SQL injection RCE'},
   {id:'CVE-2023-24044',techRegex:/Plesk[\/ ]1[78]\.\d+/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'Plesk Obsidian stored XSS'},
-  {id:'CVE-2021-45424',techRegex:/DirectAdmin[\/ ]1\.6[0-3]\d/,cvss:7.5,exploitAvailable:false,cwe:'CWE-22',description:'DirectAdmin path traversal'},
-  {id:'CVE-2023-25705',techRegex:/phpMyAdmin[\/ ]5\.[0-2]\.\d+/,cvss:5.4,exploitAvailable:false,cwe:'CWE-79',description:'phpMyAdmin stored XSS'},
   {id:'CVE-2022-23808',techRegex:/phpMyAdmin[\/ ]5\.[0-1]\.\d+/,cvss:6.1,exploitAvailable:false,cwe:'CWE-79',description:'phpMyAdmin XSS via SQL query'},
   {id:'CVE-2018-12613',techRegex:/phpMyAdmin[\/ ]4\.[0-9]\.\d+/,cvss:8.8,exploitAvailable:true,cwe:'CWE-22',description:'phpMyAdmin LFI via index.php'},
   {id:'CVE-2024-27304',techRegex:/pgx[\/ ]5\.\d+\.\d+/,cvss:8.1,exploitAvailable:false,cwe:'CWE-89',description:'pgx SQL injection via protocol'},
@@ -1524,8 +1470,6 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2023-46214',techRegex:/Splunk[\/ ](?:8\.[0-9]|9\.[0-1])\.\d+/,cvss:8,exploitAvailable:true,cwe:'CWE-94',description:'Splunk Enterprise RCE via XSLT'},
   {id:'CVE-2023-40598',techRegex:/Splunk[\/ ](?:8\.[0-9]|9\.[0-1])\.\d+/,cvss:5,exploitAvailable:false,cwe:'CWE-79',description:'Splunk XSS in classic dashboards'},
   {id:'CVE-2021-33845',techRegex:/Splunk[\/ ]8\.\d+\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-200',description:'Splunk information disclosure via REST'},
-  {id:'CVE-2022-37395',techRegex:/InfluxDB[\/ ]1\.[0-8]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-20',description:'InfluxDB JWT authentication bypass'},
-  {id:'CVE-2023-30859',techRegex:/CouchDB[\/ ]3\.[0-3]\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-79',description:'CouchDB XSS in Fauxton UI'},
   {id:'CVE-2022-24706',techRegex:/CouchDB[\/ ]3\.[0-2]\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-1188',description:'CouchDB default cookie auth RCE'},
   {id:'CVE-2021-38295',techRegex:/CouchDB[\/ ]3\.[0-1]\.\d+/,cvss:7,exploitAvailable:false,cwe:'CWE-79',description:'CouchDB privilege escalation via attachment'},
   {id:'CVE-2021-40438',techRegex:/Apache[\/ ]2\.4\.(?:3[89]|4[0-8])\b/,cvss:9,exploitAvailable:true,cwe:'CWE-918',description:'Apache mod_proxy SSRF'},
@@ -1560,13 +1504,11 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2024-24790',techRegex:/Go[\/ ]1\.2[0-2]\.\d+/,cvss:9.8,exploitAvailable:false,cwe:'CWE-20',description:'Go net/netip IPv4-mapped bypass'},
   {id:'CVE-2023-24538',techRegex:/Go[\/ ]1\.(?:19|20)\.\d+/,cvss:9.8,exploitAvailable:false,cwe:'CWE-94',description:'Go html/template code injection'},
   {id:'CVE-2022-41723',techRegex:/Go[\/ ]1\.(?:18|19|20)\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Go net/http HPACK DoS'},
-  {id:'CVE-2021-34550',techRegex:/Python[\/ ]3\.[6-9]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-20',description:'Python asyncio improper input validation'},
   {id:'CVE-2020-10735',techRegex:/Python[\/ ]3\.[6-9]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-1333',description:'Python int conversion DoS'},
   {id:'CVE-2024-0450',techRegex:/Python[\/ ]3\.(?:[8-9]|1[0-2])\.\d+/,cvss:6.2,exploitAvailable:false,cwe:'CWE-1333',description:'Python zipfile quoted-overlap DoS'},
   {id:'CVE-2021-31799',techRegex:/Ruby[\/ ]2\.[5-7]\.\d+/,cvss:7.8,exploitAvailable:false,cwe:'CWE-78',description:'RDoc command injection'},
   {id:'CVE-2023-28755',techRegex:/Ruby[\/ ](?:2\.[7]|3\.[0-2])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-1333',description:'Ruby URI ReDoS'},
   {id:'CVE-2024-27282',techRegex:/Ruby[\/ ]3\.[0-3]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-125',description:'Ruby regex out-of-bounds read'},
-  {id:'CVE-2022-24856',techRegex:/Flysystem[\/ ]1\.[0-9]+\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-22',description:'Flysystem path traversal'},
   {id:'CVE-2024-3273',techRegex:/D-Link[\/ ](?:DNS-320L|DNS-325|DNS-327L)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-78',description:'D-Link NAS command injection backdoor'},
   {id:'CVE-2024-3272',techRegex:/D-Link[\/ ](?:DNS-320L|DNS-325|DNS-327L)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-798',description:'D-Link NAS hardcoded credential'},
   {id:'CVE-2021-36260',techRegex:/Hikvision[\/ ](?:IPC|DS-2)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-78',description:'Hikvision IP camera command injection'},
@@ -1591,7 +1533,6 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2021-33623',techRegex:/trim-newlines[\/ ]3\.[0-1]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-1333',description:'trim-newlines ReDoS'},
   {id:'CVE-2022-3517',techRegex:/minimatch[\/ ]3\.[0-4]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-1333',description:'minimatch ReDoS'},
   {id:'CVE-2023-26115',techRegex:/word-wrap[\/ ]1\.0\.[0-4]/,cvss:5.3,exploitAvailable:false,cwe:'CWE-1333',description:'word-wrap ReDoS'},
-  {id:'CVE-2024-21501',techRegex:/serve-static[\/ ]1\.1[0-9]\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-22',description:'serve-static path traversal'},
   {id:'CVE-2024-4067',techRegex:/micromatch[\/ ]4\.[0-9]+\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-1333',description:'micromatch ReDoS'},
   {id:'CVE-2020-15168',techRegex:/node-fetch[\/ ]2\.[0-6]\.\d+/,cvss:3.7,exploitAvailable:false,cwe:'CWE-20',description:'node-fetch unauthorized size'},
   {id:'CVE-2022-0235',techRegex:/node-fetch[\/ ]2\.[0-6]\.\d+/,cvss:6.1,exploitAvailable:false,cwe:'CWE-200',description:'node-fetch cookie leak on redirect'},
@@ -1608,13 +1549,10 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2023-35945',techRegex:/Envoy[\/ ]1\.2[4-7]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Envoy HTTP/2 memory leak'},
   {id:'CVE-2024-23324',techRegex:/Envoy[\/ ]1\.2[89]\.\d+/,cvss:8.1,exploitAvailable:false,cwe:'CWE-863',description:'Envoy ext_authz bypass'},
   {id:'CVE-2022-24112',techRegex:/Apache[ ]APISIX[\/ ]2\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-290',description:'APISIX admin API auth bypass RCE'},
-  {id:'CVE-2024-27919',techRegex:/Kong[\/ ]3\.[0-6]\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-400',description:'Kong Gateway memory exhaustion'},
-  {id:'CVE-2024-38021',techRegex:/Kong[\/ ]3\.[0-6]\.\d+/,cvss:8.1,exploitAvailable:false,cwe:'CWE-918',description:'Kong Gateway SSRF via plugin'},
   {id:'CVE-2017-0143',techRegex:/SMB[\/ ](?:v?1|Windows[ ](?:7|2008|XP))/,cvss:9.8,exploitAvailable:true,cwe:'CWE-20',description:'EternalBlue SMBv1 remote code execution'},
   {id:'CVE-2017-0144',techRegex:/SMB[\/ ](?:v?1|Windows[ ](?:7|2008|XP))/,cvss:9.8,exploitAvailable:true,cwe:'CWE-20',description:'EternalBlue SMBv1 RCE (MS17-010)'},
   {id:'CVE-2020-1472',techRegex:/Netlogon[\/ ](?:Windows[ ]Server[ ](?:2008|2012|2016|2019))/,cvss:10,exploitAvailable:true,cwe:'CWE-330',description:'Zerologon Netlogon privilege escalation'},
   {id:'CVE-2019-0708',techRegex:/RDP[\/ ](?:Windows[ ](?:7|2008|XP))/,cvss:9.8,exploitAvailable:true,cwe:'CWE-416',description:'BlueKeep RDP pre-auth RCE'},
-  {id:'CVE-2019-11815',techRegex:/RDP[\/ ](?:Windows[ ](?:7|2008|2012))/,cvss:8.1,exploitAvailable:false,cwe:'CWE-362',description:'RDP race condition use-after-free'},
   {id:'CVE-2023-48795',techRegex:/OpenSSH[\/ ](?:[6-9]\.\d+|9\.[0-5])/,cvss:5.9,exploitAvailable:true,cwe:'CWE-354',description:'Terrapin SSH prefix truncation attack'},
   {id:'CVE-2024-6387',techRegex:/OpenSSH[\/ ](?:8\.[5-9]|9\.[0-7])/,cvss:8.1,exploitAvailable:true,cwe:'CWE-364',description:'regreSSHion OpenSSH signal handler race RCE'},
   {id:'CVE-2023-38408',techRegex:/OpenSSH[\/ ](?:[8-9]\.\d+)/,cvss:9.8,exploitAvailable:true,cwe:'CWE-428',description:'OpenSSH PKCS#11 remote code execution'},
@@ -1628,11 +1566,9 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2019-14271',techRegex:/Docker[\/ ](?:18|19)\.\d+/,cvss:7.5,exploitAvailable:true,cwe:'CWE-502',description:'Docker cp chroot escape'},
   {id:'CVE-2024-41110',techRegex:/Docker[\/ ](?:1[89]|2[0-7])\.\d+/,cvss:9.9,exploitAvailable:true,cwe:'CWE-863',description:'Docker AuthZ plugin bypass'},
   {id:'CVE-2023-28842',techRegex:/Docker[\/ ](?:2[0-3])\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-284',description:'Docker Swarm encrypted overlay bypass'},
-  {id:'CVE-2021-3762',techRegex:/BIND[\/ ]9\.(?:1[0-9])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-20',description:'BIND resolver cache poisoning'},
   {id:'CVE-2020-8625',techRegex:/BIND[\/ ]9\.(?:1[0-7])\.\d+/,cvss:8.1,exploitAvailable:true,cwe:'CWE-120',description:'BIND GSSAPI buffer overflow'},
   {id:'CVE-2023-2828',techRegex:/BIND[\/ ]9\.(?:1[6-9])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-770',description:'BIND cache size limit DoS'},
   {id:'CVE-2024-1737',techRegex:/BIND[\/ ]9\.(?:1[6-9])\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-770',description:'BIND key file DoS'},
-  {id:'CVE-2018-5175',techRegex:/NTP[\/ ]4\.2\.8p\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-20',description:'NTP origin timestamp bypass'},
   {id:'CVE-2015-1799',techRegex:/NTP[\/ ]4\.2\.\d+/,cvss:5.9,exploitAvailable:false,cwe:'CWE-362',description:'NTP authentication bypass by spoofing'},
   {id:'CVE-2017-6742',techRegex:/SNMP[\/ ](?:v?[12]c?|3)/,cvss:8.8,exploitAvailable:true,cwe:'CWE-120',description:'Cisco SNMP buffer overflow'},
   {id:'CVE-2002-0013',techRegex:/SNMP[\/ ](?:v?1|2c)/,cvss:7.5,exploitAvailable:true,cwe:'CWE-20',description:'SNMPv1 community string bypass'},
@@ -1658,7 +1594,6 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2024-1085',techRegex:/Linux[ ]kernel[\/ ]5\.\d+/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'netfilter nft_pipapo UAF privesc'},
   {id:'CVE-2020-14386',techRegex:/Linux[ ]kernel[\/ ]5\.[0-8]\.\d+/,cvss:7.8,exploitAvailable:true,cwe:'CWE-787',description:'AF_PACKET tpacket_rcv overflow privesc'},
   {id:'CVE-2019-2215',techRegex:/Android[\/ ](?:8|9|10)\b/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'Android binder use-after-free privesc'},
-  {id:'CVE-2023-45866',techRegex:/Android[\/ ]1[0-4]\b/,cvss:8.8,exploitAvailable:false,cwe:'CWE-287',description:'Android Bluetooth HID keystroke injection'},
   {id:'CVE-2021-39698',techRegex:/Android[\/ ]1[0-2]\b/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'Android binder UAF privesc'},
   {id:'CVE-2022-20421',techRegex:/Android[\/ ]1[2-3]\b/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'Android binder UAF privesc'},
   {id:'CVE-2023-20938',techRegex:/Android[\/ ]1[2-3]\b/,cvss:7.8,exploitAvailable:true,cwe:'CWE-416',description:'Android binder UAF privesc'},
@@ -1669,7 +1604,6 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2020-0796',techRegex:/SMBv3[\/ ]Windows[ ](?:10|Server[ ]2019)/,cvss:10,exploitAvailable:true,cwe:'CWE-787',description:'SMBGhost SMBv3 compression RCE'},
   {id:'CVE-2020-1350',techRegex:/DNS[ ]Server[\/ ]Windows[ ]Server[ ](?:2008|2012|2016|2019)/,cvss:10,exploitAvailable:true,cwe:'CWE-400',description:'SIGRed Windows DNS server RCE'},
   {id:'CVE-2022-30190',techRegex:/Windows[ ](?:10|11|Server[ ]2022)/,cvss:7.8,exploitAvailable:true,cwe:'CWE-78',description:'Follina MSDT remote code execution'},
-  {id:'CVE-2023-36884',techRegex:/Office[\/ ](?:2013|2016|2019|2021)/,cvss:7.5,exploitAvailable:true,cwe:'CWE-20',description:'Office HTML RCE (Storm-0978)'},
   {id:'CVE-2021-42287',techRegex:/Windows[ ]Server[ ](?:2012|2016|2019|2022)/,cvss:8.8,exploitAvailable:true,cwe:'CWE-269',description:'NoPac AD privilege escalation'},
   {id:'CVE-2021-42278',techRegex:/Windows[ ]Server[ ](?:2012|2016|2019|2022)/,cvss:8.8,exploitAvailable:true,cwe:'CWE-269',description:'sAMAccountName spoofing (NoPac)'},
   {id:'CVE-2022-26923',techRegex:/Windows[ ]Server[ ](?:2012|2016|2019|2022)/,cvss:8.8,exploitAvailable:true,cwe:'CWE-295',description:'Certifried AD certificate spoofing'},
@@ -1699,22 +1633,12 @@ const CVE_DB: CVEEntry[] = [
   {id:'CVE-2021-26084',techRegex:/Confluence[\/ ](?:6\.[0-9]|7\.[0-9])\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-94',description:'Confluence OGNL injection RCE (CVE-2021-26084)'},
   {id:'CVE-2020-14179',techRegex:/Jira[\/ ](?:7\.[0-9]|8\.[0-9])\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-200',description:'Jira information disclosure via dashboard'},
   {id:'CVE-2019-8442',techRegex:/Jira[\/ ](?:7\.[0-9]|8\.[0-4])\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-22',description:'Jira path traversal information disclosure'},
-  {id:'CVE-2017-9506',techRegex:/Jira[\/ ](?:7\.[0-6])\.\d+/,cvss:6.1,exploitAvailable:false,cwe:'CWE-918',description:'Jira SSRF via icon URL'},
-  {id:'CVE-2021-26085',techRegex:/Bamboo[\/ ](?:7\.[0-9]|8\.[0-9])\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-22',description:'Bamboo path traversal'},
-  {id:'CVE-2022-31197',techRegex:/PostgreSQL[ ]JDBC[\/ ]42\.[0-9]+\.\d+/,cvss:8.8,exploitAvailable:false,cwe:'CWE-89',description:'PostgreSQL JDBC SQL injection'},
-  {id:'CVE-2024-1597',techRegex:/PostgreSQL[ ]JDBC[\/ ]42\.[0-9]+\.\d+/,cvss:9.8,exploitAvailable:true,cwe:'CWE-89',description:'PostgreSQL JDBC SQL injection via PreparedStatement'},
-  {id:'CVE-2023-22102',techRegex:/MySQL[ ]Connector[\/ ]8\.[0-9]+\.\d+/,cvss:8.3,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Connector/J takeover'},
-  {id:'CVE-2022-21363',techRegex:/MySQL[ ]Connector[\/ ]8\.[0-9]+\.\d+/,cvss:7.7,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Connector/J input validation'},
-  {id:'CVE-2024-21090',techRegex:/MySQL[ ]Connector[\/ ]8\.[0-9]+\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Connector/J partial DoS'},
-  {id:'CVE-2023-21971',techRegex:/MySQL[ ]Connector[\/ ]8\.[0-9]+\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Connector/J unauthorized access'},
   {id:'CVE-2023-22103',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:5.3,exploitAvailable:false,cwe:'CWE-20',description:'MySQL optimizer input validation'},
   {id:'CVE-2023-21980',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server optimizer issue'},
   {id:'CVE-2024-21096',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:4.9,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server mysqldump issue'},
-  {id:'CVE-2024-21109',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:4.9,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server optimizer issue'},
   {id:'CVE-2023-21912',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:7.5,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server replication DoS'},
   {id:'CVE-2022-21595',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:4.9,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server optimizer issue'},
   {id:'CVE-2022-21367',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:4.9,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server optimizer issue'},
-  {id:'CVE-2021-2291',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:4.9,exploitAvailable:false,cwe:'CWE-20',description:'MySQL Server InnoDB issue'},
   {id:'CVE-2020-14765',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:6.5,exploitAvailable:false,cwe:'CWE-20',description:'MySQL FEDERATED input validation'},
   {id:'CVE-2019-2805',techRegex:/MySQL[ ]Server[\/ ]8\.[0-9]+\.\d+/,cvss:4.9,exploitAvailable:false,cwe:'CWE-20',description:'MySQL optimizer issue'},
   {id:'CVE-2018-2767',techRegex:/MySQL[ ]Server[\/ ]5\.7\.\d+/,cvss:3.1,exploitAvailable:false,cwe:'CWE-310',description:'MySQL yaSSL TLS downgrade'},
@@ -1840,6 +1764,25 @@ function detectTechnologies(headers: Record<string, string>, body: string): Arra
   return found;
 }
 
+/**
+ * Merge detections from several sources (banner, HTTP response, CMS probe).
+ * Versioned detections come first so the primary label is the most actionable one.
+ */
+function mergeTechnologies(...lists: Array<Array<{ name: string; category?: string; version?: string }>>): Array<{ name: string; version?: string | null; category?: string }> {
+  const out: Array<{ name: string; version?: string | null; category?: string }> = [];
+  const seen = new Set<string>();
+  for (const list of lists) {
+    for (const t of list || []) {
+      if (!t || !t.name) continue;
+      const key = `${t.name.toLowerCase()}|${t.version || ''}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ name: t.name, version: t.version || null, category: t.category });
+    }
+  }
+  return out.sort((a, b) => (b.version ? 1 : 0) - (a.version ? 1 : 0));
+}
+
 function detectWAF(responseHeaders: Record<string, string>, body: string): string | null {
   const headersLower: Record<string, string> = {};
   for (const [k,v] of Object.entries(responseHeaders)) headersLower[k.toLowerCase()] = v;
@@ -1875,8 +1818,10 @@ function hasVersionPattern(re: RegExp): boolean {
     || /\([^)]*[0-9][^)]*\)/.test(src);
 }
 
-function mapCVEs(techs: Array<{ name: string; version?: string }>): Array<{ id: string; cvss: number; cwe: string; description: string; exploitAvailable: boolean }> {
-  const matches: Array<{ id: string; cvss: number; cwe: string; description: string; exploitAvailable: boolean }> = [];
+type CVEMatch = { id: string; cvss: number; cwe: string; description: string; exploitAvailable: boolean; component: string; version?: string };
+
+function mapCVEs(techs: Array<{ name: string; version?: string }>): CVEMatch[] {
+  const matches: CVEMatch[] = [];
   const seen = new Set<string>();
   for (const tech of techs) {
     const name = (tech.name || '').trim();
@@ -1890,7 +1835,7 @@ function mapCVEs(techs: Array<{ name: string; version?: string }>): Array<{ id: 
         if (!hasVersionPattern(cve.techRegex) || cve.techRegex.test(name)) continue;
         if (cve.techRegex.test(techStr) && !seen.has(cve.id)) {
           seen.add(cve.id);
-          matches.push({ id: cve.id, cvss: cve.cvss, cwe: cve.cwe, description: cve.description, exploitAvailable: cve.exploitAvailable });
+          matches.push({ id: cve.id, cvss: cve.cvss, cwe: cve.cwe, description: cve.description, exploitAvailable: cve.exploitAvailable, component: name, version: ver || undefined });
         }
       }
     }
@@ -2903,6 +2848,7 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                 let sslChecked = false;
                 let waf: string | null = null;
                 let web: any = null;
+                let techsWeb: Array<{ name: string; category: string; version?: string }> = [];
                 if (port===80 || port===443 || port===8080 || port===8443 || /HTTP|Web|Proxy/i.test(svc)) {
                   try {
                     const proto = port===443||port===8443 ? 'https' : 'http';
@@ -2917,7 +2863,7 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                     try { discoveredEndpoints = await crawlEndpoints(finalUrl, web.body); } catch {}
                     // CMS / framework deep probe
                     try { const cmsRes = await probeCMS(finalUrl, web.body, web.headers, timeout); if (cmsRes.techs.length) { techs.push(...cmsRes.techs.map(t => ({...t, category: 'CMS'}))); cves.push(...mapCVEs(cmsRes.techs.map(t => ({...t, category: 'CMS'}))).filter(c=>!cves.some(ex=>ex.id===c.id))); } webVulns.push(...cmsRes.vulns); } catch {}
-                    const techsWeb = detectTechnologies(web.headers, web.body);
+                    techsWeb = detectTechnologies(web.headers, web.body);
                     cves.push(...mapCVEs(techsWeb).filter(c=>!cves.some(ex=>ex.id===c.id)));
                     waf = detectWAF(web.headers, web.body);
                     // SSL cert check: only for HTTPS assets to avoid timeouts and false findings on plain HTTP
@@ -3008,12 +2954,17 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                 const headersForPassive = (web && web.headers) ? web.headers : probe.headers;
                 const protoForPassive = port===443||port===8443 ? 'https' : 'http';
                 findings.push(...detectPassiveWebVulns(bodyForPassive, headersForPassive, `${protoForPassive}://${sub}:${port}`, port));
-                const techName = techs[0]?.name || techsBanner[0]?.name || svc || 'Unknown';
-                const techVer = techs[0]?.version || techsBanner[0]?.version || svcVersion || null;
+                // Merge every detection source so the asset shows all components, not just the banner guess.
+                const allTechs = mergeTechnologies(techs, techsWeb, techsBanner);
+                const techName = allTechs[0]?.name || svc || 'Unknown';
+                const techVer = allTechs[0]?.version || svcVersion || null;
                 const asset: DiscoveredAsset = {
                   id: genId(), domain: sub, subdomain: sub, ip, port, service: svc, banner: probe.body, technology: techName,
                   version: techVer,
-                  cves: cves.map(c=>c.id), cveConfidence: cves.length>0 ? 'high' : 'low',
+                  cves: cves.map(c=>c.id),
+                  technologies: allTechs,
+                  cveDetails: cves.map(c=>({ id: c.id, component: c.component, version: c.version || null, cvss: c.cvss, exploitAvailable: c.exploitAvailable })),
+                  cveConfidence: cves.length>0 ? 'high' : 'low',
                   cloudProvider: null, riskScore: 0, findings, headers: (web && web.headers) ? web.headers : { server: (probe.headers['server'] || probe.body.slice(0,80)) }, sslInfo, sslGrade, waf,
                   webVulns, discoveredEndpoints, firstSeen: new Date().toISOString(),
                   complianceStatus: { owasp:[], pciDss:[], gdpr:[] },
@@ -3341,6 +3292,10 @@ export class ScannerEngine {
       const techStr = asset.technology + (asset.version ? ' ' + asset.version : '');
       const cves = mapCVEs([{name: asset.technology || '', version: asset.version || ''}]).filter(c=>!asset.cves.includes(c.id));
       asset.cves.push(...cves.map(c=>c.id));
+      if (cves.length) {
+        const known = new Set((asset.cveDetails||[]).map(d=>d.id));
+        asset.cveDetails = [...(asset.cveDetails||[]), ...cves.filter(c=>!known.has(c.id)).map(c=>({ id: c.id, component: c.component, version: c.version || null, cvss: c.cvss, exploitAvailable: c.exploitAvailable }))];
+      }
       asset.cvssMax = Math.max(asset.cvssMax||0, ...cves.map(c=>c.cvss));
       asset.exploitAvailable = asset.exploitAvailable || cves.some(c=>c.exploitAvailable);
     }
@@ -3498,6 +3453,10 @@ export class ScannerEngine {
     for (const asset of assets) {
       const cves = mapCVEs([{name: asset.technology || '', version: asset.version || ''}]).filter(c=>!asset.cves.includes(c.id));
       asset.cves.push(...cves.map(c=>c.id));
+      if (cves.length) {
+        const known = new Set((asset.cveDetails||[]).map(d=>d.id));
+        asset.cveDetails = [...(asset.cveDetails||[]), ...cves.filter(c=>!known.has(c.id)).map(c=>({ id: c.id, component: c.component, version: c.version || null, cvss: c.cvss, exploitAvailable: c.exploitAvailable }))];
+      }
       asset.cvssMax = Math.max(asset.cvssMax||0, ...cves.map(c=>c.cvss));
       asset.exploitAvailable = asset.exploitAvailable || cves.some(c=>c.exploitAvailable);
     }

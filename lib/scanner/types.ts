@@ -106,6 +106,10 @@ export interface DiscoveredAsset {
   technology: string | null;
   version: string | null;
   cves: string[];
+  /** Every technology detected on this asset, not just the primary one. */
+  technologies?: Array<{ name: string; version?: string | null; category?: string }>;
+  /** CVE matches with the exact component and version that triggered them. */
+  cveDetails?: Array<{ id: string; component: string; version?: string | null; cvss: number; exploitAvailable: boolean }>;
   cveConfidence: 'high' | 'medium' | 'low';
   cloudProvider: string | null;
   riskScore: number;

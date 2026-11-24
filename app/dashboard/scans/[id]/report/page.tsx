@@ -147,15 +147,32 @@ export default function ScanReportPage() {
                       <td className="px-4 py-3 font-medium">{a.subdomain}</td>
                       <td className="px-4 py-3 text-slate-500 font-mono text-xs">{a.ip}</td>
                       <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-xs font-bold">{a.port}</span></td>
-                      <td className="px-4 py-3">{a.technology ? `${a.technology} ${a.version || ''}` : '-'}</td>
+                      <td className="px-4 py-3">
+                        {a.technologies?.length ? (
+                          <div className="flex flex-wrap gap-1">
+                            {a.technologies.slice(0, 4).map((t: any) => (
+                              <span key={`${t.name}-${t.version || ''}`} className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-medium border border-slate-200">
+                                {t.name}{t.version ? ` ${t.version}` : ''}
+                              </span>
+                            ))}
+                            {a.technologies.length > 4 && <span className="text-[10px] text-slate-500">+{a.technologies.length - 4}</span>}
+                          </div>
+                        ) : (a.technology ? `${a.technology} ${a.version || ''}` : '-')}
+                      </td>
                       <td className="px-4 py-3">{a.waf ? <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[10px] font-bold">{a.waf}</span> : '-'}</td>
                       <td className="px-4 py-3">{a.sslGrade ? <span className={`px-2 py-0.5 rounded text-xs font-bold ${gradeColor(a.sslGrade)}`}>{a.sslGrade}</span> : '-'}</td>
                       <td className="px-4 py-3">
                         {a.cves?.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
-                            {a.cves.slice(0, 3).map((cve: string) => (
-                              <span key={cve} className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[10px] font-bold border border-red-200">{cve}</span>
-                            ))}
+                            {a.cves.slice(0, 3).map((cve: string) => {
+                              const d = (a.cveDetails || []).find((x: any) => x.id === cve);
+                              return (
+                                <span key={cve} className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[10px] font-bold border border-red-200">
+                                  {cve}
+                                  {d?.component && <span className="font-normal opacity-80"> · {d.component}{d.version ? ` ${d.version}` : ''}</span>}
+                                </span>
+                              );
+                            })}
                             {a.cves.length > 3 && <span className="text-[10px] text-slate-500">+{a.cves.length - 3}</span>}
                           </div>
                         ) : <span className="text-slate-400">-</span>}
