@@ -180,10 +180,12 @@ export default function PricingPage() {
             ))}
           </div>
 
-          <div className="mt-12 flex justify-center gap-6 text-slate-500 text-sm">
-            <div className="flex items-center gap-2"><span className="text-lg">₿</span> USDT (TRC20)</div>
-            <div className="flex items-center gap-2"><span className="text-lg">⚡</span> Instant</div>
-            <div className="flex items-center gap-2"><span className="text-lg">🔒</span> Secure</div>
+          <div className="mt-12 flex flex-wrap justify-center gap-x-6 gap-y-2 text-slate-500 text-xs font-mono uppercase tracking-wider">
+            <span>Payment · USDT (TRC20)</span>
+            <span className="text-slate-700">/</span>
+            <span>Activation · manual review</span>
+            <span className="text-slate-700">/</span>
+            <span>Scope · external surface only</span>
           </div>
           <p className="mt-4 text-center text-[10px] text-slate-600">We do not perform intrusive or exploitative scanning.</p>
         </div>
