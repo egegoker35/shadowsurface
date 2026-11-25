@@ -3486,6 +3486,7 @@ export class ScannerEngine {
     this.scanResult.durationSeconds=(Date.now()-start)/1000;
     this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:0, highRiskCount:0, mediumRiskCount:0, lowRiskCount:0, infoCount:0, totalCVEs:0, totalWebVulns:0, sslIssues:0, totalExploits:0, weakSSLCount:0, missingHeaderCount:0, exposedDBCount:0, exposedAdminCount:0 };
     this.scanResult.executiveSummary={ overallRisk:'LOW', riskScore:0, criticalFindings:0, attackSurfaceSize:Object.keys(subdomains).length, recommendations:['Run full scan for deeper analysis'], threatActors:['None identified'], complianceStatus:{owaspCompliant:true,pciDssCompliant:true,gdprCompliant:true}, mitreTactics:['TA0043-Reconnaissance'] };
+    this.applyCoverage(this.scanResult.statistics?.totalSubdomains || 0);
     return this.scanResult;
   }
 
@@ -3501,6 +3502,7 @@ export class ScannerEngine {
     const maxPortRisk = Math.max(...assets.map(a=>a.riskScore),0);
     const portThreats = assets.filter(a=>a.findings.length>0 || (a.webVulns && a.webVulns.length>0)).length;
     this.scanResult.executiveSummary={ overallRisk:riskLabel(maxPortRisk), riskScore:maxPortRisk, criticalFindings:countCriticalFindings(assets), attackSurfaceSize:assets.length, recommendations:['Run full scan for CVE and cloud checks'], threatActors:portThreats>0?['Opportunistic attackers','Reconnaissance groups']:['None identified'], complianceStatus:complianceCheck(assets), mitreTactics:['TA0043-Reconnaissance'] };
+    this.applyCoverage(this.scanResult.statistics?.totalSubdomains || 0);
     return this.scanResult;
   }
 
@@ -3530,6 +3532,7 @@ export class ScannerEngine {
     const {actors, mitreTactics} = generateThreatActors(assets);
     this.scanResult.executiveSummary={ overallRisk:riskLabel(peekRiskScore(assets)), riskScore:peekRiskScore(assets), criticalFindings:crit, attackSurfaceSize:assets.length, recommendations:generateRecommendations(assets,[],dnsInfo), threatActors:actors, complianceStatus:complianceCheck(assets), mitreTactics };
     this.scanResult.dnsAnalysis = dnsInfo;
+    this.applyCoverage(this.scanResult.statistics?.totalSubdomains || 0);
     return this.scanResult;
   }
 
@@ -3542,7 +3545,34 @@ export class ScannerEngine {
     // riskScore was criticalCount*25, which is unbounded (4 criticals = 100) and ignores high/medium.
     const cloudMaxRisk = Math.max(...cloudAssets.map(c=>c.riskScore||0),0);
     this.scanResult.executiveSummary={ overallRisk:cloudAssets.some(a=>a.severity==='critical')?'CRITICAL':cloudAssets.some(a=>a.severity==='high')?'HIGH':cloudAssets.some(a=>a.severity==='medium')?'MEDIUM':'LOW', riskScore:cloudMaxRisk, criticalFindings:cloudAssets.filter(a=>a.severity==='critical').length, attackSurfaceSize:cloudAssets.length, recommendations:generateRecommendations([],cloudAssets,dnsFindings), threatActors:['Cloud-focused threat actors','Data exfiltration groups'], complianceStatus:{owaspCompliant:true,pciDssCompliant:true,gdprCompliant:!cloudAssets.some(a=>a.severity==='critical')}, mitreTactics:['TA0001-Initial Access','TA0009-Collection'] };
+    this.applyCoverage(this.scanResult.statistics?.totalSubdomains || 0);
     return this.scanResult;
+  }
+
+
+  /**
+   * Record what the scan could and could not see. A target that blocks the scanner produces
+   * zero assets, which previously rendered as "LOW risk, everything compliant" - a clean bill
+   * of health for a site nobody actually inspected.
+   */
+  private applyCoverage(resolvedSubdomains: number) {
+    const assets = this.scanResult.assets || [];
+    const unreachable = Math.max(0, resolvedSubdomains - new Set(assets.map((a) => a.subdomain)).size);
+    const inconclusive = assets.length === 0 && resolvedSubdomains > 0;
+    this.scanResult.coverage = { resolvedSubdomains, scannedAssets: assets.length, unreachable, inconclusive };
+    const es = this.scanResult.executiveSummary;
+    if (!es) return;
+    if (inconclusive) {
+      es.overallRisk = 'INCONCLUSIVE';
+      es.riskScore = 0;
+      const note = `No response was obtained from any of the ${resolvedSubdomains} resolved subdomain(s). The target is most likely filtering or blocking the scanner (firewall, WAF, rate limit) or every probed port is closed. This is NOT a clean result - re-run later or from a different network path.`;
+      es.recommendations = [note, ...(es.recommendations || []).filter((r) => r !== note)];
+      es.scanLimitations = [...(es.scanLimitations || []).filter((l) => l !== note), note];
+    } else if (unreachable > 0) {
+      const note = `${unreachable} resolved subdomain(s) did not respond on any probed port and are not represented in this report.`;
+      es.recommendations = [note, ...(es.recommendations || []).filter((r) => r !== note)];
+      es.scanLimitations = [...(es.scanLimitations || []).filter((l) => l !== note), note];
+    }
   }
 
   async runFullScan(portLimit=50, cveLimit:'lite'|'full'='full'): Promise<ScanResult> {
@@ -3638,6 +3668,7 @@ export class ScannerEngine {
     for (const a of actors) actorSet.add(a);
     this.scanResult.executiveSummary = { overallRisk: riskLabel(peekRiskScore(dedupedAssets, dedupedCloud)), riskScore: peekRiskScore(dedupedAssets, dedupedCloud), criticalFindings: crit, attackSurfaceSize: dedupedAssets.length + dedupedCloud.length, recommendations: recs.length ? recs : ['No action required - no significant findings'], threatActors: Array.from(actorSet), complianceStatus: { owaspCompliant: owasp, pciDssCompliant: pci, gdprCompliant: gdpr }, mitreTactics: Array.from(tacticSet) };
     this.scanResult.dnsAnalysis = dnsInfo;
+    this.applyCoverage(this.scanResult.statistics?.totalSubdomains || 0);
     return this.scanResult;
   }
 
@@ -3704,6 +3735,7 @@ export class ScannerEngine {
     const {actors, mitreTactics} = generateThreatActors(assets);
     this.scanResult.executiveSummary={ overallRisk:riskLabel(peekRiskScore(assets, cloudAssets)), riskScore:peekRiskScore(assets, cloudAssets), criticalFindings:crit, attackSurfaceSize:assets.length+cloudAssets.length, recommendations: generateRecommendations(assets,cloudAssets,dnsInfo), threatActors:actors, complianceStatus:complianceCheck(assets), mitreTactics };
     this.scanResult.dnsAnalysis = dnsInfo;
+    this.applyCoverage(this.scanResult.statistics?.totalSubdomains || 0);
     return this.scanResult;
   }
 }

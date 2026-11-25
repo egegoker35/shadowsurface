@@ -87,7 +87,7 @@ export default function ScanDetailPage() {
         <div>
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-3xl font-bold">Security Assessment Report</h1>
-            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${exec.overallRisk === 'CRITICAL' ? 'bg-red-900/50 text-red-300 border border-red-700' : exec.overallRisk === 'HIGH' ? 'bg-orange-900/50 text-orange-300 border border-orange-700' : exec.overallRisk === 'MEDIUM' ? 'bg-yellow-900/50 text-yellow-300 border border-yellow-700' : 'bg-emerald-900/50 text-emerald-300 border border-emerald-700'}`}>
+            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${exec.overallRisk === 'CRITICAL' ? 'bg-red-900/50 text-red-300 border border-red-700' : exec.overallRisk === 'HIGH' ? 'bg-orange-900/50 text-orange-300 border border-orange-700' : exec.overallRisk === 'MEDIUM' ? 'bg-yellow-900/50 text-yellow-300 border border-yellow-700' : exec.overallRisk === 'INCONCLUSIVE' ? 'bg-slate-700/60 text-slate-300 border border-slate-500' : 'bg-emerald-900/50 text-emerald-300 border border-emerald-700'}`}>
               {exec.overallRisk || 'UNKNOWN'} RISK
             </span>
           </div>
@@ -332,8 +332,12 @@ export default function ScanDetailPage() {
               <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
               </div>
-              <h3 className="text-lg font-semibold text-slate-300">No Assets Found</h3>
-              <p className="text-slate-500 mt-1">This scan did not discover any exposed assets or misconfigurations.</p>
+              <h3 className="text-lg font-semibold text-slate-300">{scan.coverage?.inconclusive ? 'No Response From Target' : 'No Assets Found'}</h3>
+              <p className="text-slate-500 mt-1 max-w-xl mx-auto">
+                {scan.coverage?.inconclusive
+                  ? (scan.executiveSummary?.scanLimitations?.[0] || `None of the ${scan.coverage.resolvedSubdomains} resolved subdomain(s) responded. The target is likely blocking the scanner. This is not a clean result.`)
+                  : 'This scan did not discover any exposed assets or misconfigurations.'}
+              </p>
             </>
           )}
         </div>

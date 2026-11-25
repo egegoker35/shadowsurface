@@ -14,6 +14,7 @@ const RISK_STYLES: Record<string, string> = {
   HIGH: 'bg-orange-500/10 text-orange-400 border-orange-500/25',
   MEDIUM: 'bg-amber-500/10 text-amber-400 border-amber-500/25',
   LOW: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25',
+  INCONCLUSIVE: 'bg-slate-500/10 text-slate-400 border-slate-500/25',
 };
 
 const PLAN_STYLES: Record<string, string> = {

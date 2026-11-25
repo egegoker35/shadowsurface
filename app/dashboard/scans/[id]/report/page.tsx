@@ -69,6 +69,7 @@ export default function ScanReportPage() {
             summary.overallRisk === 'CRITICAL' ? 'bg-red-50 border-red-200 text-red-900' :
             summary.overallRisk === 'HIGH' ? 'bg-orange-50 border-orange-200 text-orange-900' :
             summary.overallRisk === 'MEDIUM' ? 'bg-yellow-50 border-yellow-200 text-yellow-900' :
+            summary.overallRisk === 'INCONCLUSIVE' ? 'bg-slate-100 border-slate-300 text-slate-700' :
             'bg-emerald-50 border-emerald-200 text-emerald-900'
           }`}>
             <h2 className="text-sm font-bold uppercase tracking-wider opacity-70 mb-2">Overall Risk</h2>
@@ -77,6 +78,21 @@ export default function ScanReportPage() {
             <p className="text-xs opacity-60 mt-1">Risk Score: {summary.riskScore || 0}/100</p>
           </div>
         </div>
+        {(scan.coverage?.inconclusive || (summary.scanLimitations?.length || 0) > 0) && (
+          <div className={`mb-8 rounded-xl border-2 p-5 ${scan.coverage?.inconclusive ? 'border-slate-300 bg-slate-100' : 'border-amber-200 bg-amber-50'}`}>
+            <p className="text-sm font-bold text-slate-800 mb-1">
+              {scan.coverage?.inconclusive ? 'No evidence collected — this is not a clean result' : 'Coverage limitation'}
+            </p>
+            {(summary.scanLimitations || []).map((l: string) => (
+              <p key={l} className="text-sm text-slate-700 mt-1">{l}</p>
+            ))}
+            {scan.coverage && (
+              <p className="text-xs text-slate-500 mt-2">
+                Resolved subdomains: {scan.coverage.resolvedSubdomains} · Assets with a response: {scan.coverage.scannedAssets} · Unreachable: {scan.coverage.unreachable}
+              </p>
+            )}
+          </div>
+        )}
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-8">
           {[
             { label: 'Subdomains', value: stats.totalSubdomains || 0, color: 'text-emerald-700' },
@@ -340,9 +356,10 @@ export default function ScanReportPage() {
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
                 <h3 className="text-xs font-bold uppercase text-slate-500 mb-3">Email Security</h3>
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-slate-600">SPF Policy</span><span className={`font-bold ${dns.spfPolicy === 'strict' ? 'text-emerald-700' : dns.spfPolicy === 'softfail' ? 'text-yellow-700' : 'text-red-700'}`}>{dns.spfPolicy || 'None'}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-slate-600">DMARC Policy</span><span className={`font-bold ${dns.dmarcPolicy === 'reject' ? 'text-emerald-700' : dns.dmarcPolicy === 'quarantine' ? 'text-yellow-700' : 'text-red-700'}`}>{dns.dmarcPolicy || 'None'}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-slate-600">DKIM Present</span><span className={`font-bold ${dns.dkimPresent ? 'text-emerald-700' : 'text-red-700'}`}>{dns.dkimPresent ? 'Yes' : 'No'}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-slate-600">SPF Policy</span><span className={`font-bold ${!dns.spfPolicy ? 'text-slate-500' : dns.spfPolicy === 'strict' ? 'text-emerald-700' : dns.spfPolicy === 'softfail' ? 'text-yellow-700' : 'text-red-700'}`}>{dns.spfPolicy || 'Not determined'}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-slate-600">DMARC Policy</span><span className={`font-bold ${!dns.dmarcPolicy ? 'text-slate-500' : dns.dmarcPolicy === 'reject' ? 'text-emerald-700' : dns.dmarcPolicy === 'quarantine' ? 'text-yellow-700' : 'text-red-700'}`}>{dns.dmarcPolicy || 'Not determined'}</span></div>
+                  {/* DKIM selectors are provider-chosen: when none of the well-known selectors answer, the only honest value is "not determined". */}
+                  <div className="flex justify-between text-sm"><span className="text-slate-600">DKIM</span><span className={`font-bold ${dns.dkimPresent === true ? 'text-emerald-700' : 'text-slate-500'}`}>{dns.dkimPresent === true ? 'Detected' : 'Not determined'}</span></div>
                 </div>
               </div>
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">

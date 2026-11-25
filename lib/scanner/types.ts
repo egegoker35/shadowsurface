@@ -197,14 +197,24 @@ export interface ScanResult {
     exposedDBCount: number;
     exposedAdminCount: number;
   };
+  /** How much of the resolved attack surface actually produced a response. */
+  coverage?: {
+    resolvedSubdomains: number;
+    scannedAssets: number;
+    unreachable: number;
+    /** True when nothing responded at all: the report must not be read as clean. */
+    inconclusive: boolean;
+  };
   executiveSummary: {
-    overallRisk: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
+    overallRisk: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO' | 'INCONCLUSIVE';
     riskScore: number;
     criticalFindings: number;
     attackSurfaceSize: number;
     recommendations: string[];
     threatActors: string[];
     mitreTactics?: string[];
+    /** Explicit statements about what this scan could not observe. */
+    scanLimitations?: string[];
     complianceStatus?: {
       owaspCompliant: boolean;
       pciDssCompliant: boolean;
