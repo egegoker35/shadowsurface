@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const ip = clientIp(req.headers);
-    const rl = await rateLimitByIP(ip, 10, 3600);
+    const rl = await rateLimitByIP(ip, 10, 3600, 'invite');
     if (!rl.success) {
       return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
     }

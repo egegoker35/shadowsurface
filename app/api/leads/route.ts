@@ -7,7 +7,7 @@ import { clientIp } from '@/lib/middleware/security';
 export async function POST(req: NextRequest) {
   try {
     const ip = clientIp(req.headers);
-    const rl = await rateLimitByIP(ip, 5, 3600);
+    const rl = await rateLimitByIP(ip, 5, 3600, 'lead');
     if (!rl.success) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }

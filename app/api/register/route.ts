@@ -12,7 +12,7 @@ const schema = z.object({ email: z.string().email(), password: z.string().min(8)
 export async function POST(req: NextRequest) {
   try {
     const ip = clientIp(req.headers);
-    const rl = await rateLimitByIP(ip, 5, 3600);
+    const rl = await rateLimitByIP(ip, 5, 3600, 'register');
     if (!rl.success) {
       return NextResponse.json({ error: 'Too many registration attempts. Try again later.' }, { status: 429 });
     }

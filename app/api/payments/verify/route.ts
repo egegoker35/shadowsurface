@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = clientIp(req.headers);
-    const limit = await rateLimitByIP(`pay:${ip}`, 10, 600).catch(() => ({ success: true }));
+    const limit = await rateLimitByIP(`pay:${ip}`, 10, 600, 'payment').catch(() => ({ success: true }));
     if (!limit.success) {
       return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
     }

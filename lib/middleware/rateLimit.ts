@@ -31,12 +31,20 @@ export async function rateLimit(
   };
 }
 
+/**
+ * Per-IP limiter, scoped by endpoint.
+ *
+ * Without a scope every caller shared one bucket: three demo requests from an address
+ * consumed the same counter that guards admin login, so ordinary use could lock an
+ * operator out of the console (and a shared proxy address made it worse).
+ */
 export async function rateLimitByIP(
   ip: string,
   maxRequests = 10,
-  windowSeconds = 60
+  windowSeconds = 60,
+  scope = 'general'
 ): Promise<RateLimitResult> {
-  return rateLimit(`ip:${ip}`, maxRequests, windowSeconds);
+  return rateLimit(`ip:${scope}:${ip}`, maxRequests, windowSeconds);
 }
 
 export async function rateLimitByUser(

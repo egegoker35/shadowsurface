@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const ip = clientIp(req.headers);
-    const rl = await rateLimitByIP(ip, 5, 1800);
+    const rl = await rateLimitByIP(ip, 5, 1800, 'reset');
     if (!rl.success) {
       return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
     }

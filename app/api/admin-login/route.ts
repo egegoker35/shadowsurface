@@ -14,7 +14,7 @@ const JWT_SECRET = process.env.JWT_SECRET?.trim();
 export async function POST(req: NextRequest) {
   try {
     const ip = clientIp(req.headers);
-    const rl = await rateLimitByIP(ip, 5, 1800);
+    const rl = await rateLimitByIP(ip, 5, 1800, 'admin-auth');
     if (!rl.success) {
       return NextResponse.json({ error: 'Too many attempts. Try again in 30 minutes.' }, { status: 429 });
     }

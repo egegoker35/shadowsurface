@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   try {
     const ip = clientIp(req.headers);
 
-    const rl = await rateLimitByIP(ip, 3, 1800);
+    const rl = await rateLimitByIP(ip, 3, 1800, 'demo');
     if (!rl.success) {
       return NextResponse.json(
         { error: 'Demo rate limit: 3 scans per 30 minutes per IP.', reset: rl.reset },

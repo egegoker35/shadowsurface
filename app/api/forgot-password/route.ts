@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const ip = clientIp(req.headers);
-    const rl = await rateLimitByIP(ip, 3, 3600);
+    const rl = await rateLimitByIP(ip, 3, 3600, 'forgot');
     if (!rl.success) {
       return NextResponse.json({ error: 'Too many password reset requests. Try again later.' }, { status: 429 });
     }
