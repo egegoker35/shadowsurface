@@ -1,40 +1,105 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import Navbar from '@/components/Navbar';
 import SchemaOrg from '@/components/SchemaOrg';
 import FAQSchema from '@/components/FAQSchema';
 import DemoResult from '@/components/DemoResult';
-import LiveStats from '@/components/landing/LiveStats';
-import TrustBanner from '@/components/landing/TrustBanner';
-import TerminalTyping from '@/components/landing/TerminalTyping';
-import RiskPulse from '@/components/landing/RiskPulse';
+import ReportPreview from '@/components/landing/ReportPreview';
 
 const FAQS = [
   {
-    q: 'What is an attack surface scanner?',
-    a: 'An attack surface scanner is a cybersecurity tool that automatically discovers and maps all externally facing digital assets — subdomains, open ports, cloud services, and web applications — to identify potential entry points for attackers. ShadowSurface is a leading external attack surface management (EASM) platform that combines subdomain enumeration, port scanning, CVE vulnerability mapping, and cloud misconfiguration detection into a single unified scanner.',
+    q: 'What does an external attack surface scan cover?',
+    a: 'It starts from a single domain and works outward: subdomains from certificate transparency logs and DNS, the services listening on each host, the software and version behind each service, the CVEs that affect those versions, and the cloud storage or admin interface that was left reachable. Everything is derived from the internet side, the same view an attacker has.',
   },
   {
-    q: 'How does subdomain enumeration work?',
-    a: 'ShadowSurface uses both passive and active subdomain enumeration techniques. Passive discovery queries certificate transparency logs (crt.sh), DNS records, and historical datasets. Active techniques perform DNS brute-forcing against a curated wordlist of over 5,000 common subdomain names. This dual approach ensures comprehensive coverage of your external attack surface.',
+    q: 'How are subdomains discovered?',
+    a: 'Certificate transparency logs provide the passive half. The active half is a DNS dictionary of 2,292 hostname entries, resolved with bounded concurrency. Before either runs, a random label is resolved to detect wildcard DNS — if the catch-all answers, dictionary hits cannot be distinguished from the wildcard, so only the apex is kept instead of inventing hundreds of hostnames.',
   },
   {
-    q: 'What ports does ShadowSurface scan?',
-    a: 'Our port scanner checks 100+ ports including HTTP (80, 8080), HTTPS (443, 8443), SSH (22), FTP (21), SMTP (25), MySQL (3306), PostgreSQL (5432), Redis (6379), MongoDB (27017), Elasticsearch (9200), RDP (3389), VNC (5900), and many more. Each open port triggers banner grabbing and service fingerprinting to identify the exact technology and version running.',
+    q: 'Which ports are scanned?',
+    a: 'The engine carries 407 TCP ports covering web, database, remote access, mail, container and orchestration services. Plan limits decide how many are probed per asset: 10 on Free, 20 on Starter, 50 on Professional, 100 on Enterprise. Every open port is followed by a banner grab and a service fingerprint.',
   },
   {
-    q: 'How accurate is the CVE mapping?',
-    a: 'ShadowSurface matches discovered service versions against a curated CVE database. We only report CVEs when the exact or major.minor version is confirmed — no fuzzy guessing. For technologies like IIS, we require build numbers to prevent false positives. This ensures you only see vulnerabilities that actually affect your infrastructure.',
+    q: 'How do you avoid false CVE matches?',
+    a: 'A CVE is only reported when the version we actually detected falls inside the affected range for that record, and we hold 456 CVE records that have been checked against MITRE. If a service exposes no version, no CVE is reported — a bare product name is not evidence of a vulnerable build.',
   },
   {
-    q: 'Can I scan my cloud infrastructure?',
-    a: 'Yes. ShadowSurface detects exposed cloud assets including Amazon S3 buckets, Google Cloud Storage blobs, Azure Blob Storage containers, and open Firebase databases. We check for public permissions, misconfigured ACLs, and leaked credentials in publicly accessible resources.',
+    q: 'What happens on the free plan?',
+    a: 'The free plan runs subdomain discovery and a top-10 port scan, one scan per hour and two per month, without a card. Paid plans add CVE mapping, cloud checks, SSL analysis and bulk scanning.',
+  },
+];
+
+const METHOD = [
+  {
+    step: '01',
+    name: 'Discovery',
+    runs: 'Certificate transparency (crt.sh) plus a 2,292-entry DNS dictionary',
+    proof: 'A random label is resolved first. If wildcard DNS answers, dictionary hits are discarded rather than reported as hostnames.',
   },
   {
-    q: 'Is ShadowSurface free to try?',
-    a: 'Absolutely. You can run a free demo scan on any domain without registration. For continuous monitoring, automated scheduling, and bulk scanning, upgrade to one of our paid plans starting at $99/month.',
+    step: '02',
+    name: 'Fingerprint',
+    runs: 'TCP connect across 407 ports, HTTP banner, TLS handshake',
+    proof: 'The service name, version, TLS protocol and cipher come from the response itself. Nothing is inferred from a page title.',
+  },
+  {
+    step: '03',
+    name: 'Vulnerability mapping',
+    runs: 'Detected version compared against 456 CVE records',
+    proof: 'A CVE is matched only when the version sits inside the affected range, and the finding names the component and version it applies to.',
+  },
+  {
+    step: '04',
+    name: 'Evidence gate',
+    runs: 'Every finding carries a confidence level and its observation',
+    proof: 'When the observation is missing the finding is removed, not softened. A host that never answered produces an INCONCLUSIVE scan, never a clean one.',
+  },
+];
+
+const COVERAGE = [
+  {
+    group: 'Discovery',
+    items: 'Subdomains (CT logs + DNS), wildcard detection, A / MX / TXT / NS / SOA / CNAME records, CAA, DNSKEY',
+  },
+  {
+    group: 'Service',
+    items: 'TCP ports, service banners, TLS version and cipher, certificate validity and expiry, WAF and CDN response headers',
+  },
+  {
+    group: 'Vulnerability',
+    items: 'CVE by affected version range, CVSS, CWE, exploit availability, active probes for injection, traversal, redirect and CORS',
+  },
+  {
+    group: 'Cloud',
+    items: 'Public S3, Google Cloud Storage, Azure Blob, Firebase and Spaces buckets, verified by reading the bucket listing',
+  },
+  {
+    group: 'Hygiene',
+    items: 'Security headers, cookie flags, SPF and DMARC enforcement, DNSSEC, exposed admin paths, directory listing, server version leakage',
+  },
+];
+
+const NOT_REPORTED = [
+  'A CVE for a service whose version we could not read. A product name alone is not a vulnerable build.',
+  'A missing DKIM record. Selectors are chosen by the mail provider, so we report a positive hit and stay silent otherwise.',
+  'Missing headers on a host that returned no headers. Without a response there is nothing to measure.',
+  'A WAF brand found in page text. Only headers issued by the provider count as evidence.',
+  'A clean verdict for a target that never answered. That scan is marked INCONCLUSIVE and says so in the report.',
+];
+
+const AUDIENCE = [
+  {
+    role: 'Security teams',
+    body: 'A continuous view of what is actually reachable from the internet, with the evidence needed to hand each finding to the team that owns the asset.',
+  },
+  {
+    role: 'DevOps and cloud',
+    body: 'Catch a public bucket or a forgotten staging host before it becomes an incident. Scans can be driven from CI through the REST API.',
+  },
+  {
+    role: 'Consultants',
+    body: 'Reconnaissance and a client-ready report in one pass, with the request and response behind every finding so the client can reproduce it.',
   },
 ];
 
@@ -43,7 +108,7 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const runDemo = async () => {
     if (!target) return;
@@ -72,168 +137,218 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-slate-950 text-slate-200">
       <SchemaOrg />
       <Navbar />
 
       {/* ─── HERO ─────────────────────────────────────────────── */}
-      <section className="pt-28 pb-20 px-4">
-        <div className="max-w-5xl mx-auto text-center">
-          <div className="flex justify-center mb-8">
-            <div className="relative w-28 h-28 animate-pulse">
-              <Image src="/logo.svg" alt="ShadowSurface Logo" width={112} height={112} priority />
+      <section className="pt-24 pb-14 px-6">
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+          <div className="lg:col-span-6">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-400/80 mb-5">
+              External attack surface management
+            </p>
+            <h1 className="text-[2rem] sm:text-[2.75rem] font-semibold tracking-tight leading-[1.1] text-white">
+              Find what you have exposed, before someone else does.
+            </h1>
+            <p className="mt-6 text-base sm:text-lg text-slate-400 leading-relaxed max-w-xl">
+              ShadowSurface enumerates your subdomains, fingerprints every open service and maps
+              CVEs to the exact version it detected. Every finding in the report is backed by the
+              request and response that produced it.
+            </p>
+
+            <div className="mt-8 max-w-xl">
+              <label htmlFor="scan-target" className="block text-xs font-medium text-slate-400 mb-2">
+                Domain
+              </label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  id="scan-target"
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                  placeholder="example.com"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="flex-1 px-3.5 py-2.5 rounded-md bg-slate-900 border border-slate-700 font-mono text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  onKeyDown={(e) => e.key === 'Enter' && runDemo()}
+                />
+                <button
+                  onClick={runDemo}
+                  disabled={loading}
+                  className="px-5 py-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading ? 'Scanning…' : 'Run scan'}
+                </button>
+              </div>
+              <p className="mt-2.5 text-xs text-slate-500">
+                No account required. One free scan per 30 minutes.
+              </p>
+              {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+              {result && <DemoResult result={result} />}
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+              <Link href="/register" className="text-emerald-400 hover:text-emerald-300 font-medium">
+                Create an account
+              </Link>
+              <span className="text-slate-700">·</span>
+              <Link href="/pricing" className="text-slate-400 hover:text-slate-200">
+                Plans and limits
+              </Link>
             </div>
           </div>
-          <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight mb-6">
-            Attack Surface Scanner — Know Your <span className="text-emerald-400">External Attack Surface</span> Before Attackers Do
-          </h1>
-          <p className="text-lg sm:text-xl text-slate-400 mb-10 max-w-3xl mx-auto leading-relaxed">
-            ShadowSurface is a cloud-based <strong className="text-slate-200">attack surface management platform</strong> that automatically discovers subdomains, scans open ports, maps CVE vulnerabilities, and detects cloud misconfigurations. Run your first free external attack surface scan in seconds.
-          </p>
 
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 max-w-xl mx-auto mb-12">
-            <h3 className="text-sm font-semibold text-slate-300 mb-3 uppercase tracking-wider">Try a Free Attack Surface Scan</h3>
-            <div className="flex gap-2">
-              <input
-                value={target}
-                onChange={(e) => setTarget(e.target.value)}
-                placeholder="example.com"
-                className="flex-1 px-4 py-3 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                onKeyDown={(e) => e.key === 'Enter' && runDemo()}
-              />
-              <button
-                onClick={runDemo}
-                disabled={loading}
-                className="px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50 transition-colors"
-              >
-                {loading ? 'Scanning...' : 'Scan'}
-              </button>
-            </div>
-            {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
-            {result && <DemoResult result={result} />}
-          </div>
-
-          <div className="flex justify-center gap-4">
-            <Link href="/register" className="px-8 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-colors">Start Free</Link>
-            <Link href="/pricing" className="px-8 py-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold transition-colors">View Pricing</Link>
+          <div className="lg:col-span-6 w-full">
+            <ReportPreview />
           </div>
         </div>
       </section>
 
-      <LiveStats />
-      <TrustBanner />
-
-      {/* ─── SEO: WHAT IS ASM ─────────────────────────────────── */}
-      <section className="py-20 border-t border-slate-800/50">
-        <div className="max-w-4xl mx-auto px-6">
-          <h2 className="text-3xl font-bold mb-6 text-center">What Is Attack Surface Management?</h2>
-          <div className="space-y-5 text-slate-300 leading-relaxed">
-            <p>
-              <strong>Attack Surface Management (ASM)</strong> is the continuous process of discovering, analyzing, and securing all externally facing digital assets that could be exploited by threat actors. Your external attack surface includes everything an attacker can see from the internet — subdomains, IP addresses, open ports, web applications, cloud storage buckets, SSL certificates, and third-party integrations.
-            </p>
-            <p>
-              Traditional vulnerability scanning focuses on known systems. In contrast, an <strong>external attack surface scanner</strong> like ShadowSurface starts with zero knowledge and discovers assets you may not even know exist — shadow IT, forgotten subdomains, development environments left exposed, or cloud resources misconfigured by other teams.
-            </p>
-            <p>
-              ShadowSurface combines four core discovery engines: <strong>subdomain enumeration</strong> to find every hostname under your domain, <strong>port scanning</strong> to detect open services, <strong>CVE mapping</strong> to match discovered software versions against known vulnerabilities, and <strong>cloud misconfiguration scanning</strong> to identify publicly exposed storage and databases.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── HOW IT WORKS ─────────────────────────────────────── */}
-      <section className="py-20 border-t border-slate-800/50">
-        <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center mb-4">How ShadowSurface Works</h2>
-          <p className="text-slate-400 text-center max-w-2xl mx-auto mb-12">Complete external attack surface intelligence in three simple steps.</p>
-          <div className="grid sm:grid-cols-3 gap-8">
+      {/* ─── REAL CAPABILITY NUMBERS ──────────────────────────── */}
+      <section className="border-y border-slate-800/70">
+        <div className="max-w-6xl mx-auto px-6 py-5">
+          <dl className="grid grid-cols-2 lg:grid-cols-4 gap-y-5 gap-x-8">
             {[
-              { step: '01', title: 'Discover Subdomains', desc: 'Enter your domain. Our subdomain scanner queries certificate transparency logs and actively brute-forces DNS to find every hostname — including forgotten dev and staging environments.' },
-              { step: '02', title: 'Scan Ports & Services', desc: 'For each discovered asset, our port scanner checks 100+ ports, grabs service banners, fingerprints technologies, and detects WAF/CDN protection layers.' },
-              { step: '03', title: 'Map CVEs & Cloud Risks', desc: 'Discovered software versions are matched against our CVE database. Cloud resources are checked for public permissions and misconfigurations. You get a risk-scored report.' },
+              { v: '456', l: 'CVE records checked against MITRE' },
+              { v: '2,292', l: 'subdomain dictionary entries' },
+              { v: '407', l: 'TCP ports in the engine' },
+              { v: '1', l: 'evidence trail per finding' },
             ].map((s) => (
-              <div key={s.step} className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 text-center">
-                <div className="text-4xl font-extrabold text-slate-700 mb-3">{s.step}</div>
-                <h3 className="text-lg font-bold mb-2">{s.title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{s.desc}</p>
+              <div key={s.l}>
+                <dt className="font-mono text-xl text-white">{s.v}</dt>
+                <dd className="mt-0.5 text-xs text-slate-500 leading-snug">{s.l}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
+      {/* ─── METHOD ───────────────────────────────────────────── */}
+      <section id="method" className="py-20 px-6">
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-10 lg:gap-16">
+          <div className="lg:col-span-4">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 mb-4">Method</p>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-snug">
+              How a scan runs
+            </h2>
+            <p className="mt-4 text-sm text-slate-400 leading-relaxed">
+              Four stages. Each one produces the evidence the next stage depends on, and nothing
+              leaves the last stage without it.
+            </p>
+          </div>
+
+          <div className="lg:col-span-8 divide-y divide-slate-800/80 border-t border-slate-800/80">
+            {METHOD.map((m) => (
+              <div key={m.step} className="py-6 grid sm:grid-cols-[44px_1fr] gap-x-5 gap-y-2">
+                <span className="font-mono text-xs text-slate-600 pt-1">{m.step}</span>
+                <div>
+                  <h3 className="text-sm font-semibold text-white">{m.name}</h3>
+                  <p className="mt-1.5 text-sm text-slate-400 leading-relaxed">{m.runs}</p>
+                  <p className="mt-2 text-[13px] text-slate-500 leading-relaxed border-l border-slate-800 pl-3">
+                    {m.proof}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <TerminalTyping />
-      <RiskPulse />
+      {/* ─── COVERAGE ─────────────────────────────────────────── */}
+      <section id="coverage" className="py-20 px-6 border-t border-slate-800/70">
+        <div className="max-w-6xl mx-auto">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 mb-4">Coverage</p>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-snug">
+              What gets checked
+            </h2>
+            <p className="mt-4 text-sm text-slate-400 leading-relaxed">
+              Five groups of checks, all from the internet side. Plan limits decide how many ports
+              are probed and which scan types are available, not what the engine is capable of.
+            </p>
+          </div>
 
-      {/* ─── FEATURES ─────────────────────────────────────────── */}
-      <section className="py-20 border-t border-slate-800/50">
-        <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center mb-4">Attack Surface Intelligence Features</h2>
-          <p className="text-slate-400 text-center max-w-2xl mx-auto mb-12">Everything you need to discover, monitor, and secure your external digital footprint.</p>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { title: 'Subdomain Scanner', desc: 'Enumerate thousands of subdomains via passive CT log queries and active DNS brute-forcing with a 5,000+ wordlist.' },
-              { title: 'Port Scanner', desc: 'Scan 100+ ports per asset with TCP connect scanning, banner grabbing, and service fingerprinting.' },
-              { title: 'CVE Scanner', desc: 'Match discovered Apache, Nginx, OpenSSH, IIS, and Python versions against known CVEs with confidence scoring.' },
-              { title: 'Cloud Security Scanner', desc: 'Detect publicly exposed S3 buckets, GCS blobs, Azure containers, and Firebase databases with misconfiguration details.' },
-              { title: 'SSL Certificate Analysis', desc: 'Monitor certificate expiry, detect self-signed certificates, weak ciphers, and chain validation errors.' },
-              { title: 'WAF & CDN Detection', desc: 'Identify Cloudflare, Akamai, AWS CloudFront, Sucuri, and generic WAF protection layers.' },
-              { title: 'Executive Risk Reports', desc: 'Generate PDF-ready risk-scored reports with severity distribution, asset tables, and remediation recommendations.' },
-              { title: 'API & Bulk Scanning', desc: 'Full REST API with API keys. Bulk scan up to 50 domains simultaneously on Enterprise plans.' },
-            ].map((f) => (
-              <div key={f.title} className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
-                <h3 className="font-semibold text-white mb-2">{f.title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{f.desc}</p>
+          <div className="mt-10 border-t border-slate-800/80">
+            {COVERAGE.map((c) => (
+              <div key={c.group} className="py-5 grid sm:grid-cols-[140px_1fr] gap-x-6 gap-y-1 border-b border-slate-800/80">
+                <span className="text-sm font-medium text-slate-300">{c.group}</span>
+                <span className="text-sm text-slate-400 leading-relaxed">{c.items}</span>
+              </div>
+            ))}
+          </div>
+
+          <p className="mt-6 text-xs text-slate-500">
+            Full technical detail on <Link href="/features" className="text-slate-400 underline decoration-slate-700 underline-offset-2 hover:text-slate-200">the features page</Link>.
+          </p>
+        </div>
+      </section>
+
+      {/* ─── WHAT WE DO NOT REPORT ────────────────────────────── */}
+      <section className="py-20 px-6 border-t border-slate-800/70">
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-10 lg:gap-16">
+          <div className="lg:col-span-4">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 mb-4">Restraint</p>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-snug">
+              What we do not report
+            </h2>
+            <p className="mt-4 text-sm text-slate-400 leading-relaxed">
+              A scanner is only useful if its findings survive scrutiny. These are the rules the
+              engine enforces before anything reaches a report.
+            </p>
+          </div>
+          <ul className="lg:col-span-8 space-y-4">
+            {NOT_REPORTED.map((n) => (
+              <li key={n} className="flex gap-3">
+                <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-slate-600" />
+                <span className="text-sm text-slate-400 leading-relaxed">{n}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* ─── AUDIENCE ─────────────────────────────────────────── */}
+      <section className="py-20 px-6 border-t border-slate-800/70">
+        <div className="max-w-6xl mx-auto">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 mb-4">Users</p>
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-snug">
+            Where it fits
+          </h2>
+          <div className="mt-10 grid sm:grid-cols-3 gap-x-10 gap-y-8">
+            {AUDIENCE.map((a) => (
+              <div key={a.role} className="border-t border-slate-800 pt-5">
+                <h3 className="text-sm font-semibold text-white">{a.role}</h3>
+                <p className="mt-2 text-sm text-slate-400 leading-relaxed">{a.body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── USE CASES ────────────────────────────────────────── */}
-      <section className="py-20 border-t border-slate-800/50">
-        <div className="max-w-4xl mx-auto px-6">
-          <h2 className="text-3xl font-bold mb-6 text-center">Who Uses ShadowSurface?</h2>
-          <div className="grid sm:grid-cols-2 gap-8">
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
-              <h3 className="text-lg font-bold mb-2 text-emerald-400">Security Teams</h3>
-              <p className="text-slate-300 text-sm leading-relaxed">SOC and red teams use ShadowSurface to continuously monitor their organization's external attack surface, discover shadow IT, and prioritize remediation based on real risk scores rather than vulnerability counts alone.</p>
-            </div>
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
-              <h3 className="text-lg font-bold mb-2 text-emerald-400">DevOps & Cloud Engineers</h3>
-              <p className="text-slate-300 text-sm leading-relaxed">Cloud engineers scan for publicly exposed storage buckets, misconfigured load balancers, and forgotten development environments before attackers find them. Integrate scans into CI/CD pipelines via our REST API.</p>
-            </div>
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
-              <h3 className="text-lg font-bold mb-2 text-emerald-400">Penetration Testers</h3>
-              <p className="text-slate-300 text-sm leading-relaxed">Pentesters run ShadowSurface during reconnaissance to quickly map the target's attack surface, identify high-value entry points, and generate professional reports for client deliverables.</p>
-            </div>
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
-              <h3 className="text-lg font-bold mb-2 text-emerald-400">Compliance Officers</h3>
-              <p className="text-slate-300 text-sm leading-relaxed">Meet regulatory requirements for continuous asset discovery and vulnerability management. Generate audit-ready reports showing your organization's security posture over time.</p>
-            </div>
+      {/* ─── FAQ ──────────────────────────────────────────────── */}
+      <section className="py-20 px-6 border-t border-slate-800/70">
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-10 lg:gap-16">
+          <div className="lg:col-span-4">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 mb-4">Questions</p>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-snug">
+              Technical FAQ
+            </h2>
           </div>
-        </div>
-      </section>
-
-      {/* ─── VISIBLE FAQ ──────────────────────────────────────── */}
-      <section className="py-20 border-t border-slate-800/50">
-        <div className="max-w-3xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center mb-4">Frequently Asked Questions</h2>
-          <p className="text-slate-400 text-center mb-12">Everything you need to know about attack surface scanning with ShadowSurface.</p>
-          <div className="space-y-3">
+          <div className="lg:col-span-8 border-t border-slate-800/80">
             {FAQS.map((faq, i) => (
-              <div key={i} className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
+              <div key={faq.q} className="border-b border-slate-800/80">
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full text-left px-6 py-4 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+                  className="w-full text-left py-4 flex items-start justify-between gap-6 group"
+                  aria-expanded={openFaq === i}
                 >
-                  <span className="font-semibold text-white">{faq.q}</span>
-                  <span className="text-emerald-400 text-xl">{openFaq === i ? '−' : '+'}</span>
+                  <span className="text-sm font-medium text-slate-200 group-hover:text-white">{faq.q}</span>
+                  <span className="text-slate-500 text-base leading-none pt-0.5 shrink-0">
+                    {openFaq === i ? '−' : '+'}
+                  </span>
                 </button>
                 {openFaq === i && (
-                  <div className="px-6 pb-4 text-slate-300 text-sm leading-relaxed">
-                    {faq.a}
-                  </div>
+                  <div className="pb-5 pr-10 text-sm text-slate-400 leading-relaxed">{faq.a}</div>
                 )}
               </div>
             ))}
@@ -244,19 +359,68 @@ export default function LandingPage() {
       <FAQSchema />
 
       {/* ─── CTA ──────────────────────────────────────────────── */}
-      <section className="py-20 border-t border-slate-800/50 text-center">
-        <div className="max-w-3xl mx-auto px-6">
-          <h2 className="text-3xl font-bold mb-4">Start Your Free Attack Surface Scan</h2>
-          <p className="text-slate-400 mb-8">Discover subdomains, open ports, CVEs, and cloud misconfigurations in minutes. No credit card required.</p>
-          <div className="flex justify-center gap-4">
-            <Link href="/register" className="px-8 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-colors">Get Started Free</Link>
-            <Link href="/pricing" className="px-8 py-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold transition-colors">View Pricing</Link>
+      <section className="py-16 px-6 border-t border-slate-800/70">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-white">
+              Run the first scan on your own domain.
+            </h2>
+            <p className="mt-2 text-sm text-slate-400">
+              Free plan covers subdomain discovery and the top 10 ports. No card required.
+            </p>
+          </div>
+          <div className="flex gap-3 shrink-0">
+            <Link
+              href="/register"
+              className="px-5 py-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-colors"
+            >
+              Create account
+            </Link>
+            <Link
+              href="/pricing"
+              className="px-5 py-2.5 rounded-md border border-slate-700 hover:border-slate-600 text-slate-300 text-sm font-medium transition-colors"
+            >
+              See pricing
+            </Link>
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-slate-800 py-8 text-center text-slate-500 text-sm">
-        &copy; {new Date().getFullYear()} ShadowSurface. All rights reserved.
+      {/* ─── FOOTER ───────────────────────────────────────────── */}
+      <footer className="border-t border-slate-800/70 py-12 px-6">
+        <div className="max-w-6xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-8">
+          <div className="col-span-2 sm:col-span-1">
+            <div className="text-sm font-semibold text-white">ShadowSurface</div>
+            <p className="mt-2 text-xs text-slate-500 leading-relaxed">
+              External attack surface management with an evidence trail behind every finding.
+            </p>
+          </div>
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.14em] text-slate-500 mb-3">Product</div>
+            <ul className="space-y-2 text-sm">
+              <li><Link href="/features" className="text-slate-400 hover:text-slate-200">Features</Link></li>
+              <li><Link href="/pricing" className="text-slate-400 hover:text-slate-200">Pricing</Link></li>
+              <li><Link href="/register" className="text-slate-400 hover:text-slate-200">Get started</Link></li>
+            </ul>
+          </div>
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.14em] text-slate-500 mb-3">Company</div>
+            <ul className="space-y-2 text-sm">
+              <li><Link href="/blog" className="text-slate-400 hover:text-slate-200">Blog</Link></li>
+              <li><Link href="/contact" className="text-slate-400 hover:text-slate-200">Contact</Link></li>
+            </ul>
+          </div>
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.14em] text-slate-500 mb-3">Legal</div>
+            <ul className="space-y-2 text-sm">
+              <li><Link href="/privacy" className="text-slate-400 hover:text-slate-200">Privacy</Link></li>
+              <li><Link href="/terms" className="text-slate-400 hover:text-slate-200">Terms</Link></li>
+            </ul>
+          </div>
+        </div>
+        <div className="max-w-6xl mx-auto mt-10 pt-6 border-t border-slate-900 text-xs text-slate-600">
+          © {new Date().getFullYear()} ShadowSurface
+        </div>
       </footer>
     </div>
   );
