@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Navbar from '@/components/Navbar';
+import { USDT_TRC20_ADDRESS, USDT_ADDRESS_FORMAT_OK } from '@/lib/usdtAddress';
 
 const plans = [
   {
@@ -233,23 +234,32 @@ export default function PricingPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-lg">₿</span>
-                      <span className="font-semibold text-sm">USDT (TRC20)</span>
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400">Address:</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-white font-mono text-xs">THZzRBItyb8bhGczJgSFVNGjjt6x4MC3PL</span>
-                          <button onClick={() => copyText('THZzRBItyb8bhGczJgSFVNGjjt6x4MC3PL')} className="text-emerald-400 text-xs hover:text-emerald-300">Copy</button>
-                        </div>
+                  {USDT_ADDRESS_FORMAT_OK ? (
+                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-lg">₿</span>
+                        <span className="font-semibold text-sm">USDT (TRC20)</span>
                       </div>
-                      <div className="flex justify-between"><span className="text-slate-400">Network:</span><span className="text-white">TRC20 (Tron)</span></div>
-                      <div className="flex justify-between"><span className="text-slate-400">Amount:</span><span className="text-white">{selectedPlan.price} USDT</span></div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400">Address:</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-mono text-xs">{USDT_TRC20_ADDRESS}</span>
+                            <button onClick={() => copyText(USDT_TRC20_ADDRESS)} className="text-emerald-400 text-xs hover:text-emerald-300">Copy</button>
+                          </div>
+                        </div>
+                        <div className="flex justify-between"><span className="text-slate-400">Network:</span><span className="text-white">TRC20 (Tron)</span></div>
+                        <div className="flex justify-between"><span className="text-slate-400">Amount:</span><span className="text-white">{selectedPlan.price} USDT</span></div>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="bg-amber-900/20 border border-amber-800 rounded-xl p-4">
+                      <p className="text-amber-200 text-sm">
+                        Online checkout is paused while the payment wallet is being reconfigured. Email{' '}
+                        <span className="font-bold">egegoker35@gmail.com</span> with the plan you want and your account will be activated manually.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="bg-emerald-900/20 border border-emerald-800 rounded-xl p-4">
                     <p className="text-emerald-300 text-sm text-center">
@@ -258,7 +268,11 @@ export default function PricingPage() {
                   </div>
                 </div>
 
-                <button onClick={() => setStep('verify')} className="mt-4 w-full py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition-colors">
+                <button
+                  onClick={() => setStep('verify')}
+                  disabled={!USDT_ADDRESS_FORMAT_OK}
+                  className="mt-4 w-full py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
                   I Have Paid — Verify Now
                 </button>
               </>

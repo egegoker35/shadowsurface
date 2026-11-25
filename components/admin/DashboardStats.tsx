@@ -94,6 +94,69 @@ export default function DashboardStats({ data }: { data: any }) {
           </ul>
         </div>
       </div>
+
+      <SystemChecks config={data?.config} />
+    </div>
+  );
+}
+
+/**
+ * Configuration that silently disables a customer-facing flow. Both rows are computed
+ * from live settings in the admin API, so a warning clears as soon as the value is fixed.
+ */
+function SystemChecks({ config }: { config?: any }) {
+  const payments = config?.payments;
+  const email = config?.email;
+
+  const rows: Array<{ label: string; ok: boolean; detail: string }> = [];
+
+  if (payments) {
+    rows.push({
+      label: 'USDT payments',
+      ok: !!payments.valid,
+      detail: payments.valid
+        ? `Recipient ${payments.address}`
+        : `Recipient address is invalid (${payments.reason || 'unknown reason'}) - checkout is paused`,
+    });
+  }
+
+  if (email) {
+    const shared = email.provider === 'resend' && email.sharedSender;
+    rows.push({
+      label: 'Transactional email',
+      ok: email.provider !== 'none' && !shared,
+      detail:
+        email.provider === 'none'
+          ? 'No provider configured - verification and password-reset mail cannot be delivered'
+          : shared
+            ? `Resend shared sender (${email.from || 'onboarding@resend.dev'}) only reaches the account owner - verify a domain to mail customers`
+            : `Sending through ${email.provider} as ${email.from}`,
+    });
+  }
+
+  if (!rows.length) return null;
+
+  return (
+    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-bold text-white">System checks</h3>
+        <span className="text-[11px] text-slate-500">{rows.filter((r) => !r.ok).length} warning(s)</span>
+      </div>
+      <ul className="space-y-3">
+        {rows.map((row) => (
+          <li key={row.label} className="flex items-start gap-3 text-xs">
+            <span
+              className={`mt-1 h-2 w-2 shrink-0 rounded-full ${row.ok ? 'bg-emerald-500' : 'bg-amber-500'}`}
+            />
+            <span className="min-w-0">
+              <span className="text-slate-200 font-semibold">{row.label}</span>
+              <span className={`block mt-0.5 break-words ${row.ok ? 'text-slate-500' : 'text-amber-300'}`}>
+                {row.detail}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

@@ -78,10 +78,13 @@ deploying; the build itself only regenerates the client.
 | `ADMIN_PASSWORD` | Admin | Console login password |
 | `RESEND_API_KEY` | Optional | Transactional email |
 | `EMAIL_FROM` | Optional | Sender address. Must belong to a domain verified in Resend |
+| `NEXT_PUBLIC_USDT_TRC20_ADDRESS` | Optional | USDT (TRC20) wallet for plan payments. Validated as Base58Check; checkout is paused when invalid |
 
 ## Billing
 
-Plans are sold per month and paid in USDT (TRC20). `POST /api/payments/verify` reads the
+Plans are sold per month and paid in USDT (TRC20). The recipient wallet is a single
+constant (`lib/usdtAddress.ts`, overridable with `NEXT_PUBLIC_USDT_TRC20_ADDRESS`) and is
+checked as a Base58Check Tron address before any money is accepted. `POST /api/payments/verify` reads the
 transfer from TronScan (`trc20TransferInfo`), checks recipient, amount, token contract and
 that the transaction has not been used before, then activates the plan for one 30-day
 period. Renewing an active plan extends the current end date. An organization whose paid

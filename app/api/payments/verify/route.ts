@@ -3,9 +3,8 @@ import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { rateLimitByIP } from '@/lib/middleware/rateLimit';
 import { nextPeriodEnd } from '@/lib/plans';
+import { USDT_TRC20_ADDRESS, USDT_TRC20_CONTRACT, USDT_ADDRESS_STATUS } from '@/lib/usdt';
 
-const USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
-const MY_ADDRESS = 'THZzRBItyb8bhGczJgSFVNGjjt6x4MC3PL';
 const MAX_TX_AGE_MS = 72 * 60 * 60 * 1000;
 
 const PLAN_AMOUNTS: Record<string, number> = {
@@ -26,6 +25,20 @@ type Trc20Transfer = {
 
 export async function POST(req: NextRequest) {
   try {
+    // Refuse to take money for a wallet that cannot receive it. The previous build shipped
+    // an address containing "I", which is not in the Base58 alphabet, so TronScan rejected
+    // every lookup and no payment could ever have been settled.
+    if (!USDT_ADDRESS_STATUS.valid) {
+      return NextResponse.json(
+        {
+          error:
+            'Payments are temporarily unavailable: the recipient wallet is not configured correctly. ' +
+            'Please contact support to activate your plan manually.',
+        },
+        { status: 503 }
+      );
+    }
+
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
     const limit = await rateLimitByIP(`pay:${ip}`, 10, 600).catch(() => ({ success: true }));
     if (!limit.success) {
@@ -75,7 +88,7 @@ export async function POST(req: NextRequest) {
         (t.type === undefined || t.type === 'Transfer') &&
         t.to_address &&
         t.contract_address &&
-        (t.contract_address || '').toLowerCase() === USDT_CONTRACT.toLowerCase(),
+        (t.contract_address || '').toLowerCase() === USDT_TRC20_CONTRACT.toLowerCase(),
     );
     if (!transfer) return NextResponse.json({ error: 'Not a USDT transfer' }, { status: 400 });
 
@@ -83,7 +96,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Transfer failed on-chain' }, { status: 400 });
     }
 
-    if ((transfer.to_address || '').toLowerCase() !== MY_ADDRESS.toLowerCase()) {
+    if ((transfer.to_address || '').toLowerCase() !== USDT_TRC20_ADDRESS.toLowerCase()) {
       return NextResponse.json({ error: 'Recipient address mismatch' }, { status: 400 });
     }
 

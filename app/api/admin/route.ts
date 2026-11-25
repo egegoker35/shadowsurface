@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdmin, adminForbidden } from '@/lib/adminAuth';
+import { USDT_TRC20_ADDRESS, USDT_ADDRESS_STATUS } from '@/lib/usdt';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -228,6 +229,26 @@ export async function GET(req: NextRequest) {
       scansByStatus: scansByStatus.map((s) => ({ status: s.status, count: s._count._all })),
       risk30d: riskRows.reduce((acc, r) => ({ ...acc, [r.risk]: r.n }), {} as Record<string, number>),
       recentScans,
+      // Deployment settings that silently break a user-facing flow. Both checks are
+      // derived from live configuration, so a warning disappears as soon as the env
+      // value is corrected; neither is a hardcoded status.
+      config: {
+        payments: {
+          address: USDT_TRC20_ADDRESS,
+          valid: USDT_ADDRESS_STATUS.valid,
+          reason: USDT_ADDRESS_STATUS.reason || null,
+        },
+        email: (() => {
+          const from = process.env.EMAIL_FROM || '';
+          const provider = process.env.RESEND_API_KEY
+            ? 'resend'
+            : process.env.SMTP_HOST
+              ? 'smtp'
+              : 'none';
+          const sharedSender = provider === 'resend' && (!from || from.includes('resend.dev'));
+          return { provider, from, sharedSender };
+        })(),
+      },
     });
   } catch (e: any) {
     console.error('[Admin API]', e);
