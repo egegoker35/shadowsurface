@@ -9,6 +9,7 @@ const execAsync = promisify(exec);
 import type { DiscoveredAsset, CloudAsset, ScanResult, Finding, WebVuln, WebVulnType, SSLInfo, DNSRecord, AgentSurfaceResult } from './types';
 import { scanAgentSurface } from './agentSurface';
 import { isHostWithinDomain } from './hostnames';
+import { isPrivateIp } from '@/lib/middleware/security';
 
 const genId = () => Math.random().toString(36).substring(2, 14);
 
@@ -2956,7 +2957,10 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
   for (let i=0; i<entries.length; i+=chunkSize) {
     const chunk = entries.slice(i, i+chunkSize);
     await Promise.all(chunk.map(async ([sub, ips]) => {
-      for (const ip of ips) {
+      // A hostname can resolve to a private address (internal DNS, attacker-controlled
+      // zone). Probing it would turn the scanner into an internal-network scanner, so
+      // private, loopback and link-local answers are dropped before any connection.
+      for (const ip of ips.filter((candidate) => !isPrivateIp(candidate))) {
         const pList = ports.slice(0,100);
         for (let p=0; p<pList.length; p+=portBatch) {
           await Promise.all(pList.slice(p, p+portBatch).map(async (port) => {

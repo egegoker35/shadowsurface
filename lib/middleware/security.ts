@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimit } from './rateLimit';
+import { clientIp } from './ip';
 
 const SUSPICIOUS_PATTERNS = [
   /[<>\"'`;]/,
@@ -20,6 +21,8 @@ const BLOCKED_PREFIXES = [
   '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.',
   '172.28.', '172.29.', '172.30.', '172.31.', '127.', '0.', 'fc00:', 'fe80:',
 ];
+
+export { clientIp, isPrivateIp } from './ip';
 
 export function isBlockedTarget(target: string): boolean {
   const lower = target.toLowerCase().trim();
@@ -45,7 +48,7 @@ export function hasSuspiciousInput(input: string): boolean {
 }
 
 export async function abuseCheck(req: NextRequest): Promise<NextResponse | null> {
-  const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+  const ip = clientIp(req.headers);
 
   // Check if IP is globally banned first
   const { redis } = await import('@/lib/redis');

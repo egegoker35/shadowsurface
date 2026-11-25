@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
+import { validateWebhookUrl } from '@/lib/webhookUrl';
 
 export type ScanEventPayload = {
   event: 'scan.completed' | 'scan.failed';
@@ -44,13 +45,22 @@ export async function dispatchScanEvent(orgId: string, payload: ScanEventPayload
 
         let status = 0;
         try {
-          const res = await fetch(hook.url, {
-            method: 'POST',
-            headers,
-            body,
-            signal: AbortSignal.timeout(5000),
-          });
-          status = res.status;
+          // Re-check at delivery time: rows created before validation existed must not be
+          // fetched, and redirects are not followed so a 302 cannot bounce the request
+          // into an internal address after validation.
+          const check = await validateWebhookUrl(hook.url);
+          if (!check.ok) {
+            status = -1;
+          } else {
+            const res = await fetch(check.url!, {
+              method: 'POST',
+              headers,
+              body,
+              redirect: 'manual',
+              signal: AbortSignal.timeout(5000),
+            });
+            status = res.status;
+          }
         } catch {
           status = 0; // network error / timeout: record it instead of throwing
         }

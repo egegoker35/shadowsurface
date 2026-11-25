@@ -5,6 +5,7 @@
  */
 
 import { resolve4 } from 'dns/promises';
+import { isPrivateIp } from '@/lib/middleware/security';
 import { SUBDOMAIN_WORDLIST } from './wordlist';
 import { isHostWithinDomain } from './hostnames';
 
@@ -88,9 +89,9 @@ async function resolveBulk(domains: string[], concurrency = 200): Promise<Record
       })
     );
     for (const s of settled) {
-      if (s.status === 'fulfilled' && s.value.ips.length > 0) {
-        results[s.value.domain] = s.value.ips;
-      }
+      if (s.status !== 'fulfilled') continue;
+      const publicIps = s.value.ips.filter((ip) => !isPrivateIp(ip));
+      if (publicIps.length > 0) results[s.value.domain] = publicIps;
     }
   }
   return results;

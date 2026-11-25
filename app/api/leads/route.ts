@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 import { rateLimitByIP } from '@/lib/middleware/rateLimit';
+import { clientIp } from '@/lib/middleware/security';
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const ip = clientIp(req.headers);
     const rl = await rateLimitByIP(ip, 5, 3600);
     if (!rl.success) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });

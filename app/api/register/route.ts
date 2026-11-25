@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { hashPassword, createToken } from '@/lib/auth';
 import { rateLimitByIP } from '@/lib/middleware/rateLimit';
 import { z } from 'zod';
+import { clientIp } from '@/lib/middleware/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +11,7 @@ const schema = z.object({ email: z.string().email(), password: z.string().min(8)
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const ip = clientIp(req.headers);
     const rl = await rateLimitByIP(ip, 5, 3600);
     if (!rl.success) {
       return NextResponse.json({ error: 'Too many registration attempts. Try again later.' }, { status: 429 });

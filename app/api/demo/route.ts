@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runDemoScan } from '@/lib/scanner/demoScanner';
 import { rateLimitByIP } from '@/lib/middleware/rateLimit';
-import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput } from '@/lib/middleware/security';
+import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput, clientIp } from '@/lib/middleware/security';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -10,7 +10,7 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const ip = clientIp(req.headers);
 
     const rl = await rateLimitByIP(ip, 3, 1800);
     if (!rl.success) {

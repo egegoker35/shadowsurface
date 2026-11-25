@@ -1,6 +1,7 @@
 import { request as httpRequest } from 'http';
 import { request as httpsRequest } from 'https';
 import { resolve4, resolveCname } from 'dns/promises';
+import { isPrivateIp } from '@/lib/middleware/security';
 import { URL } from 'url';
 
 export interface AgentSurfaceFinding {
@@ -266,6 +267,8 @@ async function typosquatCheck(target: string, result: AgentSurfaceResult, deadli
       const [ips, cnames] = await Promise.all([resolve4(cand), resolveCname(cand)]);
       const addrs = [...(ips || []), ...(cnames || [])];
       if (addrs.length === 0) continue;
+      // Never fetch a candidate that only resolves to private or loopback addresses.
+      if ((ips || []).length > 0 && (ips || []).every((ip) => isPrivateIp(ip))) continue;
       const res = await fetchUrl(`https://${cand}/`, 2500);
       const body = res?.body.toLowerCase() || '';
       const looksAgent = body.includes('mcp') || body.includes('agent') || body.includes('llm') || body.includes('login');

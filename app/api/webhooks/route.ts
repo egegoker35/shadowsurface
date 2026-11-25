@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
+import { validateWebhookUrl } from '@/lib/webhookUrl';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,8 +23,15 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { name, url, events, secret } = body;
     if (!name || !url) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+
+    // Stored URLs are fetched by the server on every scan event, so they must point at a
+    // public HTTPS endpoint. Without this check a customer could aim delivery at internal
+    // services or the cloud metadata endpoint.
+    const check = await validateWebhookUrl(url);
+    if (!check.ok) return NextResponse.json({ error: `Invalid webhook URL: ${check.reason}` }, { status: 400 });
+
     const item = await prisma.webhook.create({
-      data: { name, url, events: events || ['scan.completed'], secret, orgId: user.orgId },
+      data: { name, url: check.url!, events: events || ['scan.completed'], secret, orgId: user.orgId },
     });
     return NextResponse.json({ webhook: item });
   } catch (e: any) {

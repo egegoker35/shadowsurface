@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { rateLimitByIP } from '@/lib/middleware/rateLimit';
 import { nextPeriodEnd } from '@/lib/plans';
 import { USDT_TRC20_ADDRESS, USDT_TRC20_CONTRACT, USDT_ADDRESS_STATUS } from '@/lib/usdt';
+import { clientIp } from '@/lib/middleware/security';
 
 const MAX_TX_AGE_MS = 72 * 60 * 60 * 1000;
 
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const ip = clientIp(req.headers);
     const limit = await rateLimitByIP(`pay:${ip}`, 10, 600).catch(() => ({ success: true }));
     if (!limit.success) {
       return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
