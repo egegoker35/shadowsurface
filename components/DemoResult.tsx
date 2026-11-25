@@ -31,10 +31,14 @@ function ScoreRing({ score, label, invert = false }: { score: number; label: str
 export default function DemoResult({ result }: { result: any }) {
   if (!result) return null;
   const subdomains = result.subdomains || [];
-  const findings = result.findings || [];
+  const assets = result.assets || [];
+  // Tag every finding with the host it came from. The flat list showed the same header
+  // finding twice with no indication that two different assets produced it.
+  const findings = assets.length
+    ? assets.flatMap((a: any) => (a.findings || []).map((f: any) => ({ ...f, host: a.subdomain })))
+    : (result.findings || []);
   // The demo never returns a separate port list; it returns one entry per responding
   // service. Reading result.ports left the "Open Ports" ring stuck at 0 on every scan.
-  const assets = result.assets || [];
   const ports = assets.length
     ? Array.from(new Map(assets.map((a: any) => [a.port, { port: a.port, service: a.service }])).values())
     : (result.ports || []);
@@ -85,9 +89,12 @@ export default function DemoResult({ result }: { result: any }) {
           <h4 className="text-sm font-semibold text-white mb-2">Security Findings</h4>
           <div className="space-y-2">
             {findings.slice(0, 6).map((f: any, i: number) => (
-              <div key={i} className="flex items-center justify-between bg-slate-900/50 rounded-lg px-3 py-2">
-                <span className="text-xs text-slate-300">{f.description}</span>
-                <Badge severity={f.severity} />
+              <div key={i} className="bg-slate-900/50 rounded-lg px-3 py-2">
+                {f.host && <div className="font-mono text-[10px] text-slate-500 mb-1">{f.host}</div>}
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-slate-300">{f.description}</span>
+                  <Badge severity={f.severity} />
+                </div>
               </div>
             ))}
             {findings.length > 6 && (
