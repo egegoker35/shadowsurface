@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const user = await getUserFromRequest(req.headers);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const items = await prisma.apiKey.findMany({ where: { orgId: user.orgId }, orderBy: { createdAt: 'desc' } });
-    return NextResponse.json({ apiKeys: items.map((k) => ({ ...k, keyHash: undefined, prefix: k.keyHash.slice(0, 8) + '...' })) });
+    return NextResponse.json({ apiKeys: items.map((k) => ({ ...k, keyHash: undefined, prefix: 'ss_••••••••' })) });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
