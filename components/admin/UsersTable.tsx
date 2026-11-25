@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import Pagination from './Pagination';
 
 const PLAN_STYLES: Record<string, string> = {
@@ -47,14 +48,33 @@ export default function UsersTable({
   onRefresh: () => void;
 }) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('ss_admin_token') : null;
+  const [notice, setNotice] = useState('');
+  const [tempCred, setTempCred] = useState<{ email: string; password: string } | null>(null);
 
   const call = async (url: string, init: RequestInit) => {
+    setNotice('');
     const res = await fetch(url, init);
     if (res.ok) onRefresh();
     else {
       const d = await res.json().catch(() => ({}));
-      alert(d.error || 'The action failed.');
+      setNotice(d.error || 'The action failed.');
     }
+  };
+
+  const resetPassword = async (u: any) => {
+    if (!confirm(`Issue a temporary password for ${u.email}? Their current password stops working immediately.`)) return;
+    setNotice('');
+    const res = await fetch('/api/admin/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ userId: u.id }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setNotice(d.error || 'Password reset failed.');
+      return;
+    }
+    setTempCred({ email: d.email || u.email, password: d.tempPassword });
   };
 
   const upgrade = (userId: string, plan: string) =>
@@ -87,6 +107,27 @@ export default function UsersTable({
           {total} total
         </span>
       </div>
+      {tempCred && (
+        <div className="mx-7 mt-5 rounded-xl border border-emerald-600/40 bg-emerald-500/10 px-4 py-3">
+          <div className="text-sm font-semibold text-emerald-300">Temporary password for {tempCred.email}</div>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <code className="font-mono text-white bg-slate-950/70 border border-slate-700 px-2.5 py-1 rounded text-sm">{tempCred.password}</code>
+            <button
+              onClick={() => navigator.clipboard?.writeText(tempCred.password)}
+              className="text-[11px] font-bold text-emerald-300 hover:text-emerald-200 underline underline-offset-2"
+            >
+              Copy
+            </button>
+            <button onClick={() => setTempCred(null)} className="text-[11px] text-slate-400 hover:text-slate-200 underline underline-offset-2">
+              Dismiss
+            </button>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-1.5">Shown once and stored only as a hash. Deliver it over a secure channel.</p>
+        </div>
+      )}
+      {notice && (
+        <div className="mx-7 mt-5 rounded-xl border border-red-600/40 bg-red-500/10 px-4 py-2.5 text-xs text-red-300">{notice}</div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
           <thead className="text-[11px] text-slate-500 uppercase tracking-wider bg-slate-950/60 border-b border-slate-800">
@@ -163,6 +204,13 @@ export default function UsersTable({
                           {p.slice(0, 3)}
                         </button>
                       ))}
+                      <button
+                        onClick={() => resetPassword(u)}
+                        className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-sky-700/50 text-sky-400 hover:bg-sky-600/20 transition-colors"
+                        title="Issue a temporary password"
+                      >
+                        Reset PW
+                      </button>
                       <button
                         onClick={() => setRole(u.id, u.role === 'admin' ? 'user' : 'admin')}
                         className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-orange-700/50 text-orange-400 hover:bg-orange-600/20 transition-colors"

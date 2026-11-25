@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
+import { effectivePlan } from '@/lib/plans';
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,7 +23,17 @@ export async function GET(req: NextRequest) {
     ]);
 
     const { passwordHash: _ph, ...safeUser } = user;
-    return NextResponse.json({ scanCount, assetCount, cloudCount, highRiskAssets, scans, plan: org?.plan || 'starter', user: safeUser, organization: org });
+    return NextResponse.json({
+      scanCount,
+      assetCount,
+      cloudCount,
+      highRiskAssets,
+      scans,
+      plan: effectivePlan(org),
+      planExpiresAt: org?.planExpiresAt || null,
+      user: safeUser,
+      organization: org,
+    });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Failed' }, { status: 500 });
   }

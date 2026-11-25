@@ -16,7 +16,9 @@ export const PLAN_CONFIG: Record<string, PlanConfig> = {
 };
 
 export function configForPlan(plan?: string | null): PlanConfig {
-  return PLAN_CONFIG[plan || 'free'] || PLAN_CONFIG.starter;
+  // Unknown plan strings must not fall back to a paid tier: an org row with a stale or
+  // hand-edited value would otherwise receive starter limits for free.
+  return PLAN_CONFIG[plan || 'free'] || PLAN_CONFIG.free;
 }
 
 /**

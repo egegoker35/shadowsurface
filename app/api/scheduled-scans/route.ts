@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
-import { configForPlan, VALID_SCAN_TYPES } from '@/lib/plans';
+import { configForPlan, effectivePlan, VALID_SCAN_TYPES } from '@/lib/plans';
 import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput } from '@/lib/middleware/security';
 
 export const dynamic = 'force-dynamic';
@@ -45,9 +45,11 @@ export async function POST(req: NextRequest) {
     if (isBlockedTarget(cleanTarget)) return NextResponse.json({ error: 'Target blocked' }, { status: 403 });
 
     const org = await prisma.organization.findUnique({ where: { id: user.orgId } });
-    const config = configForPlan(org?.plan);
+    // An expired paid period must not keep scheduled-scan limits.
+    const plan = effectivePlan(org);
+    const config = configForPlan(plan);
     if (!config.allowedTypes.includes(type)) {
-      return NextResponse.json({ error: `${type} scan is not included in the ${org?.plan || 'free'} plan. Upgrade at /pricing` }, { status: 403 });
+      return NextResponse.json({ error: `${type} scan is not included in the ${plan} plan. Upgrade at /pricing` }, { status: 403 });
     }
 
     const item = await prisma.scheduledScan.create({
