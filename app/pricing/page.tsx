@@ -89,6 +89,7 @@ export default function PricingPage() {
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [verifyError, setVerifyError] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
+  const [tempPassword, setTempPassword] = useState('');
 
   const openModal = (plan: any) => {
     setSelectedPlan(plan);
@@ -132,8 +133,12 @@ export default function PricingPage() {
     });
     const data = await res.json();
     setVerifyLoading(false);
-    if (res.ok) setStep('success');
-    else setVerifyError(data.error || 'Verification failed');
+    if (res.ok) {
+      setTempPassword(data.tempPassword || '');
+      setStep('success');
+    } else {
+      setVerifyError(data.error || 'Verification failed');
+    }
   };
 
   const copyText = (text: string) => {
@@ -181,7 +186,7 @@ export default function PricingPage() {
           <div className="mt-12 flex flex-wrap justify-center gap-x-6 gap-y-2 text-slate-500 text-xs font-mono uppercase tracking-wider">
             <span>Payment · USDT (TRC20)</span>
             <span className="text-slate-700">/</span>
-            <span>Activation · manual review</span>
+            <span>Activation · verified on-chain</span>
             <span className="text-slate-700">/</span>
             <span>Scope · external surface only</span>
           </div>
@@ -248,7 +253,7 @@ export default function PricingPage() {
 
                   <div className="bg-emerald-900/20 border border-emerald-800 rounded-xl p-4">
                     <p className="text-emerald-300 text-sm text-center">
-                      After payment, send receipt/tx hash to <span className="font-bold">egegoker35@gmail.com</span>
+                      Enter the transaction hash on the next step to activate instantly. If it does not verify, email the hash to <span className="font-bold">egegoker35@gmail.com</span>.
                     </p>
                   </div>
                 </div>
@@ -291,6 +296,16 @@ export default function PricingPage() {
                 </div>
                 <h2 className="text-2xl font-bold text-emerald-400">Payment Verified!</h2>
                 <p className="text-slate-400 text-sm mt-2">Your {selectedPlan?.name} plan is now active.</p>
+                {tempPassword && (
+                  <div className="mt-4 text-left bg-slate-950 border border-slate-800 rounded-xl p-4">
+                    <p className="text-xs text-slate-400 mb-1">One-time password for {form.email}</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <code className="font-mono text-emerald-300 text-sm break-all">{tempPassword}</code>
+                      <button onClick={() => copyText(tempPassword)} className="text-emerald-400 text-xs shrink-0 hover:text-emerald-300">Copy</button>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-2">Sign in with this password and change it in Settings. It is shown only once.</p>
+                  </div>
+                )}
                 <a href="/login" className="mt-6 inline-block px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">Go to Dashboard</a>
               </div>
             )}

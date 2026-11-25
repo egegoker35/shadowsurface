@@ -10,9 +10,18 @@ export async function GET(req: NextRequest) {
       where: { orgId: user.orgId, status: 'completed' },
       orderBy: { createdAt: 'desc' },
       take: 20,
-      include: { assets: { take: 50 }, cloudAssets: { take: 50 } },
+      include: {
+        assets: { select: { riskScore: true } },
+        _count: { select: { assets: true, cloudAssets: true } },
+      },
     });
-    return NextResponse.json({ scans });
+    // Totals come from _count so a large scan is never reported as its first page of assets.
+    const withCounts = scans.map((s) => ({
+      ...s,
+      highRiskAssets: s.assets.filter((a) => (a.riskScore || 0) >= 70).length,
+      assets: undefined,
+    }));
+    return NextResponse.json({ scans: withCounts });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Internal error' }, { status: 500 });
   }

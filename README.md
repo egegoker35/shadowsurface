@@ -9,7 +9,7 @@ Full-stack Cloud Attack Surface Intelligence platform built with Next.js 14, Pos
 - **Web Asset Analysis**: Security header checks, technology fingerprinting, CVE mapping
 - **Cloud Misconfiguration Detection**: AWS S3, GCS, Azure Blob public exposure checks
 - **Risk Scoring**: Automatic risk calculation per asset
-- **SaaS Ready**: Multi-tenant auth, email verification, Stripe billing, dashboard, monitoring
+- **SaaS Ready**: Multi-tenant auth, email verification, USDT (TRC20) payment verification, dashboard, scan activity and scheduled scans
 - **Background Workers**: Redis-backed job queue with retry logic
 - **Rate Limiting**: Redis-based IP and user rate limits
 - **Production Hardened**: Nginx SSL proxy, security headers, health checks, resource limits

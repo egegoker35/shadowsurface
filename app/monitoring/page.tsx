@@ -18,7 +18,8 @@ export default function MonitoringPage() {
     <div className="min-h-screen">
       <Navbar />
       <main className="pt-24 pb-10 px-4 max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Continuous Monitoring</h1>
+        <h1 className="text-2xl font-bold mb-2">Scan Activity</h1>
+        <p className="text-sm text-slate-400 mb-6">Every completed scan for your organization. For recurring coverage, create a <a href="/dashboard/scheduled-scans" className="text-emerald-400 hover:underline">scheduled scan</a>.</p>
         {loading ? <p className="text-slate-400">Loading...</p> : (
           <div className="space-y-6">
             {scans.map((scan) => (
@@ -31,9 +32,9 @@ export default function MonitoringPage() {
                   <span className={`px-2 py-1 rounded text-xs ${scan.status === 'completed' ? 'bg-emerald-900 text-emerald-300' : 'bg-yellow-900 text-yellow-300'}`}>{scan.status}</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                  <div className="bg-slate-950 rounded-lg p-3"><div className="text-lg font-bold">{scan.assets?.length || 0}</div><div className="text-[10px] text-slate-400">Assets</div></div>
-                  <div className="bg-slate-950 rounded-lg p-3"><div className="text-lg font-bold">{scan.cloudAssets?.length || 0}</div><div className="text-[10px] text-slate-400">Cloud</div></div>
-                  <div className="bg-slate-950 rounded-lg p-3"><div className="text-lg font-bold text-red-400">{scan.assets?.filter((a:any)=>a.riskScore>=70).length || 0}</div><div className="text-[10px] text-slate-400">High Risk</div></div>
+                  <div className="bg-slate-950 rounded-lg p-3"><div className="text-lg font-bold">{scan._count?.assets ?? 0}</div><div className="text-[10px] text-slate-400">Assets</div></div>
+                  <div className="bg-slate-950 rounded-lg p-3"><div className="text-lg font-bold">{scan._count?.cloudAssets ?? 0}</div><div className="text-[10px] text-slate-400">Cloud</div></div>
+                  <div className="bg-slate-950 rounded-lg p-3"><div className="text-lg font-bold text-red-400">{scan.highRiskAssets ?? 0}</div><div className="text-[10px] text-slate-400">High Risk</div></div>
                   <div className="bg-slate-950 rounded-lg p-3"><div className="text-lg font-bold">{scan.durationSeconds ? `${scan.durationSeconds.toFixed(1)}s` : '-'}</div><div className="text-[10px] text-slate-400">Duration</div></div>
                 </div>
                 {scan.executiveSummary && (
