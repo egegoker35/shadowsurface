@@ -24,32 +24,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e?.message || 'Failed to save' }, { status: 500 });
   }
 }
-
-export async function GET(req: NextRequest) {
-  try {
-    const adminToken = req.headers.get('x-admin-secret');
-    if (adminToken !== process.env.ADMIN_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const leads = await prisma.lead.findMany({ orderBy: { createdAt: 'desc' }, take: 100 });
-    return NextResponse.json({ leads });
-  } catch {
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
-  }
-}
-
-export async function DELETE(req: NextRequest) {
-  try {
-    const admin = await getUserFromRequest(req.headers);
-    if (!admin || admin.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await prisma.lead.delete({ where: { id } });
-    return NextResponse.json({ success: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Failed' }, { status: 500 });
-  }
-}
