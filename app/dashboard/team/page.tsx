@@ -55,14 +55,17 @@ export default function TeamPage() {
         <div className="lg:col-span-1">
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-1">Invite Member</h2>
-            <p className="text-xs text-slate-500 mb-4">Send an invitation link via email.</p>
+            <p className="text-xs text-slate-500 mb-4">
+              Create a single-use invitation link (valid for 7 days) and share it with your teammate. Email delivery is
+              not enabled yet, so the link is shown here for you to send.
+            </p>
             <form onSubmit={invite} className="space-y-3">
               <div>
                 <label className="block text-xs text-slate-400 mb-1.5">Email Address</label>
                 <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="colleague@company.com" required className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
               </div>
               <button type="submit" disabled={sending} className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-sm transition-colors">
-                {sending ? 'Sending...' : 'Send Invite'}
+                {sending ? 'Creating...' : 'Create Invite Link'}
               </button>
             </form>
             {inviteError && <p className="mt-3 text-xs text-red-400 leading-relaxed">{inviteError}</p>}

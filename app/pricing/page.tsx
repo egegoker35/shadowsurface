@@ -152,7 +152,11 @@ export default function PricingPage() {
       <section className="pt-32 pb-20 px-4">
         <div className="max-w-6xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">Simple, Transparent Pricing</h1>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-12">Pay with crypto. No hidden fees. Cancel anytime.</p>
+          <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-12">
+            {USDT_ADDRESS_FORMAT_OK
+              ? 'Pay with crypto. No hidden fees. Cancel anytime.'
+              : 'Online checkout is paused while we update the payment wallet. Email us and we will activate your plan manually.'}
+          </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 max-w-7xl mx-auto">
             {plans.map((plan) => (
@@ -261,11 +265,13 @@ export default function PricingPage() {
                     </div>
                   )}
 
-                  <div className="bg-emerald-900/20 border border-emerald-800 rounded-xl p-4">
-                    <p className="text-emerald-300 text-sm text-center">
-                      Enter the transaction hash on the next step to activate instantly. If it does not verify, email the hash to <span className="font-bold">egegoker35@gmail.com</span>.
-                    </p>
-                  </div>
+                  {USDT_ADDRESS_FORMAT_OK && (
+                    <div className="bg-emerald-900/20 border border-emerald-800 rounded-xl p-4">
+                      <p className="text-emerald-300 text-sm text-center">
+                        Enter the transaction hash on the next step to activate instantly. If it does not verify, email the hash to <span className="font-bold">egegoker35@gmail.com</span>.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <button
