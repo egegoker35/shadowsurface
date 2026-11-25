@@ -24,13 +24,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Protected admin role cannot be changed' }, { status: 403 });
     }
 
-    // Only allow demotion: admin -> user
-    // Promotion to admin is completely disabled per user directive
-    if (role !== 'user') {
-      return NextResponse.json({ error: 'Only demotion to user is allowed. Admin promotion is disabled.' }, { status: 403 });
-    }
-    if (targetUser.role !== 'admin') {
-      return NextResponse.json({ error: 'User is not an admin' }, { status: 400 });
+    // Roles the console may assign. Admin promotion stays disabled: the console token is
+    // separate from user accounts, so 'admin' here would only create a user that still
+    // cannot open the console.
+    if (!['user', 'client'].includes(role)) {
+      return NextResponse.json({ error: "Role must be 'user' or 'client'" }, { status: 400 });
     }
 
     await prisma.user.update({ where: { id: userId }, data: { role } });

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getUserFromRequest } from '@/lib/auth';
+import { getUserFromRequest, isReadOnly } from '@/lib/auth';
 import { configForPlan, effectivePlan, VALID_SCAN_TYPES } from '@/lib/plans';
 import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput } from '@/lib/middleware/security';
+import { targetIsCovered } from '@/lib/domains';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req.headers);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (isReadOnly(user)) return NextResponse.json({ error: 'Read-only account' }, { status: 403 });
     const body = await req.json();
     const { name, target, scanType, cron } = body;
     if (!name || !target || !scanType) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
@@ -45,6 +47,21 @@ export async function POST(req: NextRequest) {
     if (isBlockedTarget(cleanTarget)) return NextResponse.json({ error: 'Target blocked' }, { status: 403 });
 
     const org = await prisma.organization.findUnique({ where: { id: user.orgId } });
+
+    if (org?.requireDomainVerification) {
+      const verified = await prisma.domain.findMany({
+        where: { orgId: user.orgId, verified: true },
+        select: { domain: true },
+      });
+      const allowed = verified.map((d) => d.domain);
+      if (allowed.length === 0 || !targetIsCovered(cleanTarget, allowed)) {
+        return NextResponse.json(
+          { error: `${cleanTarget} is not a verified domain for this organization` },
+          { status: 403 }
+        );
+      }
+    }
+
     // An expired paid period must not keep scheduled-scan limits.
     const plan = effectivePlan(org);
     const config = configForPlan(plan);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getUserFromRequest } from '@/lib/auth';
+import { getUserFromRequest, isReadOnly } from '@/lib/auth';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req.headers);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (isReadOnly(user)) return NextResponse.json({ error: 'Read-only account' }, { status: 403 });
     const body = await req.json();
     const { name, permissions } = body;
     if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 });

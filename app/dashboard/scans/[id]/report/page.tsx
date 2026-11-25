@@ -5,13 +5,19 @@ import { useParams } from 'next/navigation';
 export default function ScanReportPage() {
   const { id } = useParams();
   const [scan, setScan] = useState<any>(null);
+  const [orgName, setOrgName] = useState('');
   const [loading, setLoading] = useState(true);
   const token = typeof window !== 'undefined' ? localStorage.getItem('ss_token') : null;
 
   useEffect(() => {
     if (!id || !token) return;
     fetch(`/api/scans/${id}`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(async (res) => { if (res.ok) setScan((await res.json()).scan); })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = await res.json();
+        setScan(data.scan);
+        setOrgName(data.organization?.name || '');
+      })
       .finally(() => setLoading(false));
   }, [id, token]);
 
@@ -52,7 +58,14 @@ export default function ScanReportPage() {
       <div className="max-w-5xl mx-auto p-8 md:p-12">
         <div className="border-b-2 border-slate-900 pb-6 mb-8">
           <div className="flex items-center justify-between">
-            <div><h1 className="text-3xl font-extrabold tracking-tight">ShadowSurface</h1><p className="text-sm text-slate-500 mt-1">Attack Surface Intelligence Report</p></div>
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight">{orgName || 'ShadowSurface'}</h1>
+              <p className="text-sm text-slate-500 mt-1">Attack Surface Intelligence Report</p>
+              <p className="text-xs text-slate-400 mt-1">
+                Prepared by {process.env.NEXT_PUBLIC_OPERATOR_NAME || 'ShadowSurface Security'} &bull; Reporting period{' '}
+                {new Date(scan.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
+              </p>
+            </div>
             <div className="text-right text-sm text-slate-500">
               <p>Report ID: <span className="font-mono text-slate-900">{scan.id}</span></p>
               <p>Generated: {new Date(scan.completedAt || scan.createdAt).toLocaleString()}</p>

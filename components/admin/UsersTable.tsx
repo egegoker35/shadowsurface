@@ -89,6 +89,13 @@ export default function UsersTable({
     call(`/api/admin/delete-user?id=${userId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
   };
 
+  const toggleOwnership = (orgId: string, enabled: boolean) =>
+    call('/api/admin/toggle-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ orgId, enabled }),
+    });
+
   const setRole = (userId: string, role: string) =>
     call('/api/admin/update-role', {
       method: 'POST',
@@ -168,10 +175,12 @@ export default function UsersTable({
                       className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${
                         u.role === 'admin'
                           ? 'bg-violet-500/10 text-violet-400 border-violet-500/25'
-                          : 'bg-slate-800 text-slate-400 border-slate-700'
+                          : u.role === 'client'
+                            ? 'bg-sky-500/10 text-sky-400 border-sky-500/25'
+                            : 'bg-slate-800 text-slate-400 border-slate-700'
                       }`}
                     >
-                      {u.role === 'admin' ? 'ADMIN' : 'USER'}
+                      {u.role === 'admin' ? 'ADMIN' : u.role === 'client' ? 'READ-ONLY' : 'USER'}
                     </span>
                   </td>
                   <td className="px-7 py-4">
@@ -211,13 +220,28 @@ export default function UsersTable({
                       >
                         Reset PW
                       </button>
-                      <button
-                        onClick={() => setRole(u.id, u.role === 'admin' ? 'user' : 'admin')}
-                        className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-orange-700/50 text-orange-400 hover:bg-orange-600/20 transition-colors"
-                        title={u.role === 'admin' ? 'Remove admin role' : 'Grant admin role'}
-                      >
-                        {u.role === 'admin' ? 'Demote' : 'Promote'}
-                      </button>
+                      {u.role !== 'admin' && (
+                        <button
+                          onClick={() => setRole(u.id, u.role === 'client' ? 'user' : 'client')}
+                          className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-orange-700/50 text-orange-400 hover:bg-orange-600/20 transition-colors"
+                          title={u.role === 'client' ? 'Allow this account to start scans again' : 'Make read-only: can view reports, cannot start scans'}
+                        >
+                          {u.role === 'client' ? 'Editor' : 'Read-only'}
+                        </button>
+                      )}
+                      {u.orgId && (
+                        <button
+                          onClick={() => toggleOwnership(u.orgId, !u.org?.requireDomainVerification)}
+                          className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-colors ${
+                            u.org?.requireDomainVerification
+                              ? 'border-emerald-700/50 text-emerald-400 bg-emerald-600/10'
+                              : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                          }`}
+                          title="Only allow scans of domains this organization has verified with a DNS TXT record"
+                        >
+                          {u.org?.requireDomainVerification ? 'Verified-only' : 'Any domain'}
+                        </button>
+                      )}
                       <button
                         onClick={() => del(u.id)}
                         className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-red-700/50 text-red-400 hover:bg-red-600/20 transition-colors"

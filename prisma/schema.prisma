@@ -25,6 +25,11 @@ model Organization {
   webhooks           Webhook[]
   apiKeys            ApiKey[]
   invites            Invite[]
+  domains            Domain[]
+  // When enabled, a scan target must belong to a domain this organization has proven
+  // it owns with a DNS TXT record. Used for client workspaces where the operator, not
+  // the customer, decides what may be scanned.
+  requireDomainVerification Boolean @default(false)
 }
 
 model User {
@@ -208,4 +213,20 @@ model Payment {
   amount    Float
   confirmed Boolean  @default(true)
   createdAt DateTime @default(now())
+}
+
+/// A domain whose ownership was proven with a DNS TXT record. The token is generated
+/// per organization+domain, so the same domain can be claimed by two customers without
+/// one learning the other's token.
+model Domain {
+  id         String    @id @default(uuid())
+  domain     String
+  orgId      String
+  token      String    @unique
+  verified   Boolean   @default(false)
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, domain])
 }

@@ -56,7 +56,8 @@ export default function Navbar() {
                     <Link href="/dashboard/settings" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">Settings</Link>
                     <Link href="/dashboard/scheduled-scans" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">Scheduled Scans</Link>
                     <Link href="/dashboard/integrations" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">Integrations</Link>
-                    <Link href="/dashboard/team" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">Team</Link>
+                                        <Link href="/dashboard/domains" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">Domains</Link>
+<Link href="/dashboard/team" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">Team</Link>
                     <div className="border-t border-slate-700" />
                     <Link href="/privacy" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">Privacy Policy</Link>
                     <Link href="/terms" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">Terms of Service</Link>

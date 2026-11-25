@@ -31,7 +31,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       executiveSummary: result.executiveSummary ?? row.executiveSummary ?? null,
       statistics: result.statistics ?? row.statistics ?? null,
     };
-    return NextResponse.json({ scan: merged });
+    // The printable report is handed to the customer, so it carries the organization
+    // name and the operator's brand instead of only a scan id.
+    const org = await prisma.organization.findUnique({
+      where: { id: user.orgId },
+      select: { name: true },
+    });
+    return NextResponse.json({ scan: merged, organization: { name: org?.name || '' } });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Internal error' }, { status: 500 });
   }

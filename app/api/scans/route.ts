@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getUserFromRequest } from '@/lib/auth';
+import { getUserFromRequest, isReadOnly } from '@/lib/auth';
 import { rateLimitByUser } from '@/lib/middleware/rateLimit';
 import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput } from '@/lib/middleware/security';
 import { z } from 'zod';
 import { configForPlan, effectivePlan, VALID_SCAN_TYPES } from '@/lib/plans';
 import { startScanExecution } from '@/lib/scanRunner';
+import { targetIsCovered } from '@/lib/domains';
 
 const createSchema = z.object({
   target: z.string().min(3).max(512),
@@ -16,6 +17,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req.headers);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (isReadOnly(user)) return NextResponse.json({ error: 'Read-only account' }, { status: 403 });
 
     const org = await prisma.organization.findUnique({ where: { id: user.orgId } });
     const plan = org?.plan || 'free';
@@ -46,6 +48,30 @@ export async function POST(req: NextRequest) {
       if (hasSuspiciousInput(t)) return NextResponse.json({ error: 'Suspicious input' }, { status: 400 });
       const st = sanitizeTarget(t);
       if (isBlockedTarget(st)) return NextResponse.json({ error: 'Target blocked' }, { status: 403 });
+    }
+
+    // Client workspaces require proof of ownership: only domains (and their subdomains)
+    // that published the TXT record may be scanned.
+    if (org?.requireDomainVerification) {
+      const verified = await prisma.domain.findMany({
+        where: { orgId: user.orgId, verified: true },
+        select: { domain: true },
+      });
+      const allowed = verified.map((d) => d.domain);
+      if (allowed.length === 0) {
+        return NextResponse.json(
+          { error: 'No verified domain yet: add a domain and publish its TXT record before scanning' },
+          { status: 403 }
+        );
+      }
+      for (const candidate of targets) {
+        if (!targetIsCovered(sanitizeTarget(candidate), allowed)) {
+          return NextResponse.json(
+            { error: `${candidate} is not a verified domain for this organization` },
+            { status: 403 }
+          );
+        }
+      }
     }
 
     const primaryTarget = targets[0];

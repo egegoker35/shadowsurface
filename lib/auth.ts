@@ -32,6 +32,11 @@ export function verifyToken<T>(token: string): T | null {
   }
 }
 
+/** Read-only accounts can view reports but must not start work or change settings. */
+export function isReadOnly(user: { role?: string | null } | null | undefined): boolean {
+  return user?.role === 'client';
+}
+
 export async function getUserFromRequest(headers: Headers) {
   const auth = headers.get('authorization');
 
