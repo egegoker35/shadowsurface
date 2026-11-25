@@ -29,6 +29,15 @@ const tabs = [
     ),
   },
   {
+    id: 'leads',
+    label: 'Leads',
+    icon: (
+      <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+      </svg>
+    ),
+  },
+  {
     id: 'payments',
     label: 'Payments',
     icon: (
@@ -84,9 +93,6 @@ export default function Sidebar({ active, onChange }: { active: string; onChange
               {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.6)]" />}
               <span className={isActive ? 'text-emerald-400' : 'text-slate-500 group-hover:text-slate-300'}>{tab.icon}</span>
               {tab.label}
-              {tab.id === 'payments' && (
-                <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">LIVE</span>
-              )}
             </button>
           );
         })}
@@ -100,7 +106,7 @@ export default function Sidebar({ active, onChange }: { active: string; onChange
           </svg>
           Back to App
         </a>
-        <div className="px-3.5 py-2 text-[10px] text-slate-600">ShadowSurface v2.0 · Secure Ops</div>
+        <div className="px-3.5 py-2 text-[10px] text-slate-600">ShadowSurface Admin Console</div>
       </div>
     </aside>
   );

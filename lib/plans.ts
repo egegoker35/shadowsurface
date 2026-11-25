@@ -18,3 +18,35 @@ export const PLAN_CONFIG: Record<string, PlanConfig> = {
 export function configForPlan(plan?: string | null): PlanConfig {
   return PLAN_CONFIG[plan || 'free'] || PLAN_CONFIG.starter;
 }
+
+/**
+ * Plans are sold per month, so access has to end when the month does.
+ *
+ * Before this, a single payment granted the plan forever: there was no expiry field,
+ * no renewal and no downgrade. An organization whose paid period has lapsed falls back
+ * to the free tier rather than losing its data, which is what the pricing page implies.
+ */
+export function effectivePlan(org?: { plan?: string | null; planExpiresAt?: Date | string | null } | null): string {
+  const plan = org?.plan || 'free';
+  if (plan === 'free') return 'free';
+  const expires = org?.planExpiresAt ? new Date(org.planExpiresAt) : null;
+  if (!expires) return plan; // legacy/manual grants without an end date stay as-is
+  return expires.getTime() > Date.now() ? plan : 'free';
+}
+
+export function isExpired(org?: { plan?: string | null; planExpiresAt?: Date | string | null } | null): boolean {
+  if (!org?.planExpiresAt || (org?.plan || 'free') === 'free') return false;
+  return new Date(org.planExpiresAt).getTime() <= Date.now();
+}
+
+/** One billing period, added to now or to the current end date for a renewal. */
+export function nextPeriodEnd(from?: Date | string | null, days = 30): Date {
+  const base = from ? new Date(from) : new Date();
+  const start = base.getTime() > Date.now() ? base : new Date();
+  return new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+export function daysLeft(expires?: Date | string | null): number | null {
+  if (!expires) return null;
+  return Math.ceil((new Date(expires).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+}

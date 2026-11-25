@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 import crypto from 'crypto';
+import { effectivePlan } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
     }
 
     const org = await prisma.organization.findUnique({ where: { id: user.orgId }, select: { plan: true, name: true } });
-    const plan = org?.plan || 'free';
+    const plan = effectivePlan(org);
     const maxSeats = plan === 'enterprise' ? Number.POSITIVE_INFINITY : (SEAT_LIMITS[plan] ?? 1);
 
     const [members, pending] = await Promise.all([

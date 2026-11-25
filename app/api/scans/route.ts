@@ -4,7 +4,7 @@ import { getUserFromRequest } from '@/lib/auth';
 import { rateLimitByUser } from '@/lib/middleware/rateLimit';
 import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput } from '@/lib/middleware/security';
 import { z } from 'zod';
-import { configForPlan, VALID_SCAN_TYPES } from '@/lib/plans';
+import { configForPlan, effectivePlan, VALID_SCAN_TYPES } from '@/lib/plans';
 import { startScanExecution } from '@/lib/scanRunner';
 
 const createSchema = z.object({
@@ -19,7 +19,8 @@ export async function POST(req: NextRequest) {
 
     const org = await prisma.organization.findUnique({ where: { id: user.orgId } });
     const plan = org?.plan || 'free';
-    const config = configForPlan(plan);
+    // A lapsed subscription is treated as free until it is renewed.
+    const config = configForPlan(effectivePlan(org));
 
     const body = await req.json();
     const parsed = createSchema.safeParse(body);

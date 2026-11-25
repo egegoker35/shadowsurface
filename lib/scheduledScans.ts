@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { configForPlan } from '@/lib/plans';
+import { configForPlan, effectivePlan } from '@/lib/plans';
 import { startScanExecution } from '@/lib/scanRunner';
 
 const INTERVAL_MS: Record<string, number> = {
@@ -51,7 +51,7 @@ export async function runDueScheduledScans(limit = 10): Promise<ScheduledRunResu
       continue;
     }
 
-    const config = configForPlan(job.org?.plan);
+    const config = configForPlan(effectivePlan(job.org));
     if (!config.allowedTypes.includes(job.scanType)) {
       console.warn(`[ScheduledScans] ${job.id}: ${job.scanType} scan is not included in the ${job.org?.plan} plan`);
       results.push({ scheduledScanId: job.id, status: 'skipped', reason: `scan type not included in plan`, nextRun: nextRun.toISOString() });

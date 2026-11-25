@@ -12,6 +12,8 @@ model Organization {
   id                 String   @id @default(uuid())
   name               String
   plan               String   @default("free")
+  planStartedAt      DateTime?
+  planExpiresAt      DateTime?
   stripeCustomerId   String?
   stripeSubscriptionId String?
   createdAt          DateTime @default(now())

@@ -1,110 +1,99 @@
 'use client';
 
+const PLAN_ORDER = ['free', 'starter', 'professional', 'enterprise'];
+
+const PLAN_TONE: Record<string, string> = {
+  free: 'bg-slate-500',
+  starter: 'bg-sky-500',
+  professional: 'bg-violet-500',
+  enterprise: 'bg-amber-500',
+};
+
+function money(n: number) {
+  return `$${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+}
+
+/**
+ * Overview cards. Every value comes from the API's count/aggregate queries; nothing here
+ * is derived from the length of a paginated list, which is what made the old dashboard
+ * report "total leads" as the number of rows it happened to receive.
+ */
 export default function DashboardStats({ data }: { data: any }) {
-  const pendingPayments = (data?.recentPayments || []).filter((p: any) => p.status === 'new' || p.status === 'pending').length;
-  const completedScans = (data?.recentScans || []).filter((s: any) => s.status === 'completed').length;
-  const criticalScans = (data?.recentScans || []).filter((s: any) => s.executiveSummary?.overallRisk === 'CRITICAL').length;
+  const t = data?.totals || {};
+  const plans: Array<{ plan: string; count: number }> = data?.usersByPlan || [];
+  const planTotal = plans.reduce((sum, p) => sum + p.count, 0) || 1;
+  const risk = data?.risk30d || {};
 
   const cards = [
-    {
-      label: 'Total Revenue',
-      value: `$${(data?.totalRevenue || 0).toLocaleString()}`,
-      sub: 'Lifetime payments',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      accent: 'from-emerald-500/20 to-emerald-500/0',
-      text: 'text-emerald-400',
-      ring: 'border-emerald-500/20',
-    },
-    {
-      label: 'Total Users',
-      value: (data?.totalUsers || 0).toLocaleString(),
-      sub: 'Registered accounts',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-        </svg>
-      ),
-      accent: 'from-blue-500/20 to-blue-500/0',
-      text: 'text-blue-400',
-      ring: 'border-blue-500/20',
-    },
-    {
-      label: 'Total Scans',
-      value: (data?.totalScans || 0).toLocaleString(),
-      sub: `${completedScans} completed recently`,
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9.348 14.652a3.75 3.75 0 010-5.304m5.304 0a3.75 3.75 0 010 5.304m-7.425 2.121a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M12 12h.008v.008H12V12z" />
-        </svg>
-      ),
-      accent: 'from-violet-500/20 to-violet-500/0',
-      text: 'text-violet-400',
-      ring: 'border-violet-500/20',
-    },
-    {
-      label: 'Pending Payments',
-      value: pendingPayments,
-      sub: 'Awaiting approval',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      accent: 'from-amber-500/20 to-amber-500/0',
-      text: 'text-amber-400',
-      ring: 'border-amber-500/20',
-    },
-    {
-      label: 'Critical Scans',
-      value: criticalScans,
-      sub: 'In recent activity',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-        </svg>
-      ),
-      accent: 'from-red-500/20 to-red-500/0',
-      text: 'text-red-400',
-      ring: 'border-red-500/20',
-    },
-    {
-      label: 'Payment Requests',
-      value: (data?.recentPayments || []).length,
-      sub: 'Total leads',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
-        </svg>
-      ),
-      accent: 'from-pink-500/20 to-pink-500/0',
-      text: 'text-pink-400',
-      ring: 'border-pink-500/20',
-    },
+    { label: 'Revenue', value: money(t.revenue), sub: `${money(t.revenue30d)} in the last 30 days`, tone: 'text-emerald-400' },
+    { label: 'Organizations', value: (t.users ?? 0).toLocaleString(), sub: `${t.expiredPaid ?? 0} paid plan(s) expired`, tone: 'text-blue-400' },
+    { label: 'Scans', value: (t.scans ?? 0).toLocaleString(), sub: `${t.scans30d ?? 0} in the last 30 days`, tone: 'text-violet-400' },
+    { label: 'Leads', value: (t.leads ?? 0).toLocaleString(), sub: `${t.pendingLeads ?? 0} awaiting review`, tone: 'text-amber-400' },
+    { label: 'Payments', value: (t.payments ?? 0).toLocaleString(), sub: `${t.payments30d ?? 0} in the last 30 days`, tone: 'text-teal-400' },
+    { label: 'Schedules', value: (t.activeScheduled ?? 0).toLocaleString(), sub: 'Active recurring scans', tone: 'text-pink-400' },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-      {cards.map((card) => (
-        <div
-          key={card.label}
-          className={`relative overflow-hidden bg-gradient-to-br ${card.accent} bg-slate-900/80 border ${card.ring} rounded-2xl p-6 hover:border-slate-600/60 transition-all duration-200 group`}
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">{card.label}</div>
-              <div className={`text-3xl font-extrabold mt-2.5 tracking-tight ${card.text}`}>{card.value}</div>
-              <div className="text-xs text-slate-500 mt-2">{card.sub}</div>
-            </div>
-            <div className={`w-11 h-11 rounded-xl bg-slate-950/60 border ${card.ring} flex items-center justify-center ${card.text} group-hover:scale-105 transition-transform`}>
-              {card.icon}
-            </div>
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {cards.map((c) => (
+          <div key={c.label} className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 shadow-lg shadow-black/20">
+            <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">{c.label}</div>
+            <div className={`text-3xl font-extrabold mt-2.5 tracking-tight ${c.tone}`}>{c.value}</div>
+            <div className="text-xs text-slate-500 mt-2">{c.sub}</div>
           </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-white">Organizations by plan</h3>
+            <span className="text-[11px] text-slate-500">{planTotal} total</span>
+          </div>
+          <div className="flex h-2 w-full overflow-hidden rounded-full bg-slate-800 mb-4">
+            {PLAN_ORDER.map((plan) => {
+              const count = plans.find((p) => p.plan === plan)?.count || 0;
+              return count > 0 ? (
+                <span key={plan} className={PLAN_TONE[plan]} style={{ width: `${(count / planTotal) * 100}%` }} />
+              ) : null;
+            })}
+          </div>
+          <ul className="space-y-2">
+            {PLAN_ORDER.map((plan) => {
+              const count = plans.find((p) => p.plan === plan)?.count || 0;
+              return (
+                <li key={plan} className="flex items-center gap-2.5 text-xs">
+                  <span className={`h-2 w-2 rounded-full ${PLAN_TONE[plan]}`} />
+                  <span className="text-slate-400 capitalize w-24">{plan}</span>
+                  <span className="text-slate-200 font-semibold">{count}</span>
+                </li>
+              );
+            })}
+          </ul>
         </div>
-      ))}
+
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-white">Scan verdicts, last 30 days</h3>
+            <span className="text-[11px] text-slate-500">completed only</span>
+          </div>
+          <ul className="space-y-2.5">
+            {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INCONCLUSIVE'].map((label) => (
+              <li key={label} className="flex items-center justify-between text-xs">
+                <span className="text-slate-400">{label}</span>
+                <span className="font-mono text-slate-200">{risk[label] ?? 0}</span>
+              </li>
+            ))}
+            {risk.UNKNOWN ? (
+              <li className="flex items-center justify-between text-xs">
+                <span className="text-slate-500">no verdict recorded</span>
+                <span className="font-mono text-slate-500">{risk.UNKNOWN}</span>
+              </li>
+            ) : null}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }

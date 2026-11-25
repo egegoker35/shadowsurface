@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { rateLimitByIP } from '@/lib/middleware/rateLimit';
+import { nextPeriodEnd } from '@/lib/plans';
 
 const USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 const MY_ADDRESS = 'THZzRBItyb8bhGczJgSFVNGjjt6x4MC3PL';
@@ -125,7 +126,9 @@ export async function POST(req: NextRequest) {
       // login they cannot complete.
       const { hashPassword } = await import('@/lib/auth');
       tempPassword = crypto.randomBytes(9).toString('base64url');
-      const org = await prisma.organization.create({ data: { name: normalizedEmail.split('@')[0], plan } });
+      const org = await prisma.organization.create({
+        data: { name: normalizedEmail.split('@')[0], plan, planStartedAt: new Date(), planExpiresAt: nextPeriodEnd(null) },
+      });
       user = await prisma.user.create({
         data: {
           email: normalizedEmail,
@@ -135,9 +138,19 @@ export async function POST(req: NextRequest) {
         },
       });
     } else {
+      // Paying for the same plan again renews the period; switching plans starts a new one.
+      const current = await prisma.organization.findUnique({
+        where: { id: user.orgId },
+        select: { plan: true, planExpiresAt: true },
+      });
+      const renewal = current?.plan === plan && !!current?.planExpiresAt;
       await prisma.organization.update({
         where: { id: user.orgId },
-        data: { plan },
+        data: {
+          plan,
+          planExpiresAt: nextPeriodEnd(renewal ? current!.planExpiresAt : null),
+          ...(renewal ? {} : { planStartedAt: new Date() }),
+        },
       });
     }
 
