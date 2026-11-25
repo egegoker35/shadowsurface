@@ -23,11 +23,19 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Cannot delete admin users' }, { status: 403 });
     }
 
+    // Deleting one member used to wipe every scan in the organization, including work
+    // belonging to teammates. Only a sole-member organization takes its scans with it.
+    const teammates = await prisma.user.count({ where: { orgId: user.orgId, id: { not: userId } } });
+    if (teammates > 0) {
+      await prisma.user.delete({ where: { id: userId } });
+      return NextResponse.json({ success: true, workspaceDeleted: false });
+    }
+
     await prisma.scan.deleteMany({ where: { orgId: user.orgId } });
     await prisma.user.delete({ where: { id: userId } });
     await prisma.organization.delete({ where: { id: user.orgId } });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, workspaceDeleted: true });
   } catch (e: any) {
     console.error('[Admin Delete User]', e);
     return NextResponse.json({ error: e.message || 'Failed' }, { status: 500 });

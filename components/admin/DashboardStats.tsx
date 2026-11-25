@@ -26,7 +26,7 @@ export default function DashboardStats({ data }: { data: any }) {
 
   const cards = [
     { label: 'Revenue', value: money(t.revenue), sub: `${money(t.revenue30d)} in the last 30 days`, tone: 'text-emerald-400' },
-    { label: 'Organizations', value: (t.users ?? 0).toLocaleString(), sub: `${t.expiredPaid ?? 0} paid plan(s) expired`, tone: 'text-blue-400' },
+    { label: 'Users', value: (t.users ?? 0).toLocaleString(), sub: `${t.expiredPaid ?? 0} paid plan(s) expired`, tone: 'text-blue-400' },
     { label: 'Scans', value: (t.scans ?? 0).toLocaleString(), sub: `${t.scans30d ?? 0} in the last 30 days`, tone: 'text-violet-400' },
     { label: 'Leads', value: (t.leads ?? 0).toLocaleString(), sub: `${t.pendingLeads ?? 0} awaiting review`, tone: 'text-amber-400' },
     { label: 'Payments', value: (t.payments ?? 0).toLocaleString(), sub: `${t.payments30d ?? 0} in the last 30 days`, tone: 'text-teal-400' },
