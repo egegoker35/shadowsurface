@@ -12,7 +12,7 @@ export function middleware(req: NextRequest) {
   response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
 
   // Tightened CSP — removed unsafe-eval, kept unsafe-inline for Next.js client hydration
-  response.headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://api.openai.com https://apilist.tronscanapi.com https://app.lemonsqueezy.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';");
+  response.headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://apilist.tronscanapi.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';");
 
   // Strip infrastructure-identifying headers added by hosting provider
   response.headers.delete('x-do-app-origin');

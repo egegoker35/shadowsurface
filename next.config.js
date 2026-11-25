@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Do not advertise the framework in every response.
+  poweredByHeader: false,
   experimental: {
     serverComponentsExternalPackages: ['bcryptjs'],
     // Required on Next 14 to run instrumentation.ts, which starts the
