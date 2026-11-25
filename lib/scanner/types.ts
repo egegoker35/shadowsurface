@@ -87,6 +87,10 @@ export interface SSLInfo {
   certExpired?: boolean;
   certFingerprint?: string;
   certSANs?: string[];
+  /** True only when a peer certificate was actually retrieved. Absent means "no TLS evidence". */
+  certPresent?: boolean;
+  /** True only when the negotiated protocol was actually observed. */
+  protocolKnown?: boolean;
 }
 
 export interface DNSRecord {

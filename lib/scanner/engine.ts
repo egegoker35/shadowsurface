@@ -2583,28 +2583,15 @@ async function enumerateSubdomainsBrute(target: string): Promise<Record<string, 
 
 // ─── SSL / TLS Analyzer ─────────────────────────────────────────────────────
 
-async function analyzeSSLInfo(headers: Record<string, string>, url: string): Promise<SSLInfo> {
+export async function analyzeSSLInfo(headers: Record<string, string>, url: string, timeoutMs = 8000): Promise<SSLInfo> {
   const info: SSLInfo = {};
   const hsts = headers['strict-transport-security'] || '';
   info.hsts = !!hsts;
-  info.certificateTransparency = !!(headers['expect-ct'] || headers['cf-ray']);
+  info.certificateTransparency = !!headers['expect-ct'];
   info.ocspStapling = !!(headers['x-ocsp-response'] || headers['status-request']);
-  info.tls13 = false;
-  info.tls12 = false;
-  info.tls11 = false;
-  info.tls10 = false;
+  // Nothing below is inferred from headers: protocol and cipher facts are recorded only
+  // when a real handshake observed them, so the caller can never grade an unprobed asset.
   info.weakProtocols = [];
-  const cipher = headers['x-cipher-suite'] || headers['cipher-suite'] || '';
-  const weakCiphers = /RC4|DES|3DES|MD5|NULL|EXPORT|anon/i.test(cipher);
-  info.weakCipher = weakCiphers;
-  info.cipherSuite = cipher;
-  info.beastPoodle = info.tls10 || info.tls11;
-  info.heartbleed = /OpenSSL\/(0\.9\.[a-f]|1\.0\.1[a-f])/.test(headers['server'] || '');
-  info.logjam = /DH\s*1024|DHE_EXPORT/i.test(cipher);
-  info.renegotiationSecure = !(/OpenSSL\/(0\.9\.[a-f]|1\.0\.0[a-f])/.test(headers['server'] || ''));
-  info.selfSigned = /self signed/i.test(headers['subject'] || '');
-  info.valid = true;
-  info.tlsVersion = info.tls13 ? 'TLSv1.3' : info.tls12 ? 'TLSv1.2' : info.tls11 ? 'TLSv1.1' : info.tls10 ? 'TLSv1.0' : 'Unknown';
 
   // Real TLS certificate fetch via Node tls.connect (no external binaries — works on serverless runtimes)
   if (url.startsWith('https')) {
@@ -2612,24 +2599,38 @@ async function analyzeSSLInfo(headers: Record<string, string>, url: string): Pro
       const u = new URL(url);
       const host = u.hostname;
       const port = parseInt(u.port || '443');
-      const cert = await new Promise<{ subject: any; issuer: any; valid_from: string; valid_to: string; subjectaltname: string; protocol: string | null; cipher: string } | null>((resolve) => {
-        const socket = tlsConnect({ host, port, servername: host, rejectUnauthorized: false, timeout: 5000 });
-        const timer = setTimeout(() => { try { socket.destroy(); } catch {} resolve(null); }, 5000);
+      type TlsObservation = {
+        subject: any; issuer: any; valid_from: string; valid_to: string; subjectaltname: string;
+        protocol: string | null; cipher: string; authorized: boolean;
+      };
+      const observe = (): Promise<TlsObservation | null> => new Promise((resolve) => {
+        let settled = false;
+        const finish = (v: TlsObservation | null) => { if (!settled) { settled = true; resolve(v); } };
+        const socket = tlsConnect({ host, port, servername: host, rejectUnauthorized: false, timeout: timeoutMs });
+        const timer = setTimeout(() => { try { socket.destroy(); } catch {} finish(null); }, timeoutMs);
         socket.once('secureConnect', () => {
           try {
             const c = socket.getPeerCertificate();
-            const proto = socket.getProtocol();
             const cipher = socket.getCipher();
             clearTimeout(timer);
             socket.end();
-            resolve({ subject: c.subject, issuer: c.issuer, valid_from: c.valid_from, valid_to: c.valid_to, subjectaltname: c.subjectaltname || '', protocol: proto, cipher: cipher.name });
-          } catch { clearTimeout(timer); try { socket.destroy(); } catch {} resolve(null); }
+            finish({
+              subject: c.subject, issuer: c.issuer, valid_from: c.valid_from, valid_to: c.valid_to,
+              subjectaltname: c.subjectaltname || '', protocol: socket.getProtocol(),
+              cipher: cipher?.name || '', authorized: socket.authorized === true,
+            });
+          } catch { clearTimeout(timer); try { socket.destroy(); } catch {} finish(null); }
         });
-        socket.once('error', () => { clearTimeout(timer); resolve(null); });
-        socket.once('timeout', () => { clearTimeout(timer); try { socket.destroy(); } catch {} resolve(null); });
+        socket.once('error', () => { clearTimeout(timer); finish(null); });
+        socket.once('timeout', () => { clearTimeout(timer); try { socket.destroy(); } catch {} finish(null); });
       });
+      // One retry: cross-region handshakes can exceed a single attempt's budget without meaning
+      // the endpoint has no TLS. Only a second failure leaves the lookup unresolved.
+      const cert = await observe() ?? await observe();
       if (cert) {
         const fmtSubject = (s: any) => s ? Object.entries(s).map(([k, v]) => `${k}=${v}`).join(', ') : '';
+        info.certPresent = true;
+        info.valid = cert.authorized;
         info.certSubject = fmtSubject(cert.subject);
         info.subject = info.certSubject;
         info.certIssuer = fmtSubject(cert.issuer);
@@ -2649,12 +2650,14 @@ async function analyzeSSLInfo(headers: Record<string, string>, url: string): Pro
         }
         info.selfSigned = (cert.subject && cert.issuer && cert.subject.CN === cert.issuer.CN) || (cert.subject && cert.issuer && cert.subject.O && cert.subject.O === cert.issuer.O);
         if (cert.protocol) {
+          info.protocolKnown = true;
           info.tlsVersion = cert.protocol;
           if (cert.protocol === 'TLSv1.3') info.tls13 = true;
           else if (cert.protocol === 'TLSv1.2') info.tls12 = true;
-          else if (cert.protocol === 'TLSv1.1') info.tls11 = true;
-          else if (cert.protocol === 'TLSv1') info.tls10 = true;
+          else if (cert.protocol === 'TLSv1.1') { info.tls11 = true; info.weakProtocols = ['TLS 1.1']; }
+          else if (cert.protocol === 'TLSv1') { info.tls10 = true; info.weakProtocols = ['TLS 1.0']; }
         }
+        info.beastPoodle = !!(info.tls10 || info.tls11);
         if (cert.cipher) {
           info.cipherSuite = cert.cipher;
           info.weakCipher = /RC4|DES|3DES|MD5|NULL|EXPORT|anon/i.test(cert.cipher);
@@ -2666,27 +2669,57 @@ async function analyzeSSLInfo(headers: Record<string, string>, url: string): Pro
   return info;
 }
 
-function gradeSSL(info: SSLInfo): 'A+' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'T' | 'X' {
+export function gradeSSL(info: SSLInfo): DiscoveredAsset['sslGrade'] {
+  // No observed TLS evidence (handshake failed or was never attempted) -> no grade at all.
+  // A failed lookup is "unknown", never "invalid certificate".
+  if (!info.certPresent && !info.protocolKnown) return undefined;
   if (info.selfSigned) return 'T';
-  if (!info.valid) return 'X';
-  if (info.weakProtocols?.includes('TLS 1.0') || info.weakProtocols?.includes('TLS 1.1') || info.weakCipher || info.beastPoodle) return 'F';
-  if (info.tls12 && !info.tls13 && !info.hsts) return 'C';
-  if (info.tls12 && info.hsts) return 'B';
-  if (info.tls13 && !info.hsts) return 'A';
+  if (info.certExpired || info.valid === false) return 'X';
+  if (info.tls10 || info.tls11 || info.weakCipher || info.beastPoodle) return 'F';
   if (info.tls13 && info.hsts && info.ocspStapling) return 'A+';
+  if (info.tls13 && info.hsts) return 'A';
+  if (info.tls13) return 'B';
+  if (info.tls12 && info.hsts) return 'B';
+  if (info.tls12) return 'C';
   return 'B';
 }
 
 // ─── DNS Analyzer ───────────────────────────────────────────────────────────
-async function analyzeDNS(domain: string): Promise<{ records: DNSRecord[]; spfPolicy?: string; dmarcPolicy?: string; dkimPresent?: boolean; dnssec?: boolean; caa?: string[]; subdomainTakeover?: string[]; zoneTransfer?: boolean }> {
+/**
+ * Resolve a record type that the Node system resolver cannot express (DNSKEY, CAA) and act as a
+ * fallback when the local resolver times out. Returns:
+ *   array  -> authoritative answer (empty array means "record genuinely absent")
+ *   undefined -> the lookup itself failed; no conclusion may be drawn from it
+ */
+async function dohQuery(name: string, type: string, timeoutMs = 6000): Promise<Array<{ data: string }> | undefined> {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    const res = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${encodeURIComponent(type)}`, {
+      headers: { accept: 'application/dns-json' },
+      signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) return undefined;
+    const json: any = await res.json();
+    if (json?.Status === 3) return [];                                    // NXDOMAIN: definitively absent
+    if (typeof json?.Status === 'number' && json.Status !== 0) return undefined;
+    return Array.isArray(json?.Answer) ? json.Answer.map((a: any) => ({ data: String(a?.data ?? '') })) : [];
+  } catch {
+    return undefined;
+  }
+}
+
+export async function analyzeDNS(domain: string): Promise<{ records: DNSRecord[]; spfPolicy?: string; dmarcPolicy?: string; dkimPresent?: boolean; dnssec?: boolean; caa?: string[]; subdomainTakeover?: string[]; zoneTransfer?: boolean }> {
   const records: DNSRecord[] = [];
   let spfPolicy: string | undefined;
   let dmarcPolicy: string | undefined;
-  let dkimPresent = false;
-  let dnssec = false;
+  let dkimPresent: boolean | undefined;
+  let dnssec: boolean | undefined;
   const caa: string[] = [];
   const subdomainTakeover: string[] = [];
   let zoneTransfer = false;
+
   try {
     const ips = await resolve4(domain).catch(() => [] as string[]);
     for (const ip of ips) records.push({ type: 'A', value: ip });
@@ -2695,29 +2728,81 @@ async function analyzeDNS(domain: string): Promise<{ records: DNSRecord[]; spfPo
     const mx = await resolveMx(domain).catch(() => [] as any[]);
     for (const m of mx) records.push({ type: 'MX', value: m.exchange, priority: m.priority });
   } catch {}
-  try {
-    const txt = await resolveTxt(domain).catch(() => [] as string[][]);
-    for (const tArr of txt) {
-      const t = tArr.join('');
-      records.push({ type: 'TXT', value: t });
-      if (t.includes('v=spf1')) {
-        if (t.includes('-all')) spfPolicy = 'strict';
-        else if (t.includes('~all')) spfPolicy = 'softfail';
-        else spfPolicy = 'none';
-      }
-      if (t.includes('v=DMARC')) {
-        const pMatch = t.match(/p=([^;]+)/i);
-        dmarcPolicy = pMatch ? pMatch[1] : 'none';
-      }
-      if (t.includes('v=DKIM1')) dkimPresent = true;
-    }
-  } catch {}
-  for (const selector of ['default','mail','google','dkim','selector1','selector2']) {
+
+  // SPF is published in the domain's own TXT set.
+  {
+    // undefined  -> lookup failed, no conclusion
+    // []         -> genuinely no TXT records
+    let txtValues: string[] | undefined;
     try {
-      const dkim = await resolveTxt(`${selector}._domainkey.${domain}`).catch(() => [] as string[][]);
-      if (dkim.length > 0) dkimPresent = true;
-    } catch {}
+      const txt = await resolveTxt(domain);
+      txtValues = txt.map((tArr) => tArr.join(''));
+    } catch (e: any) {
+      const code = e?.code;
+      if (code === 'ENODATA' || code === 'ENOTFOUND') {
+        txtValues = [];
+      } else {
+        const answers = await dohQuery(domain, 'TXT');
+        txtValues = answers === undefined ? undefined : answers.map((a) => a.data.replace(/"/g, ''));
+      }
+    }
+    if (txtValues === undefined) {
+      spfPolicy = undefined; // unresolved: never reported as missing
+    } else {
+      for (const t of txtValues) records.push({ type: 'TXT', value: t });
+      const spf = txtValues.find((t) => t.includes('v=spf1'));
+      if (!spf) spfPolicy = 'absent';
+      else if (spf.includes('-all')) spfPolicy = 'strict';
+      else if (spf.includes('~all')) spfPolicy = 'softfail';
+      else if (spf.includes('?all')) spfPolicy = 'neutral';
+      else spfPolicy = 'neutral'; // v=spf1 present but no qualifier term: permissive by default
+    }
   }
+
+  // DMARC is published at _dmarc.<domain>, never inside the apex TXT set. Reading only the
+  // apex (the previous behaviour) made every domain with a valid DMARC record look unprotected.
+  try {
+    const rr = await resolveTxt(`_dmarc.${domain}`);
+    const joined = rr.map((r) => r.join('')).join(' ');
+    if (/v=DMARC1/i.test(joined)) {
+      const p = joined.match(/\bp\s*=\s*([a-z]+)/i);
+      dmarcPolicy = (p ? p[1] : 'none').toLowerCase();
+    } else {
+      dmarcPolicy = 'absent';
+    }
+  } catch (e: any) {
+    const code = e?.code;
+    if (code === 'ENODATA' || code === 'ENOTFOUND') {
+      dmarcPolicy = 'absent';
+    } else {
+      // Resolver timeout/refusal is not evidence of anything - retry over DoH before concluding.
+      const answers = await dohQuery(`_dmarc.${domain}`, 'TXT');
+      if (answers === undefined) {
+        dmarcPolicy = undefined;
+      } else if (answers.length === 0) {
+        dmarcPolicy = 'absent';
+      } else {
+        const joined = answers.map((a) => a.data.replace(/"/g, '')).join(' ');
+        const p = joined.match(/\bp\s*=\s*([a-z]+)/i);
+        dmarcPolicy = p ? p[1].toLowerCase() : 'none';
+      }
+    }
+  }
+
+  // DKIM selectors are chosen by the mail provider and cannot be enumerated. We probe the
+  // well-known ones and stay silent when none answers: absence is not verifiable, so it must
+  // never be reported as a weakness.
+  const dkimSelectors = ['default', 'mail', 'google', 'dkim', 'selector1', 'selector2', 'k1', 'k2',
+    's1', 's2', 'protonmail', 'protonmail2', 'protonmail3', 'mandrill', 'amazonses', 'sendgrid',
+    'smtp', 'mta', 'sig', 'dk', 'zoho', 'yandex', 'mailchimp', 'cm', 'mailgun', 'mxvault',
+    '20230601', '20210112', 'email'];
+  const dkimProbes = await Promise.all(dkimSelectors.map((sel) =>
+    resolveTxt(`${sel}._domainkey.${domain}`)
+      .then((r) => r.map((c) => c.join('')).join(' '))
+      .catch(() => ''),
+  ));
+  if (dkimProbes.some((v) => /v=DKIM1/i.test(v) || /\bp\s*=/i.test(v))) dkimPresent = true;
+
   try {
     const ns = await resolveNs(domain).catch(() => [] as string[]);
     for (const n of ns) records.push({ type: 'NS', value: n });
@@ -2733,13 +2818,19 @@ async function analyzeDNS(domain: string): Promise<{ records: DNSRecord[]; spfPo
       try { await resolve4(c); } catch { subdomainTakeover.push(c); }
     }
   } catch {}
-  // DNSSEC check (heuristic via root nameservers)
-  dnssec = records.some(r => r.type === 'TXT' && r.value.includes('dnssec')) || false;
-  // CAA check
-  try {
-    const caaRecords = await resolveTxt(`_caa.${domain}`).catch(() => [] as string[][]);
-    for (const c of caaRecords) { caa.push(c.join('')); }
-  } catch {}
+
+  // DNSSEC is proven by DNSKEY records, not by the word "dnssec" inside a TXT record.
+  // The Node resolver rejects 'DNSKEY' as an rrtype, so this goes over DoH.
+  const dnskeyAnswers = await dohQuery(domain, 'DNSKEY');
+  dnssec = dnskeyAnswers === undefined ? undefined : dnskeyAnswers.length > 0;
+
+  // CAA is its own record type (the previous code queried a non-existent _caa TXT name).
+  const caaAnswers = await dohQuery(domain, 'CAA');
+  for (const a of (caaAnswers || [])) {
+    const m = a.data.match(/(?:issue|issuewild)\s+"([^"]+)"/i);
+    if (m) caa.push(m[1]);
+  }
+
   return { records, spfPolicy, dmarcPolicy, dkimPresent, dnssec, caa, subdomainTakeover, zoneTransfer };
 }
 
@@ -2893,7 +2984,7 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                     // SSL cert check: only for HTTPS assets to avoid timeouts and false findings on plain HTTP
                     if (!sslChecked && (port===443 || port===8443 || finalUrl.startsWith('https://'))) {
                       sslChecked = true;
-                      sslInfo = await analyzeSSLInfo(web.headers, finalUrl);
+                      sslInfo = await analyzeSSLInfo(web.headers, finalUrl, Math.max(timeout, 8000));
                     }
                     sslGrade = sslInfo ? gradeSSL(sslInfo) : undefined;
                     // Override service name with real Server header when available
@@ -2904,7 +2995,7 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                     }
                     // Security header findings — skip on 3xx responses (headers belong to the redirect target)
                     const secHeaders = web.headers;
-                    if (web.status < 300 || web.status >= 400) {
+                    if ((web.status < 300 || web.status >= 400) && Object.keys(secHeaders || {}).length > 0) {
                       const headerSeverity: Record<string, string> = {
                         'Strict-Transport-Security': 'medium',
                         'Content-Security-Policy': 'medium',
@@ -2939,7 +3030,7 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                 } else if ([80,443,8080,8443,3000,5000,8000,9000].includes(port)) {
                   // Even if fetchURL failed, create findings from bannerGrab headers (skip on redirects)
                   const ph = probe.headers;
-                  if (probe.status < 300 || probe.status >= 400) {
+                  if ((probe.status < 300 || probe.status >= 400) && Object.keys(ph || {}).length > 0) {
                     const headerSeverity: Record<string, string> = {
                       'Strict-Transport-Security': 'medium',
                       'Content-Security-Policy': 'medium',
@@ -3100,14 +3191,18 @@ function calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[
     score += exposedAdmin * 20;
     // DNS weakness
     const dnsWeak = a.findings.filter(f=>f.type==='dns_weakness').length;
-    score += dnsWeak * 8;
+    // Domain hygiene is real but low-impact for a single host; cap it so three DNS notes
+    // cannot push a site with no exploitable issue into HIGH risk.
+    score += Math.min(dnsWeak * 4, 12);
     // Subdomain takeover
     const subTake = a.findings.filter(f=>f.type==='subdomain_takeover').length;
     score += subTake * 30;
-    // Findings severity direct sum
-    const critFindings = a.findings.filter(f=>f.severity==='critical').length;
-    const highFindings = a.findings.filter(f=>f.severity==='high').length;
-    const medFindings = a.findings.filter(f=>f.severity==='medium').length;
+    // Findings severity direct sum. Types already weighted above are excluded, otherwise a
+    // single DNS or header finding was counted twice and inflated the score.
+    const WEIGHTED_ABOVE = new Set(['dns_weakness','missing_header','ssl_weakness','info_disclosure','exposed_admin','subdomain_takeover']);
+    const critFindings = a.findings.filter(f=>f.severity==='critical' && !WEIGHTED_ABOVE.has(f.type)).length;
+    const highFindings = a.findings.filter(f=>f.severity==='high' && !WEIGHTED_ABOVE.has(f.type)).length;
+    const medFindings = a.findings.filter(f=>f.severity==='medium' && !WEIGHTED_ABOVE.has(f.type)).length;
     score += Math.min(critFindings*20 + highFindings*10 + medFindings*4, 35);
     // SSL grade penalty
     const sslPenalty = a.sslGrade==='F' ? 15 : a.sslGrade==='E' ? 10 : a.sslGrade==='D' ? 8 : a.sslGrade==='C' ? 4 : a.sslGrade==='T'?15 : a.sslGrade==='X'?15 : 0;
@@ -3162,7 +3257,7 @@ function dedupeFindings(assets: DiscoveredAsset[]) {
   }
 }
 
-function consolidateFindings(assets: DiscoveredAsset[]) {
+export function consolidateFindings(assets: DiscoveredAsset[]) {
   // Group assets by subdomain
   const bySub = new Map<string, DiscoveredAsset[]>();
   for (const a of assets) {
@@ -3171,12 +3266,24 @@ function consolidateFindings(assets: DiscoveredAsset[]) {
     bySub.set(a.subdomain, list);
   }
   for (const [sub, list] of Array.from(bySub.entries())) {
-    // Collect all missing headers across all ports for this subdomain
+    // Collect all missing headers across all ports for this subdomain.
+    // Only assets that actually returned a header map may contribute: an asset with no
+    // captured headers proves nothing about which headers are absent.
     const missingHeaders = new Set<string>();
+    let headerEvidencePorts = 0;
     const hasWeb = list.some((a: DiscoveredAsset) => a.port === 80 || a.port === 443 || a.port === 8080 || a.port === 8443);
+    // A stored missing_header finding is only valid while the asset still carries the header
+    // map that produced it. Without that evidence the finding is unbacked and must be dropped.
     for (const a of list) {
+      if (Object.keys(a.headers || {}).length === 0) {
+        a.findings = a.findings.filter((f: Finding) => f.type !== 'missing_header');
+      }
+    }
+    for (const a of list) {
+      const hasHeaderEvidence = Object.keys(a.headers || {}).length > 0;
+      if (hasHeaderEvidence && (a.port === 80 || a.port === 443 || a.port === 8080 || a.port === 8443)) headerEvidencePorts++;
       for (const f of a.findings) {
-        if (f.type === 'missing_header' && f.description) {
+        if (f.type === 'missing_header' && f.description && hasHeaderEvidence) {
           // Accept both 'X header missing' and 'Missing security headers (N): X, Y'
           const listMatch = f.description.match(/\(\d+\):\s*(.+)$/);
           const names = listMatch
@@ -3186,7 +3293,7 @@ function consolidateFindings(assets: DiscoveredAsset[]) {
         }
       }
     }
-    if (missingHeaders.size > 0 && hasWeb) {
+    if (missingHeaders.size > 0 && hasWeb && headerEvidencePorts > 0) {
       // Remove individual missing_header findings from all assets of this subdomain
       for (const a of list) {
         a.findings = a.findings.filter((f: Finding) => f.type !== 'missing_header');
@@ -3199,7 +3306,7 @@ function consolidateFindings(assets: DiscoveredAsset[]) {
         type: 'missing_header',
         severity: worstHdr as Finding['severity'],
         description: `Missing security headers (${missingHeaders.size}): ${Array.from(missingHeaders).join(', ')}`,
-        evidence: `Absent across ${list.length} port(s)`,
+        evidence: `Absent across ${headerEvidencePorts} port(s)`,
       });
     }
     // Consolidate ssl_weakness similarly
@@ -3251,7 +3358,7 @@ function generateRecommendations(assets: DiscoveredAsset[], cloudAssets: CloudAs
   if (assets.some(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X')) recs.push('Fix critical SSL/TLS misconfigurations (upgrade to TLS 1.2+, enforce HSTS)');
   if (!dnsInfo?.spfPolicy || dnsInfo.spfPolicy==='none') recs.push('Configure strict SPF record to prevent email spoofing');
   if (!dnsInfo?.dmarcPolicy || dnsInfo.dmarcPolicy==='none') recs.push('Enforce DMARC policy (p=quarantine or p=reject)');
-  if (!dnsInfo?.dkimPresent) recs.push('Enable DKIM signing for outbound email authentication');
+  if (dnsInfo?.dkimPresent === false) recs.push('Enable DKIM signing for outbound email authentication');
   if (dnsInfo?.subdomainTakeover?.length) recs.push('Remove dangling CNAME records pointing to deleted cloud resources');
   if (cloudAssets.some(c=>c.severity==='critical')) recs.push('Fix critical cloud misconfigurations (open S3 buckets, Firebase DBs, Docker/Kube APIs)');
   if (assets.some(a=>a.waf===null && (a.webVulns?.length||0)>0)) recs.push('Deploy a WAF to mitigate web application attack surface');
@@ -3280,13 +3387,21 @@ function generateThreatActors(assets: DiscoveredAsset[]): { actors: string[]; mi
   return { actors, mitreTactics: Array.from(new Set(mitre)) };
 }
 
-function complianceCheck(assets: DiscoveredAsset[]): ScanResult['executiveSummary']['complianceStatus'] {
+export function complianceCheck(assets: DiscoveredAsset[]): ScanResult['executiveSummary']['complianceStatus'] {
   let owaspCompliant = true;
   let pciDssCompliant = true;
   let gdprCompliant = true;
   for (const a of assets) {
     if ((a.webVulns||[]).some(w=>w.severity==='critical'||w.severity==='high')) owaspCompliant = false;
-    if ((a.sslGrade||'A')==='F'||a.sslGrade==='T'||a.sslGrade==='X'||!(a.sslInfo?.tls12||a.sslInfo?.tls13)) pciDssCompliant = false;
+    // PCI DSS TLS requirements apply only to assets that terminate TLS, and only observed
+    // weaknesses may fail them. A failed/unperformed handshake is unknown, not non-compliant.
+    const tlsAsset = a.port === 443 || a.port === 8443 || !!a.sslInfo;
+    if (tlsAsset) {
+      const weakGrade = a.sslGrade === 'F' || a.sslGrade === 'T' || a.sslGrade === 'X';
+      const weakProtoObserved = !!a.sslInfo && (a.sslInfo.tls10 === true || a.sslInfo.tls11 === true || a.sslInfo.weakCipher === true);
+      const noModernObserved = !!a.sslInfo && a.sslInfo.protocolKnown === true && !a.sslInfo.tls12 && !a.sslInfo.tls13;
+      if (weakGrade || a.sslInfo?.certExpired === true || weakProtoObserved || noModernObserved) pciDssCompliant = false;
+    }
     if (a.findings.some(f=>f.type==='exposed_database'||f.type==='info_disclosure')) gdprCompliant = false;
   }
   return { owaspCompliant, pciDssCompliant, gdprCompliant };
@@ -3361,10 +3476,10 @@ export class ScannerEngine {
     consolidateFindings(assets);
     calculateRiskScores(assets, []);
     this.scanResult.assets=assets; this.scanResult.durationSeconds=(Date.now()-start)/1000;
-    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:countCriticalFindings(assets), highRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount:assets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount:assets.filter(a=>a.riskScore<15).length, infoCount:countInfoFindings(assets), totalCVEs:new Set(assets.flatMap(a=>a.cves)).size, totalWebVulns:assets.reduce((s,a)=>s+(a.webVulns?.length||0),0), sslIssues:assets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length, totalExploits:assets.filter(a=>a.exploitAvailable).length, weakSSLCount:assets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length, missingHeaderCount:countMissingHeaders(assets), exposedDBCount:assets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length, exposedAdminCount:countExposedAdmin(assets) };
+    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:countCriticalFindings(assets), highRiskCount:assets.filter(a=>a.riskScore>=70&&a.riskScore<85).length, mediumRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, lowRiskCount:assets.filter(a=>a.riskScore<40).length, infoCount:countInfoFindings(assets), totalCVEs:new Set(assets.flatMap(a=>a.cves)).size, totalWebVulns:assets.reduce((s,a)=>s+(a.webVulns?.length||0),0), sslIssues:assets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length, totalExploits:assets.filter(a=>a.exploitAvailable).length, weakSSLCount:assets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length, missingHeaderCount:countMissingHeaders(assets), exposedDBCount:assets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length, exposedAdminCount:countExposedAdmin(assets) };
     const maxPortRisk = Math.max(...assets.map(a=>a.riskScore),0);
     const portThreats = assets.filter(a=>a.findings.length>0 || (a.webVulns && a.webVulns.length>0)).length;
-    this.scanResult.executiveSummary={ overallRisk:riskLabel(maxPortRisk), riskScore:maxPortRisk, criticalFindings:countCriticalFindings(assets), attackSurfaceSize:assets.length, recommendations:['Run full scan for CVE and cloud checks'], threatActors:portThreats>0?['Opportunistic attackers','Reconnaissance groups']:['None identified'], complianceStatus:{owaspCompliant:portThreats===0,pciDssCompliant:portThreats===0,gdprCompliant:portThreats===0}, mitreTactics:['TA0043-Reconnaissance'] };
+    this.scanResult.executiveSummary={ overallRisk:riskLabel(maxPortRisk), riskScore:maxPortRisk, criticalFindings:countCriticalFindings(assets), attackSurfaceSize:assets.length, recommendations:['Run full scan for CVE and cloud checks'], threatActors:portThreats>0?['Opportunistic attackers','Reconnaissance groups']:['None identified'], complianceStatus:complianceCheck(assets), mitreTactics:['TA0043-Reconnaissance'] };
     return this.scanResult;
   }
 
@@ -3390,7 +3505,7 @@ export class ScannerEngine {
     const totalWebVulns = assets.reduce((s,a)=>s+(a.webVulns?.length||0),0);
     const sslIssues = assets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length;
     this.scanResult.assets=assets; this.scanResult.durationSeconds=(Date.now()-start)/1000;
-    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:crit, highRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount:assets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount:assets.filter(a=>a.riskScore<15).length, infoCount:countInfoFindings(assets), totalCVEs:totalCves, totalWebVulns, sslIssues, totalExploits:assets.filter(a=>a.exploitAvailable).length, weakSSLCount:assets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length, missingHeaderCount:countMissingHeaders(assets), exposedDBCount:assets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length, exposedAdminCount:countExposedAdmin(assets) };
+    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:crit, highRiskCount:assets.filter(a=>a.riskScore>=70&&a.riskScore<85).length, mediumRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, lowRiskCount:assets.filter(a=>a.riskScore<40).length, infoCount:countInfoFindings(assets), totalCVEs:totalCves, totalWebVulns, sslIssues, totalExploits:assets.filter(a=>a.exploitAvailable).length, weakSSLCount:assets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length, missingHeaderCount:countMissingHeaders(assets), exposedDBCount:assets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length, exposedAdminCount:countExposedAdmin(assets) };
     const {actors, mitreTactics} = generateThreatActors(assets);
     this.scanResult.executiveSummary={ overallRisk:riskLabel(peekRiskScore(assets)), riskScore:peekRiskScore(assets), criticalFindings:crit, attackSurfaceSize:assets.length, recommendations:generateRecommendations(assets,[],dnsInfo), threatActors:actors, complianceStatus:complianceCheck(assets), mitreTactics };
     this.scanResult.dnsAnalysis = dnsInfo;
@@ -3495,12 +3610,12 @@ export class ScannerEngine {
     this.scanResult.cloudAssets = dedupedCloud;
     this.scanResult.durationSeconds = duration;
     this.scanResult.completedAt = new Date().toISOString();
-    this.scanResult.statistics = { totalSubdomains, totalAssets: dedupedAssets.length, totalCloudAssets: dedupedCloud.length, criticalFindings: crit, highRiskCount: dedupedAssets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount: dedupedAssets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount: dedupedAssets.filter(a=>a.riskScore<15).length, infoCount: countInfoFindings(dedupedAssets), totalCVEs: totalCves, totalWebVulns, sslIssues, totalExploits: dedupedAssets.filter(a=>a.exploitAvailable).length, weakSSLCount, missingHeaderCount, exposedDBCount,
+    this.scanResult.statistics = { totalSubdomains, totalAssets: dedupedAssets.length, totalCloudAssets: dedupedCloud.length, criticalFindings: crit, highRiskCount: dedupedAssets.filter(a=>a.riskScore>=70&&a.riskScore<85).length, mediumRiskCount: dedupedAssets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, lowRiskCount: dedupedAssets.filter(a=>a.riskScore<40).length, infoCount: countInfoFindings(dedupedAssets), totalCVEs: totalCves, totalWebVulns, sslIssues, totalExploits: dedupedAssets.filter(a=>a.exploitAvailable).length, weakSSLCount, missingHeaderCount, exposedDBCount,
       exposedAdminCount: countExposedAdmin(dedupedAssets) };
     if (failedTargets > 0) recs.push(`${failedTargets} of ${targets.length} target(s) could not be fully scanned - re-run them individually`);
     const {actors} = generateThreatActors(dedupedAssets);
     for (const a of actors) actorSet.add(a);
-    this.scanResult.executiveSummary = { overallRisk: riskLabel(peekRiskScore(dedupedAssets, dedupedCloud)), riskScore: peekRiskScore(dedupedAssets, dedupedCloud), criticalFindings: crit, attackSurfaceSize: totalSubdomains + dedupedCloud.length, recommendations: recs.length ? recs : ['No action required - no significant findings'], threatActors: Array.from(actorSet), complianceStatus: { owaspCompliant: owasp, pciDssCompliant: pci, gdprCompliant: gdpr }, mitreTactics: Array.from(tacticSet) };
+    this.scanResult.executiveSummary = { overallRisk: riskLabel(peekRiskScore(dedupedAssets, dedupedCloud)), riskScore: peekRiskScore(dedupedAssets, dedupedCloud), criticalFindings: crit, attackSurfaceSize: dedupedAssets.length + dedupedCloud.length, recommendations: recs.length ? recs : ['No action required - no significant findings'], threatActors: Array.from(actorSet), complianceStatus: { owaspCompliant: owasp, pciDssCompliant: pci, gdprCompliant: gdpr }, mitreTactics: Array.from(tacticSet) };
     this.scanResult.dnsAnalysis = dnsInfo;
     return this.scanResult;
   }
@@ -3511,11 +3626,13 @@ export class ScannerEngine {
     const assets = await scanPortsOnAssets(subdomains, TOP_PORTS.slice(0, portLimit));
     // Inject DNS weakness findings into the first asset (or create a primary domain asset)
     if (assets.length > 0 && dnsInfo) {
-      const primary = assets[0];
-      if (dnsInfo.spfPolicy === 'none') primary.findings.push({ type:'dns_weakness', severity:'medium', description:'SPF record missing or set to none', evidence:'No SPF protection against email spoofing' });
-      if (dnsInfo.dmarcPolicy === 'none' || !dnsInfo.dmarcPolicy) primary.findings.push({ type:'dns_weakness', severity:'medium', description:'DMARC policy missing or too weak', evidence:`DMARC=${dnsInfo.dmarcPolicy||'none'}` });
-      if (!dnsInfo.dkimPresent) primary.findings.push({ type:'dns_weakness', severity:'medium', description:'DKIM not detected', evidence:'No DKIM record found' });
-      if (!dnsInfo.dnssec) primary.findings.push({ type:'dns_weakness', severity:'low', description:'DNSSEC not enabled', evidence:'No DNSSEC records detected' });
+      // Domain-level findings belong on the apex asset, not on whichever subdomain sorted first.
+      const primary = assets.find((a) => a.subdomain === this.target) || assets[0];
+      if (dnsInfo.spfPolicy === 'absent' || dnsInfo.spfPolicy === 'neutral') primary.findings.push({ type:'dns_weakness', severity:'medium', description:'SPF record missing or has no enforcing qualifier', evidence:`SPF=${dnsInfo.spfPolicy}` });
+      // Only report DMARC when the _dmarc lookup actually returned "no record" or p=none.
+      if (dnsInfo.dmarcPolicy === 'absent' || dnsInfo.dmarcPolicy === 'none') primary.findings.push({ type:'dns_weakness', severity:'medium', description:'DMARC policy missing or set to p=none (no enforcement)', evidence:`DMARC policy=${dnsInfo.dmarcPolicy}` });
+      // DKIM absence is not verifiable without the provider-specific selector, so it is never reported.
+      if (dnsInfo.dnssec === false) primary.findings.push({ type:'dns_weakness', severity:'low', description:'DNSSEC not enabled', evidence:'No DNSKEY record published' });
       if (dnsInfo.subdomainTakeover && dnsInfo.subdomainTakeover.length > 0) {
         for (const st of dnsInfo.subdomainTakeover) {
           primary.findings.push({ type:'subdomain_takeover', severity:'critical', description:`Potential subdomain takeover: ${st}`, evidence:`Dangling CNAME: ${st}` });
@@ -3562,9 +3679,9 @@ export class ScannerEngine {
     this.scanResult.cloudAssets=cloudAssets;
     this.scanResult.durationSeconds=duration;
     this.scanResult.completedAt=new Date().toISOString();
-    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:cloudAssets.length, criticalFindings:crit, highRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, mediumRiskCount:assets.filter(a=>a.riskScore>=15&&a.riskScore<40).length, lowRiskCount:assets.filter(a=>a.riskScore<15).length, infoCount:countInfoFindings(assets), totalCVEs:totalCves, totalWebVulns, sslIssues, totalExploits, weakSSLCount, missingHeaderCount, exposedDBCount, exposedAdminCount: countExposedAdmin(assets) };
+    this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:cloudAssets.length, criticalFindings:crit, highRiskCount:assets.filter(a=>a.riskScore>=70&&a.riskScore<85).length, mediumRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, lowRiskCount:assets.filter(a=>a.riskScore<40).length, infoCount:countInfoFindings(assets), totalCVEs:totalCves, totalWebVulns, sslIssues, totalExploits, weakSSLCount, missingHeaderCount, exposedDBCount, exposedAdminCount: countExposedAdmin(assets) };
     const {actors, mitreTactics} = generateThreatActors(assets);
-    this.scanResult.executiveSummary={ overallRisk:riskLabel(peekRiskScore(assets, cloudAssets)), riskScore:peekRiskScore(assets, cloudAssets), criticalFindings:crit, attackSurfaceSize:Object.keys(subdomains).length+cloudAssets.length, recommendations: generateRecommendations(assets,cloudAssets,dnsInfo), threatActors:actors, complianceStatus:complianceCheck(assets), mitreTactics };
+    this.scanResult.executiveSummary={ overallRisk:riskLabel(peekRiskScore(assets, cloudAssets)), riskScore:peekRiskScore(assets, cloudAssets), criticalFindings:crit, attackSurfaceSize:assets.length+cloudAssets.length, recommendations: generateRecommendations(assets,cloudAssets,dnsInfo), threatActors:actors, complianceStatus:complianceCheck(assets), mitreTactics };
     this.scanResult.dnsAnalysis = dnsInfo;
     return this.scanResult;
   }
