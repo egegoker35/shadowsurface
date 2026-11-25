@@ -5,6 +5,7 @@ import { ScannerEngine } from '@/lib/scanner/engine';
 import { rateLimitByUser } from '@/lib/middleware/rateLimit';
 import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput } from '@/lib/middleware/security';
 import { z } from 'zod';
+import { dispatchScanEvent } from '@/lib/webhooks';
 
 const VALID_SCAN_TYPES = ['subdomain', 'port', 'cve', 'cloud', 'full', 'bulk'];
 
@@ -140,13 +141,25 @@ export async function POST(req: NextRequest) {
             })),
           });
         }
+        await dispatchScanEvent(user.orgId, {
+          event: 'scan.completed',
+          scanId: scan.id,
+          target,
+          overallRisk: result.executiveSummary?.overallRisk ?? null,
+          riskScore: result.executiveSummary?.riskScore ?? null,
+          totalAssets: result.statistics?.totalAssets ?? 0,
+          totalCVEs: result.statistics?.totalCVEs ?? 0,
+          durationSeconds: Math.round(result.durationSeconds || 0),
+        });
       } catch (e: any) {
         console.error('[Scan Save Error]', e);
         await prisma.scan.update({ where: { id: scan.id }, data: { status: 'failed' } });
+        await dispatchScanEvent(user.orgId, { event: 'scan.failed', scanId: scan.id, target, error: String(e?.message || e) });
       }
     }).catch(async (err: any) => {
       console.error('[Scan Engine Error]', err?.message || err);
       await prisma.scan.update({ where: { id: scan.id }, data: { status: 'failed' } });
+      await dispatchScanEvent(user.orgId, { event: 'scan.failed', scanId: scan.id, target, error: String(err?.message || err) });
     });
 
     return NextResponse.json({ scanId: scan.id, status: 'running', message: 'Scan started. This may take 5-30 minutes depending on target size.' });
