@@ -47,6 +47,21 @@ export default function ScansTable({
   const token = typeof window !== 'undefined' ? localStorage.getItem('ss_admin_token') : null;
   const [selectedScan, setSelectedScan] = useState<any>(null);
 
+  // The list query does not carry assets, cloud assets or statistics; load them when a
+  // row is opened so the modal shows real findings instead of zeroed counters.
+  const openScan = async (row: any) => {
+    setSelectedScan(row);
+    try {
+      const res = await fetch(`/api/admin?section=scan&id=${encodeURIComponent(row.id)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.scan) setSelectedScan(d.scan);
+    } catch {
+      // Keep the row we already have; the modal still renders its summary.
+    }
+  };
+
   const del = async (scanId: string) => {
     if (!confirm('Delete this scan and its assets?')) return;
     const res = await fetch(`/api/admin/delete-scan?id=${scanId}`, {
@@ -96,7 +111,7 @@ export default function ScansTable({
               return (
                 <tr key={s.id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
                   <td className="px-7 py-4">
-                    <button onClick={() => setSelectedScan(s)} className="font-semibold text-white hover:text-emerald-400 transition-colors text-left">
+                    <button onClick={() => openScan(s)} className="font-semibold text-white hover:text-emerald-400 transition-colors text-left">
                       {s.target}
                     </button>
                     <div className="text-[11px] text-slate-500 mt-0.5">
@@ -135,7 +150,7 @@ export default function ScansTable({
                   <td className="px-7 py-4">
                     <div className="flex gap-1.5 justify-end">
                       <button
-                        onClick={() => setSelectedScan(s)}
+                        onClick={() => openScan(s)}
                         className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-slate-700 text-slate-300 hover:bg-slate-700/60 transition-colors"
                       >
                         View

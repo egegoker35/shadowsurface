@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import Pagination from './Pagination';
 
 const STATUS_STYLES: Record<string, string> = {
@@ -41,27 +42,39 @@ export default function LeadsTable({
   onRefresh: () => void;
 }) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('ss_admin_token') : null;
+  const [notice, setNotice] = useState('');
+  const [tempCred, setTempCred] = useState<{ email: string; password: string } | null>(null);
 
   const approve = async (lead: any) => {
     if (!confirm(`Activate the ${lead.plan} plan for ${lead.email}?`)) return;
+    setNotice('');
     const res = await fetch('/api/admin/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ email: lead.email, plan: lead.plan }),
     });
     const d = await res.json().catch(() => ({}));
-    if (res.ok) onRefresh();
-    else alert(d.error || 'Approval failed.');
+    if (!res.ok) {
+      setNotice(d.error || 'Approval failed.');
+      return;
+    }
+    if (d.tempPassword) setTempCred({ email: lead.email, password: d.tempPassword });
+    else setNotice(`Plan activated for the existing account ${lead.email}.`);
+    onRefresh();
   };
 
   const del = async (id: string) => {
     if (!confirm('Delete this lead?')) return;
+    setNotice('');
     const res = await fetch(`/api/admin/delete-lead?id=${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) onRefresh();
-    else alert('Delete failed.');
+    else {
+      const d = await res.json().catch(() => ({}));
+      setNotice(d.error || 'Delete failed.');
+    }
   };
 
   return (
@@ -75,6 +88,24 @@ export default function LeadsTable({
           {total} total
         </span>
       </div>
+      {tempCred && (
+        <div className="mx-7 mt-5 rounded-xl border border-emerald-600/40 bg-emerald-500/10 px-4 py-3">
+          <div className="text-sm font-semibold text-emerald-300">Account created for {tempCred.email}</div>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <code className="font-mono text-white bg-slate-950/70 border border-slate-700 px-2.5 py-1 rounded text-sm">{tempCred.password}</code>
+            <button onClick={() => navigator.clipboard?.writeText(tempCred.password)} className="text-[11px] font-bold text-emerald-300 hover:text-emerald-200 underline underline-offset-2">
+              Copy
+            </button>
+            <button onClick={() => setTempCred(null)} className="text-[11px] text-slate-400 hover:text-slate-200 underline underline-offset-2">
+              Dismiss
+            </button>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-1.5">Temporary password, shown once. Send it to the customer with the login page link.</p>
+        </div>
+      )}
+      {notice && (
+        <div className="mx-7 mt-5 rounded-xl border border-slate-600/40 bg-slate-800/60 px-4 py-2.5 text-xs text-slate-300">{notice}</div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
           <thead className="text-[11px] text-slate-500 uppercase tracking-wider bg-slate-950/60 border-b border-slate-800">

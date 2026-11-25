@@ -34,6 +34,24 @@ export async function GET(req: NextRequest) {
     const now = new Date();
     const d30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
+    // Full detail for one scan, loaded only when the console opens a row. The list
+    // query stays light; assets and their findings are far too large for a page of rows.
+    if (section === 'scan') {
+      const id = req.nextUrl.searchParams.get('id');
+      if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+      const scan = await prisma.scan.findUnique({
+        where: { id },
+        include: {
+          assets: true,
+          cloudAssets: true,
+          createdBy: { select: { email: true } },
+          org: { select: { plan: true } },
+        },
+      });
+      if (!scan) return NextResponse.json({ error: 'Scan not found' }, { status: 404 });
+      return NextResponse.json({ scan });
+    }
+
     if (section === 'users') {
       const where = q ? { email: { contains: q, mode: 'insensitive' as const } } : {};
       const [rows, total] = await Promise.all([
