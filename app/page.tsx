@@ -144,11 +144,11 @@ export default function LandingPage() {
       {/* ─── HERO ─────────────────────────────────────────────── */}
       <section className="pt-24 pb-14 px-6">
         <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-12 lg:gap-16 items-start">
-          <div className="lg:col-span-6">
+          <div className="lg:col-span-7">
             <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-400/80 mb-5">
               External attack surface management
             </p>
-            <h1 className="text-[2rem] sm:text-[2.75rem] font-semibold tracking-tight leading-[1.1] text-white">
+            <h1 className="text-[1.95rem] sm:text-[2.5rem] font-semibold tracking-tight leading-[1.12] text-white">
               Find what you have exposed, before someone else does.
             </h1>
             <p className="mt-6 text-base sm:text-lg text-slate-400 leading-relaxed max-w-xl">
@@ -198,7 +198,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="lg:col-span-6 w-full">
+          <div className="lg:col-span-5 w-full">
             <ReportPreview />
           </div>
         </div>
@@ -356,7 +356,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <FAQSchema />
+      <FAQSchema faqs={FAQS.map((f) => ({ q: f.q, a: f.a }))} />
 
       {/* ─── CTA ──────────────────────────────────────────────── */}
       <section className="py-16 px-6 border-t border-slate-800/70">

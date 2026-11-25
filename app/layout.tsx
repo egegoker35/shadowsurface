@@ -1,9 +1,5 @@
 import './globals.css';
 import { ReactNode } from 'react';
-import dynamic from 'next/dynamic';
-
-const ChatWidget = dynamic(() => import('@/components/ChatWidget'), { ssr: false });
-
 export const metadata = {
   title: 'ShadowSurface - Cloud Attack Surface Intelligence Platform',
   description: 'Discover, monitor, and secure your external attack surface with automated subdomain enumeration, port scanning, CVE mapping, and cloud misconfiguration detection.',
@@ -43,14 +39,9 @@ const jsonLd = {
     { '@type': 'Offer', price: '499', priceCurrency: 'USD', priceValidUntil: '2026-12-31', name: 'Professional Plan' },
     { '@type': 'Offer', price: '1999', priceCurrency: 'USD', priceValidUntil: '2026-12-31', name: 'Enterprise Plan' },
   ],
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: '4.8',
-    ratingCount: '127',
-  },
   description: 'Cloud Attack Surface Intelligence platform with automated subdomain enumeration, port scanning, CVE mapping, and cloud misconfiguration detection.',
   url: 'https://shadowsurface.app',
-  logo: 'https://shadowsurface.app/logo.png',
+  logo: 'https://shadowsurface.app/logo.svg',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -64,7 +55,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className="antialiased text-white bg-slate-950">
         {children}
-        <ChatWidget />
       </body>
     </html>
   );

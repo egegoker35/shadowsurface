@@ -47,7 +47,7 @@ export default function ReportPreview() {
         <span className="font-mono text-[11px] text-slate-500">4 assets · 61s</span>
       </div>
 
-      <div className="grid grid-cols-[1fr_56px_44px] gap-2 px-4 py-2 border-b border-slate-800/70">
+      <div className="grid grid-cols-[minmax(0,1fr)_56px_44px] gap-2 px-4 py-2 border-b border-slate-800/70">
         <span className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Asset</span>
         <span className="text-[10px] uppercase tracking-[0.14em] text-slate-500 text-right">Risk</span>
         <span className="text-[10px] uppercase tracking-[0.14em] text-slate-500 text-right">Port</span>
@@ -56,8 +56,8 @@ export default function ReportPreview() {
       <ul className="divide-y divide-slate-800/60">
         {ROWS.map((r) => (
           <li key={r.host + r.port} className="px-4 py-3">
-            <div className="grid grid-cols-[1fr_56px_44px] gap-2 items-baseline">
-              <span className="font-mono text-[13px] text-slate-200 truncate">{r.host}</span>
+            <div className="grid grid-cols-[minmax(0,1fr)_56px_44px] gap-2 items-baseline">
+              <span className="min-w-0 font-mono text-[13px] text-slate-200 truncate">{r.host}</span>
               <span className={`justify-self-end rounded border px-1.5 py-0.5 font-mono text-[11px] ${riskTone(r.risk)}`}>
                 {r.risk}
               </span>
