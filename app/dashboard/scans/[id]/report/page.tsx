@@ -63,7 +63,7 @@ export default function ScanReportPage() {
           <div className="md:col-span-2 bg-slate-50 border border-slate-200 rounded-xl p-6">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">Target</h2>
             <p className="text-2xl font-bold text-slate-900">{scan.target}</p>
-            <p className="text-sm text-slate-500 mt-1">Scan type: {scan.type || 'Full'} &bull; Duration: {Math.round(scan.durationSeconds || 0)}s</p>
+            <p className="text-sm text-slate-500 mt-1">Scan type: {scan.scanType || 'Full'} &bull; Duration: {Math.round(scan.durationSeconds || 0)}s</p>
           </div>
           <div className={`rounded-xl p-6 text-center border-2 ${
             summary.overallRisk === 'CRITICAL' ? 'bg-red-50 border-red-200 text-red-900' :
