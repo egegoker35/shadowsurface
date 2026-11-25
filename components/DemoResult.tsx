@@ -32,7 +32,12 @@ export default function DemoResult({ result }: { result: any }) {
   if (!result) return null;
   const subdomains = result.subdomains || [];
   const findings = result.findings || [];
-  const ports = result.ports || [];
+  // The demo never returns a separate port list; it returns one entry per responding
+  // service. Reading result.ports left the "Open Ports" ring stuck at 0 on every scan.
+  const assets = result.assets || [];
+  const ports = assets.length
+    ? Array.from(new Map(assets.map((a: any) => [a.port, { port: a.port, service: a.service }])).values())
+    : (result.ports || []);
   
   // Risk comes from the scanner that produced the result, using the same weights as the
   // full report. Recomputing it here with a second formula made the demo and the report

@@ -6,6 +6,7 @@ export default function TeamPage() {
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState('');
+  const [inviteError, setInviteError] = useState('');
   const token = typeof window !== 'undefined' ? localStorage.getItem('ss_token') : null;
 
   const fetchInvites = async () => {
@@ -18,8 +19,17 @@ export default function TeamPage() {
   const invite = async (e: React.FormEvent) => {
     e.preventDefault();
     setSending(true);
+    setInviteError('');
     const res = await fetch('/api/invites', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ email }) });
-    if (res.ok) { setEmail(''); fetchInvites(); }
+    if (res.ok) {
+      setEmail('');
+      fetchInvites();
+    } else {
+      // Seat limits and duplicate invitations are rejected here; without this the form
+      // silently did nothing and the user had no idea why.
+      const data = await res.json().catch(() => ({}));
+      setInviteError(data.error || 'Could not send the invitation.');
+    }
     setSending(false);
   };
 
@@ -55,6 +65,7 @@ export default function TeamPage() {
                 {sending ? 'Sending...' : 'Send Invite'}
               </button>
             </form>
+            {inviteError && <p className="mt-3 text-xs text-red-400 leading-relaxed">{inviteError}</p>}
           </div>
         </div>
 

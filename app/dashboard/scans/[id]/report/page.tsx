@@ -88,7 +88,7 @@ export default function ScanReportPage() {
             ))}
             {scan.coverage && (
               <p className="text-xs text-slate-500 mt-2">
-                Resolved subdomains: {scan.coverage.resolvedSubdomains} · Assets with a response: {scan.coverage.scannedAssets} · Unreachable: {scan.coverage.unreachable}
+                Resolved subdomains: {scan.coverage.resolvedSubdomains} · Responding services: {scan.coverage.scannedAssets} · Unreachable: {scan.coverage.unreachable}
               </p>
             )}
           </div>

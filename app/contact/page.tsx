@@ -9,7 +9,7 @@ export default function ContactPage() {
           <div><span className="text-slate-400">Sales:</span> <a href="mailto:egegoker35@gmail.com" className="text-emerald-400 hover:underline">egegoker35@gmail.com</a></div>
           <div><span className="text-slate-400">Security:</span> <a href="mailto:egegoker35@gmail.com" className="text-emerald-400 hover:underline">egegoker35@gmail.com</a></div>
           <hr className="border-slate-800" />
-          <p className="text-slate-500 text-sm">Enterprise customers get a dedicated Slack channel and phone support.</p>
+          <p className="text-slate-500 text-sm">Enterprise plans are provisioned manually after payment is reviewed.</p>
         </div>
       </div>
     </div>

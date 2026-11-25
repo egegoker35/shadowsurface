@@ -5,6 +5,17 @@ import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Seats included in each plan. Pricing sells 1 / 5 / unlimited seats, so the invite
+ * endpoint has to enforce the same numbers - before this check any plan could invite
+ * without limit, which made the seat pricing meaningless.
+ */
+const SEAT_LIMITS: Record<string, number> = {
+  free: 1,
+  starter: 1,
+  professional: 5,
+};
+
 export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req.headers);
@@ -20,11 +31,38 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req.headers);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const body = await req.json();
-    const { email } = body;
-    if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 });
+    const email = String(body?.email || '').toLowerCase().trim();
+    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      return NextResponse.json({ error: 'A valid email is required' }, { status: 400 });
+    }
+
+    const org = await prisma.organization.findUnique({ where: { id: user.orgId }, select: { plan: true, name: true } });
+    const plan = org?.plan || 'free';
+    const maxSeats = plan === 'enterprise' ? Number.POSITIVE_INFINITY : (SEAT_LIMITS[plan] ?? 1);
+
+    const [members, pending] = await Promise.all([
+      prisma.user.count({ where: { orgId: user.orgId } }),
+      prisma.invite.count({ where: { orgId: user.orgId, accepted: false, expiresAt: { gt: new Date() } } }),
+    ]);
+    if (Number.isFinite(maxSeats) && members + pending >= maxSeats) {
+      return NextResponse.json(
+        { error: `The ${plan} plan includes ${maxSeats} seat(s). Upgrade the plan to invite more people.` },
+        { status: 403 },
+      );
+    }
+
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return NextResponse.json({ error: 'User already exists' }, { status: 409 });
+
+    const duplicate = await prisma.invite.findFirst({
+      where: { orgId: user.orgId, email, accepted: false, expiresAt: { gt: new Date() } },
+    });
+    if (duplicate) {
+      return NextResponse.json({ error: 'An invitation for this email is already pending', link: `/invite/${duplicate.token}` }, { status: 409 });
+    }
+
     const token = crypto.randomBytes(32).toString('hex');
     const invite = await prisma.invite.create({
       data: { email, token, role: 'user', expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), orgId: user.orgId },
