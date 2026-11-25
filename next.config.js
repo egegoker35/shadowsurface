@@ -2,6 +2,9 @@
 const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['bcryptjs'],
+    // Required on Next 14 to run instrumentation.ts, which starts the
+    // in-process scheduled-scan loop at server boot.
+    instrumentationHook: true,
   },
   images: {
     unoptimized: true,

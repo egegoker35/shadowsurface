@@ -16,6 +16,7 @@ export default function ScheduledScansPage() {
   const [target, setTarget] = useState('');
   const [scanType, setScanType] = useState('full');
   const [cron, setCron] = useState('daily');
+  const [error, setError] = useState('');
   const token = typeof window !== 'undefined' ? localStorage.getItem('ss_token') : null;
 
   const fetchItems = async () => {
@@ -32,7 +33,12 @@ export default function ScheduledScansPage() {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ name, target, scanType, cron }),
     });
-    if (res.ok) { setName(''); setTarget(''); fetchItems(); }
+    if (res.ok) {
+      setName(''); setTarget(''); setError(''); fetchItems();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error || 'Could not create the schedule.');
+    }
   };
 
   const del = async (id: string) => {
@@ -58,11 +64,13 @@ export default function ScheduledScansPage() {
           </select>
           <button type="submit" className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">Create</button>
         </form>
+        {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+        <p className="mt-3 text-xs text-slate-500">The server checks for due schedules every minute. Each run creates a normal scan, counts toward your monthly limit and uses the scan type your plan includes.</p>
       </div>
       {loading ? <p className="text-slate-400">Loading...</p> : items.length === 0 ? <p className="text-slate-400">No scheduled scans.</p> : (
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
           <table className="w-full text-sm text-left">
-            <thead className="text-xs text-slate-400 uppercase border-b border-slate-800"><tr><th className="px-6 py-3">Name</th><th className="px-6 py-3">Target</th><th className="px-6 py-3">Type</th><th className="px-6 py-3">Frequency</th><th className="px-6 py-3">Next Run</th><th className="px-6 py-3 text-right">Actions</th></tr></thead>
+            <thead className="text-xs text-slate-400 uppercase border-b border-slate-800"><tr><th className="px-6 py-3">Name</th><th className="px-6 py-3">Target</th><th className="px-6 py-3">Type</th><th className="px-6 py-3">Frequency</th><th className="px-6 py-3">Next Run</th><th className="px-6 py-3">Last Run</th><th className="px-6 py-3 text-right">Actions</th></tr></thead>
             <tbody>
               {items.map((s) => (
                 <tr key={s.id} className="border-b border-slate-800">
@@ -70,7 +78,12 @@ export default function ScheduledScansPage() {
                   <td className="px-6 py-3 text-emerald-400">{s.target}</td>
                   <td className="px-6 py-3 capitalize">{s.scanType}</td>
                   <td className="px-6 py-3 capitalize">{s.cron}</td>
-                  <td className="px-6 py-3 text-slate-400">{s.nextRun ? new Date(s.nextRun).toLocaleDateString() : '-'}</td>
+                  <td className="px-6 py-3 text-slate-400">{s.nextRun ? new Date(s.nextRun).toLocaleString() : '-'}</td>
+                  <td className="px-6 py-3 text-slate-400">
+                    {s.lastRun ? (
+                      s.lastScanId ? <a href={`/dashboard/scans/${s.lastScanId}`} className="text-emerald-400 hover:underline">{new Date(s.lastRun).toLocaleString()}</a> : new Date(s.lastRun).toLocaleString()
+                    ) : 'Never'}
+                  </td>
                   <td className="px-6 py-3 text-right"><button onClick={() => del(s.id)} className="text-red-400 text-xs hover:underline">Delete</button></td>
                 </tr>
               ))}

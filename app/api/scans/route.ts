@@ -1,41 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
-import { ScannerEngine } from '@/lib/scanner/engine';
 import { rateLimitByUser } from '@/lib/middleware/rateLimit';
 import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput } from '@/lib/middleware/security';
 import { z } from 'zod';
-import { dispatchScanEvent } from '@/lib/webhooks';
-
-const VALID_SCAN_TYPES = ['subdomain', 'port', 'cve', 'cloud', 'full', 'bulk'];
-
-const PLAN_CONFIG: Record<string, { perHour: number; perMonth: number; portLimit: number; allowedTypes: string[]; bulkDomains: number }> = {
-  free: { perHour: 1, perMonth: 2, portLimit: 10, allowedTypes: ['subdomain', 'port'], bulkDomains: 1 },
-  starter: { perHour: 5, perMonth: 20, portLimit: 20, allowedTypes: ['subdomain', 'port', 'cve'], bulkDomains: 1 },
-  professional: { perHour: 20, perMonth: 200, portLimit: 50, allowedTypes: ['subdomain', 'port', 'cve', 'cloud', 'full'], bulkDomains: 5 },
-  enterprise: { perHour: 100, perMonth: 9999, portLimit: 100, allowedTypes: ['subdomain', 'port', 'cve', 'cloud', 'full', 'bulk'], bulkDomains: 50 },
-};
+import { configForPlan, VALID_SCAN_TYPES } from '@/lib/plans';
+import { startScanExecution } from '@/lib/scanRunner';
 
 const createSchema = z.object({
   target: z.string().min(3).max(512),
   scanType: z.string().optional(),
 });
-
-function runScanWithTimeout(engine: ScannerEngine, scanType: string, ms = 1800000, portLimit = 50, targets?: string[]): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('Scan timed out after 30 minutes')), ms);
-    const work = scanType === 'bulk' && targets && targets.length > 1
-      ? engine.runBulkScan(targets, portLimit)
-      : engine.runScan(scanType, portLimit);
-    work.then((result: any) => {
-      clearTimeout(timer);
-      resolve(result);
-    }).catch((err: any) => {
-      clearTimeout(timer);
-      reject(err);
-    });
-  });
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     const org = await prisma.organization.findUnique({ where: { id: user.orgId } });
     const plan = org?.plan || 'free';
-    const config = PLAN_CONFIG[plan] || PLAN_CONFIG.starter;
+    const config = configForPlan(plan);
 
     const body = await req.json();
     const parsed = createSchema.safeParse(body);
@@ -93,73 +68,13 @@ export async function POST(req: NextRequest) {
       data: { target: rawTarget, scanType, status: 'running', orgId: user.orgId, createdById: user.id },
     });
 
-    const engine = new ScannerEngine(target);
-    runScanWithTimeout(engine, scanType, 1800000, config.portLimit, targets).then(async (result: any) => {
-      try {
-        await prisma.scan.update({
-          where: { id: scan.id },
-          data: {
-            status: 'completed',
-            resultJson: result as any,
-            executiveSummary: result.executiveSummary as any,
-            statistics: result.statistics as any,
-            durationSeconds: typeof result.durationSeconds === 'number' ? result.durationSeconds : null,
-          },
-        });
-        if (result.assets?.length > 0) {
-          await prisma.asset.createMany({
-            data: result.assets.map((a: any) => ({
-              scanId: scan.id,
-              domain: a.subdomain || a.ip || 'unknown',
-              subdomain: a.subdomain || a.ip || 'unknown',
-              ip: a.ip,
-              port: a.port,
-              service: a.service,
-              technology: a.technology,
-              version: a.version,
-              riskScore: a.riskScore,
-              cves: a.cves,
-              findings: a.findings as any,
-              headers: a.headers as any,
-              sslInfo: a.sslInfo as any,
-              waf: a.waf,
-            })),
-          });
-        }
-        if (result.cloudAssets?.length > 0) {
-          await prisma.cloudAsset.createMany({
-            data: result.cloudAssets.map((c: any) => ({
-              scanId: scan.id,
-              provider: c.provider,
-              serviceType: c.serviceType,
-              resourceId: c.resourceId,
-              url: c.url,
-              permissions: c.permissions as any,
-              misconfigurations: c.misconfigurations as any,
-              riskScore: c.riskScore,
-              severity: c.severity,
-            })),
-          });
-        }
-        await dispatchScanEvent(user.orgId, {
-          event: 'scan.completed',
-          scanId: scan.id,
-          target,
-          overallRisk: result.executiveSummary?.overallRisk ?? null,
-          riskScore: result.executiveSummary?.riskScore ?? null,
-          totalAssets: result.statistics?.totalAssets ?? 0,
-          totalCVEs: result.statistics?.totalCVEs ?? 0,
-          durationSeconds: Math.round(result.durationSeconds || 0),
-        });
-      } catch (e: any) {
-        console.error('[Scan Save Error]', e);
-        await prisma.scan.update({ where: { id: scan.id }, data: { status: 'failed' } });
-        await dispatchScanEvent(user.orgId, { event: 'scan.failed', scanId: scan.id, target, error: String(e?.message || e) });
-      }
-    }).catch(async (err: any) => {
-      console.error('[Scan Engine Error]', err?.message || err);
-      await prisma.scan.update({ where: { id: scan.id }, data: { status: 'failed' } });
-      await dispatchScanEvent(user.orgId, { event: 'scan.failed', scanId: scan.id, target, error: String(err?.message || err) });
+    startScanExecution({
+      scanId: scan.id,
+      target,
+      scanType,
+      orgId: user.orgId,
+      portLimit: config.portLimit,
+      targets,
     });
 
     return NextResponse.json({ scanId: scan.id, status: 'running', message: 'Scan started. This may take 5-30 minutes depending on target size.' });

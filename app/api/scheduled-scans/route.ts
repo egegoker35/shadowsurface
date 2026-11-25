@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
+import { configForPlan, VALID_SCAN_TYPES } from '@/lib/plans';
+import { isBlockedTarget, sanitizeTarget, hasSuspiciousInput } from '@/lib/middleware/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,8 +35,23 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { name, target, scanType, cron } = body;
     if (!name || !target || !scanType) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+
+    const type = String(scanType).toLowerCase();
+    if (!VALID_SCAN_TYPES.includes(type) || type === 'bulk') {
+      return NextResponse.json({ error: 'Invalid scan type for a scheduled scan' }, { status: 400 });
+    }
+    if (hasSuspiciousInput(String(target))) return NextResponse.json({ error: 'Suspicious input' }, { status: 400 });
+    const cleanTarget = sanitizeTarget(String(target).trim());
+    if (isBlockedTarget(cleanTarget)) return NextResponse.json({ error: 'Target blocked' }, { status: 403 });
+
+    const org = await prisma.organization.findUnique({ where: { id: user.orgId } });
+    const config = configForPlan(org?.plan);
+    if (!config.allowedTypes.includes(type)) {
+      return NextResponse.json({ error: `${type} scan is not included in the ${org?.plan || 'free'} plan. Upgrade at /pricing` }, { status: 403 });
+    }
+
     const item = await prisma.scheduledScan.create({
-      data: { name, target, scanType, cron: cron || 'daily', nextRun: parseCron(cron || 'daily'), orgId: user.orgId },
+      data: { name, target: cleanTarget, scanType: type, cron: cron || 'daily', nextRun: parseCron(cron || 'daily'), orgId: user.orgId },
     });
     return NextResponse.json({ scheduledScan: item });
   } catch (e: any) {
