@@ -79,9 +79,9 @@ export default function ReportPreview() {
         ))}
       </ul>
 
-      <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-t border-slate-800 bg-slate-900/70">
-        <span className="text-[10px] text-slate-500">
-          Sample output. Every finding links to the request and response that produced it.
+      <div className="flex flex-col gap-1 px-4 py-2.5 border-t border-slate-800 bg-slate-900/70 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <span className="text-[10px] leading-snug text-slate-500">
+          Sample output. Each finding links to its request and response.
         </span>
         <span className="shrink-0 font-mono text-[10px] text-slate-500">MEDIUM · 61</span>
       </div>
