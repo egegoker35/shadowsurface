@@ -3441,11 +3441,32 @@ export class ScannerEngine {
   async enumerateSubdomains(): Promise<Record<string, string[]>> {
     const result: Record<string, string[]> = {};
     const base = this.target.replace(/^www\./,'');
-    try { const ips = await resolve4(base).catch(()=>[]); if (ips.length) result[base]=ips; } catch {}
-    for (const sub of SUBDOMAIN_WORDLIST) {
-      const fqdn = `${sub}.${base}`;
-      try { const ips = await resolve4(fqdn).catch(()=>[] as string[]); if (ips.length) result[fqdn]=ips; } catch {}
-    }
+    // A resolver can hang for many seconds per name; cap every lookup and run the
+    // dictionary with bounded concurrency so one slow domain cannot stall the scan.
+    const lookup = (fqdn: string): Promise<string[]> => new Promise((res) => {
+      let done = false;
+      const timer = setTimeout(() => { if (!done) { done = true; res([]); } }, 3000);
+      resolve4(fqdn).then((ips) => { if (!done) { done = true; clearTimeout(timer); res(ips || []); } })
+        .catch(() => { if (!done) { done = true; clearTimeout(timer); res([]); } });
+    });
+    const apexIps = await lookup(base);
+    if (apexIps.length) result[base] = apexIps;
+    // Wildcard DNS: when a random label resolves, every dictionary entry resolves too.
+    // Continuing would invent subdomains the owner never published, so only the apex is kept.
+    const wildcardIps = await lookup(`ss-wildcard-${Math.random().toString(36).slice(2, 10)}.${base}`);
+    if (wildcardIps.length > 0) return result;
+    const started = Date.now();
+    const queue = [...SUBDOMAIN_WORDLIST];
+    const workers = Array.from({ length: 10 }, async () => {
+      while (queue.length > 0 && Date.now() - started < 45000) {
+        const sub = queue.shift();
+        if (!sub) return;
+        const fqdn = `${sub}.${base}`;
+        const ips = await lookup(fqdn);
+        if (ips.length) result[fqdn] = ips;
+      }
+    });
+    await Promise.all(workers);
     return result;
   }
 
@@ -3509,7 +3530,9 @@ export class ScannerEngine {
   async runCVEOnly(portLimit=50, cveLimit:'lite'|'full'='full'): Promise<ScanResult> {
     const start = Date.now();
     const [subdomains, dnsInfo] = await Promise.all([this.enumerateSubdomains(), analyzeDNS(this.target)]);
+    console.info(`[scan] ${this.target} discovery: ${Object.keys(subdomains).length} subdomain(s) in ${Date.now()-start}ms`);
     const assets = await scanPortsOnAssets(subdomains, TOP_PORTS.slice(0, portLimit));
+    console.info(`[scan] ${this.target} portscan: ${assets.length} asset(s), ${Date.now()-start}ms elapsed`);
     for (const asset of assets) {
       const cves = mapCVEs([{name: asset.technology || '', version: asset.version || ''}]).filter(c=>!asset.cves.includes(c.id));
       asset.cves.push(...cves.map(c=>c.id));
@@ -3675,7 +3698,9 @@ export class ScannerEngine {
   async _runFullScanInternal(portLimit=50, cveLimit:'lite'|'full'='full'): Promise<ScanResult> {
     const start = Date.now();
     const [subdomains, dnsInfo] = await Promise.all([this.enumerateSubdomains(), analyzeDNS(this.target)]);
+    console.info(`[scan] ${this.target} discovery: ${Object.keys(subdomains).length} subdomain(s) in ${Date.now()-start}ms`);
     const assets = await scanPortsOnAssets(subdomains, TOP_PORTS.slice(0, portLimit));
+    console.info(`[scan] ${this.target} portscan: ${assets.length} asset(s), ${Date.now()-start}ms elapsed`);
     // Inject DNS weakness findings into the first asset (or create a primary domain asset)
     if (assets.length > 0 && dnsInfo) {
       // Domain-level findings belong on the apex asset, not on whichever subdomain sorted first.
