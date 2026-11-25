@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     const target = sanitizeTarget(primaryTarget);
 
     // Rate limits run AFTER validation so rejected requests never consume quota.
-    const hourRL = await rateLimitByUser(user.id, config.perHour, 3600);
+    const hourRL = await rateLimitByUser(user.id, config.perHour, 3600, 'scan');
     if (!hourRL.success) {
       return NextResponse.json({ error: `Hourly limit (${config.perHour}/hour). Upgrade at /pricing` }, { status: 429 });
     }

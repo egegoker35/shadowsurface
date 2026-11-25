@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (isReadOnly(user)) return NextResponse.json({ error: 'Read-only account' }, { status: 403 });
 
-    const rl = await rateLimitByUser(user.id, 20, 3600);
+    const rl = await rateLimitByUser(user.id, 20, 3600, 'domain');
     if (!rl.success) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
     const body = await req.json().catch(() => ({}));

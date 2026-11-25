@@ -47,12 +47,14 @@ export async function rateLimitByIP(
   return rateLimit(`ip:${scope}:${ip}`, maxRequests, windowSeconds);
 }
 
+/** Per-user limiter, scoped so one feature cannot consume another feature's quota. */
 export async function rateLimitByUser(
   userId: string,
   maxRequests = 50,
-  windowSeconds = 60
+  windowSeconds = 60,
+  scope = 'general'
 ): Promise<RateLimitResult> {
-  return rateLimit(`user:${userId}`, maxRequests, windowSeconds);
+  return rateLimit(`user:${scope}:${userId}`, maxRequests, windowSeconds);
 }
 
 export async function rateLimitByEndpoint(
