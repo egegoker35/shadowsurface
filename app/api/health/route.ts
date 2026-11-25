@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
 import { prisma } from '@/lib/prisma';
+import pkg from '@/package.json';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,19 +25,10 @@ export async function GET() {
     status = 503;
   }
 
-  // Check worker queue length (alert if > 50)
-  try {
-    const queueLen = await redis.llen('scan:queue');
-    checks.queue = queueLen > 50 ? `warning: ${queueLen} jobs backlog` : `ok: ${queueLen} pending`;
-    if (queueLen > 100) status = 503;
-  } catch {
-    checks.queue = 'unknown';
-  }
-
   return NextResponse.json(
     {
       status: status === 200 ? 'ok' : 'degraded',
-      version: '2.0.0',
+      version: pkg.version,
       timestamp: new Date().toISOString(),
       checks,
     },
