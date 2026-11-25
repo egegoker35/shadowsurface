@@ -70,7 +70,7 @@ deploying; the build itself only regenerates the client.
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | Yes | PostgreSQL URL. Append `connection_limit=5&pool_timeout=20` |
+| `DATABASE_URL` | Yes | PostgreSQL URL. Append `connection_limit=3&pool_timeout=20` (3 per instance, two instances) |
 | `REDIS_URL` | Yes | Redis URL for rate limits and queue |
 | `JWT_SECRET` | Yes | 32+ character signing secret |
 | `APP_URL` | Yes | Public URL, used in emails and links |
