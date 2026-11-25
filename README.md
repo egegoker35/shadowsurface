@@ -26,6 +26,12 @@ Production: <https://shadowsurface.app> (DigitalOcean App Platform, app `44f41a7
   takeover fingerprints.
 - **Findings** — severity, evidence, remediation and a per-asset risk score, consolidated so
   a repeated issue is reported once per asset rather than once per port.
+- **Ownership proof** — an organization claims a domain and publishes
+  `_shadowsurface-verify.<domain>` TXT = token. When ownership enforcement is enabled for an
+  organization (the admin console toggles it per org), scans and scheduled scans are limited to
+  verified domains and their subdomains.
+- **Roles** — `client` accounts are read-only: they can open reports but cannot start scans,
+  create invites, register webhooks or mint API keys.
 - **Operations** — scheduled scans (in-process scheduler with atomic job claiming), HMAC-SHA256
   signed webhooks for `scan.completed` / `scan.failed`, organization API keys, team invites with
   seat limits, monitoring and per-plan quotas.
@@ -78,6 +84,7 @@ deploying; the build itself only regenerates the client.
 | `ADMIN_PASSWORD` | Admin | Console login password |
 | `RESEND_API_KEY` | Optional | Transactional email |
 | `EMAIL_FROM` | Optional | Sender address. Must belong to a domain verified in Resend |
+| `NEXT_PUBLIC_OPERATOR_NAME` | Optional | Name printed on the report as "Prepared by" |
 | `NEXT_PUBLIC_USDT_TRC20_ADDRESS` | Optional | USDT (TRC20) wallet for plan payments. Validated as Base58Check; checkout is paused when invalid |
 
 ## Billing
@@ -121,11 +128,15 @@ accepted as `Authorization: Bearer ss_...` or `X-API-Key` on scan endpoints.
 | GET/POST | `/api/invites` | Yes | Team invites (seat limit per plan) |
 | POST | `/api/invites/accept` | No | Accept an invite |
 | GET/POST/DELETE | `/api/api-keys` | Yes | Organization API keys |
+| GET/POST/DELETE | `/api/domains` | Yes | Claimed domains and their verification tokens |
+| POST | `/api/domains/verify` | Yes | Check the TXT record and mark the domain verified |
 | POST | `/api/payments/verify` | Yes | Verify a USDT transfer and activate a plan |
 | GET | `/api/health` | No | Database, Redis and queue health |
 | POST | `/api/admin-login` | No | Admin console token (rate limited) |
 | GET | `/api/admin?section=...` | Admin | Console data: overview, users, scans, scan, leads, payments, revenue |
 | POST | `/api/admin/upgrade` | Admin | Set plan and billing period |
+| POST | `/api/admin/update-role` | Admin | Editor / read-only role |
+| POST | `/api/admin/toggle-verification` | Admin | Require verified domains for an organization |
 | POST | `/api/admin/reset-password` | Admin | Issue a temporary password |
 | POST | `/api/admin/approve` | Admin | Activate a lead's plan |
 | DELETE | `/api/admin/delete-user`, `/api/admin/delete-scan`, `/api/admin/delete-lead` | Admin | Remove records |
