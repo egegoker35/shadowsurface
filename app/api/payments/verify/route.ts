@@ -35,7 +35,9 @@ export async function POST(req: NextRequest) {
             'Payments are temporarily unavailable: the recipient wallet is not configured correctly. ' +
             'Please contact support to activate your plan manually.',
         },
-        { status: 503 }
+        // 409 rather than 503: the DigitalOcean gateway replaces 5xx app responses with
+        // its own error page, which hid this message from the customer entirely.
+        { status: 409 }
       );
     }
 
