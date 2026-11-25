@@ -1710,7 +1710,12 @@ async function fetchURL(url: string, method: string = 'GET', headers?: Record<st
   }
 }
 
-interface ProbeResult { status: number; body: string; headers: Record<string,string> }
+interface TlsObservation {
+  subject: any; issuer: any; valid_from: string; valid_to: string; subjectaltname: string;
+  protocol: string | null; cipher: string; authorized: boolean;
+}
+
+interface ProbeResult { status: number; body: string; headers: Record<string,string>; tls?: TlsObservation }
 function bannerGrab(host: string, port: number, timeout = 10000, payload?: string, hostHeader?: string): Promise<ProbeResult> {
   return new Promise((resolve) => {
     const isHttps = port === 443 || port === 8443;
@@ -1721,9 +1726,28 @@ function bannerGrab(host: string, port: number, timeout = 10000, payload?: strin
       let data=''; 
       const rh = res.headers || {};
       for (const [k,v] of Object.entries(rh)) { hdrs[k.toLowerCase()] = Array.isArray(v) ? v.join(', ') : String(v); }
+      // The TLS state of the connection that actually served this response. Reading it here
+      // (instead of opening a second handshake) means certificate facts are available whenever
+      // the page loaded, and never invented when it did not.
+      let tls: TlsObservation | undefined;
+      if (isHttps) {
+        try {
+          const sock: any = (res as any).socket;
+          if (sock && typeof sock.getPeerCertificate === 'function') {
+            const c = sock.getPeerCertificate() || {};
+            tls = {
+              subject: c.subject, issuer: c.issuer, valid_from: c.valid_from, valid_to: c.valid_to,
+              subjectaltname: c.subjectaltname || '',
+              protocol: typeof sock.getProtocol === 'function' ? sock.getProtocol() : null,
+              cipher: (typeof sock.getCipher === 'function' && sock.getCipher()?.name) || '',
+              authorized: sock.authorized === true,
+            };
+          }
+        } catch {}
+      }
       res.on('data',c=>data+=c); 
-      res.on('end',()=>resolve({status: res.statusCode || 200, body: data.slice(0,1024), headers: hdrs})); 
-      res.on('error',()=>resolve({status: 0, body:'', headers: hdrs})); 
+      res.on('end',()=>resolve({status: res.statusCode || 200, body: data.slice(0,1024), headers: hdrs, tls})); 
+      res.on('error',()=>resolve({status: 0, body:'', headers: hdrs, tls})); 
     });
     req.setTimeout(timeout, () => { req.destroy(); resolve({status: 0, body:'', headers: hdrs}); });
     req.on('error', () => resolve({status: 0, body:'', headers: hdrs}));
@@ -2583,7 +2607,7 @@ async function enumerateSubdomainsBrute(target: string): Promise<Record<string, 
 
 // ─── SSL / TLS Analyzer ─────────────────────────────────────────────────────
 
-export async function analyzeSSLInfo(headers: Record<string, string>, url: string, timeoutMs = 8000): Promise<SSLInfo> {
+export async function analyzeSSLInfo(headers: Record<string, string>, url: string, timeoutMs = 8000, observed?: TlsObservation): Promise<SSLInfo> {
   const info: SSLInfo = {};
   const hsts = headers['strict-transport-security'] || '';
   info.hsts = !!hsts;
@@ -2599,10 +2623,6 @@ export async function analyzeSSLInfo(headers: Record<string, string>, url: strin
       const u = new URL(url);
       const host = u.hostname;
       const port = parseInt(u.port || '443');
-      type TlsObservation = {
-        subject: any; issuer: any; valid_from: string; valid_to: string; subjectaltname: string;
-        protocol: string | null; cipher: string; authorized: boolean;
-      };
       const observe = (): Promise<TlsObservation | null> => new Promise((resolve) => {
         let settled = false;
         const finish = (v: TlsObservation | null) => { if (!settled) { settled = true; resolve(v); } };
@@ -2626,7 +2646,8 @@ export async function analyzeSSLInfo(headers: Record<string, string>, url: strin
       });
       // One retry: cross-region handshakes can exceed a single attempt's budget without meaning
       // the endpoint has no TLS. Only a second failure leaves the lookup unresolved.
-      const cert = await observe() ?? await observe();
+      // Prefer the observation from the connection that already delivered the response.
+      const cert = observed ?? await observe() ?? await observe();
       if (cert) {
         const fmtSubject = (s: any) => s ? Object.entries(s).map(([k, v]) => `${k}=${v}`).join(', ') : '';
         info.certPresent = true;
@@ -2984,7 +3005,7 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                     // SSL cert check: only for HTTPS assets to avoid timeouts and false findings on plain HTTP
                     if (!sslChecked && (port===443 || port===8443 || finalUrl.startsWith('https://'))) {
                       sslChecked = true;
-                      sslInfo = await analyzeSSLInfo(web.headers, finalUrl, Math.max(timeout, 8000));
+                      sslInfo = await analyzeSSLInfo(web.headers, finalUrl, Math.max(timeout, 8000), probe.tls ?? (web as any).tls);
                     }
                     sslGrade = sslInfo ? gradeSSL(sslInfo) : undefined;
                     // Override service name with real Server header when available
@@ -3023,7 +3044,7 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                     if (serverHdrWeb && /\d/.test(serverHdrWeb)) findings.push({ type:'info_disclosure', severity:'low', port, service:svc, description:'Server header exposes version information', evidence: serverHdrWeb.slice(0,60) });
                     // SSL findings from analyzeSSLInfo (HSTS covered by the missing_header loop above)
                     if (sslInfo) {
-                      if (sslInfo.tls10 || sslInfo.tls11 || sslInfo.weakCipher || sslInfo.beastPoodle) findings.push({ type:'ssl_weakness', severity:'critical', port, service:svc, description:'Weak TLS protocol or cipher suite detected', evidence: `TLS=${sslInfo.tlsVersion}, weakCipher=${sslInfo.weakCipher}` });
+                      if (sslInfo.tls10 || sslInfo.tls11 || sslInfo.weakCipher || sslInfo.beastPoodle) findings.push({ type:'ssl_weakness', severity:'high', port, service:svc, description:'Weak TLS protocol or cipher suite detected', evidence: `TLS=${sslInfo.tlsVersion}, weakCipher=${sslInfo.weakCipher}` });
                       if (sslInfo.certExpired || sslInfo.selfSigned) findings.push({ type:'ssl_weakness', severity:'high', port, service:svc, description:'Certificate expired or self-signed', evidence: `expired=${sslInfo.certExpired}, selfSigned=${sslInfo.selfSigned}` });
                     }
                   } catch {}
