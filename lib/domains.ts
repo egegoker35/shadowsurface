@@ -34,14 +34,30 @@ export function normalizeDomainInput(raw: string): string | null {
   return host;
 }
 
-/** TXT values published under the verification record. Empty when the lookup fails. */
+/**
+ * TXT values that can prove ownership: the dedicated record plus the domain's own apex.
+ * Both are writable only by whoever controls the zone, so either one is valid proof, and
+ * accepting the apex lets customers verify through DNS panels that refuse new subdomains.
+ */
 export async function fetchVerificationRecords(domain: string): Promise<string[]> {
-  try {
-    const records = await resolveTxt(verificationRecordName(domain));
-    return records.map((chunks) => chunks.join('').trim());
-  } catch {
-    return [];
-  }
+  const names = [verificationRecordName(domain), domain];
+  const results = await Promise.all(
+    names.map(async (name) => {
+      try {
+        const records = await resolveTxt(name);
+        return records.map((chunks) => chunks.join('').trim());
+      } catch {
+        return [] as string[];
+      }
+    })
+  );
+  return results.flat();
+}
+
+/** Pure comparison so the match rule itself is unit-tested. */
+export function isVerificationTokenPresent(records: string[], token: string): boolean {
+  if (!token) return false;
+  return records.some((value) => value === token);
 }
 
 /** True when the (already sanitized) target is the domain or one of its subdomains. */

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest, isReadOnly } from '@/lib/auth';
-import { fetchVerificationRecords, verificationRecordName } from '@/lib/domains';
+import { fetchVerificationRecords, isVerificationTokenPresent, verificationRecordName } from '@/lib/domains';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     if (!domain) return NextResponse.json({ error: 'Domain not found' }, { status: 404 });
 
     const records = await fetchVerificationRecords(domain.domain);
-    const matched = records.some((value) => value === domain.token);
+    const matched = isVerificationTokenPresent(records, domain.token);
 
     if (!matched) {
       return NextResponse.json(

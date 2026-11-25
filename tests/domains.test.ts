@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newDomainToken, normalizeDomainInput, targetIsCovered, verificationRecordName } from '../lib/domains';
+import { isVerificationTokenPresent, newDomainToken, normalizeDomainInput, targetIsCovered, verificationRecordName } from '../lib/domains';
 
 test('domain input accepts URLs and bare hosts', () => {
   assert.equal(normalizeDomainInput('example.com'), 'example.com');
@@ -37,4 +37,14 @@ test('targets are covered only on a label boundary', () => {
   assert.equal(targetIsCovered('example.com.evil.net', allowed), false);
   assert.equal(targetIsCovered('other.com', allowed), false);
   assert.equal(targetIsCovered('app.example.com', []), false);
+});
+
+test('only the exact token counts as proof', () => {
+  const token = 'ssv-0123456789abcdef0123456789abcdef';
+  assert.equal(isVerificationTokenPresent([token], token), true);
+  assert.equal(isVerificationTokenPresent(['v=spf1 -all', token], token), true);
+  assert.equal(isVerificationTokenPresent(['v=spf1 -all'], token), false);
+  assert.equal(isVerificationTokenPresent([], token), false);
+  assert.equal(isVerificationTokenPresent([token], ''), false);
+  assert.equal(isVerificationTokenPresent([` ${token} `], token), false);
 });

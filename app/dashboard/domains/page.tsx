@@ -75,7 +75,7 @@ export default function DomainsPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold">Domain Ownership</h1>
         <p className="text-slate-400 text-sm mt-1">
-          Prove you control a domain by publishing a DNS TXT record. Verified domains can be scanned.
+          Prove you control a domain by publishing its TXT value at the record below, or at the domain apex. Verified domains can be scanned.
         </p>
       </div>
 
