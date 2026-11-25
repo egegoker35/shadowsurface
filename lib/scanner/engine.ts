@@ -8,6 +8,7 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 import type { DiscoveredAsset, CloudAsset, ScanResult, Finding, WebVuln, WebVulnType, SSLInfo, DNSRecord, AgentSurfaceResult } from './types';
 import { scanAgentSurface } from './agentSurface';
+import { isHostWithinDomain } from './hostnames';
 
 const genId = () => Math.random().toString(36).substring(2, 14);
 
@@ -3455,6 +3456,36 @@ export class ScannerEngine {
     // Continuing would invent subdomains the owner never published, so only the apex is kept.
     const wildcardIps = await lookup(`ss-wildcard-${Math.random().toString(36).slice(2, 10)}.${base}`);
     if (wildcardIps.length > 0) return result;
+
+    // Certificate transparency finds names no dictionary contains. The feed is text, so every
+    // entry is label-validated first (see hostnames.ts) — a plain suffix test would accept
+    // m.testexample.com as part of example.com. Budgeted so a slow CT endpoint cannot stall
+    // the scan: 6s fetch, 60 extra names, resolved through the same bounded lookup.
+    try {
+      const ctrl = new AbortController();
+      const ctTimer = setTimeout(() => ctrl.abort(), 6000);
+      const res = await fetch(`https://crt.sh/?q=%25.${encodeURIComponent(base)}&output=json`, { signal: ctrl.signal });
+      clearTimeout(ctTimer);
+      if (res.ok) {
+        const rows = (await res.json()) as Array<{ name_value?: string }>;
+        const names = new Set<string>();
+        for (const row of Array.isArray(rows) ? rows : []) {
+          for (const entry of String(row?.name_value || '').split('\n')) {
+            const host = isHostWithinDomain(entry, base);
+            if (host && host !== base) names.add(host);
+            if (names.size >= 60) break;
+          }
+          if (names.size >= 60) break;
+        }
+        const ctList = Array.from(names);
+        for (let i = 0; i < ctList.length; i += 10) {
+          const slice = ctList.slice(i, i + 10);
+          const resolved = await Promise.all(slice.map(async (host) => [host, await lookup(host)] as const));
+          for (const [host, ips] of resolved) if (ips.length) result[host] = ips;
+        }
+      }
+    } catch { /* CT is best-effort; the dictionary result stands */ }
+
     const started = Date.now();
     const queue = [...SUBDOMAIN_WORDLIST];
     const workers = Array.from({ length: 10 }, async () => {

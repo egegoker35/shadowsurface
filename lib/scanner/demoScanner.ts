@@ -6,6 +6,7 @@
 
 import { resolve4 } from 'dns/promises';
 import { SUBDOMAIN_WORDLIST } from './wordlist';
+import { isHostWithinDomain } from './hostnames';
 
 function genId(): string { return Math.random().toString(36).substring(2, 14); }
 function timeout<T>(ms: number): Promise<T> {
@@ -103,8 +104,10 @@ async function queryCrtsh(domain: string): Promise<string[]> {
     const subs = new Set<string>();
     for (const entry of data) {
       for (const n of entry.name_value.split('\n')) {
-        const trimmed = n.trim().replace('*.', '');
-        if (trimmed.endsWith(domain) && trimmed !== domain && trimmed.includes('.')) subs.add(trimmed);
+        // Label-boundary validation: crt.sh returns emails and free-text CNs, and a plain
+        // suffix test accepted m.testexample.com as a subdomain of example.com.
+        const host = isHostWithinDomain(n, domain);
+        if (host && host !== domain) subs.add(host);
       }
     }
     return Array.from(subs);
@@ -131,6 +134,49 @@ async function checkSSL(hostname: string): Promise<{ issuer?: string; validTo?: 
       req.end();
     });
   } catch { return null; }
+}
+
+/**
+ * Asset risk, using the same weights as the full engine so the demo and the report
+ * never disagree about the same host. Symptoms already scored explicitly are excluded
+ * from the severity sum to avoid counting one issue twice.
+ */
+function scoreDemoAsset(a: {
+  port?: number; banner?: string; technology?: string | null; version?: string | null;
+  cves?: string[]; findings?: Record<string, unknown>[]; waf?: string | null;
+}): number {
+  let score = 12;
+  score += a.port && a.port < 1024 ? 4 : 2;
+  if (a.banner && a.banner.length > 5) score += 3;
+  if (a.technology && !['Unknown', 'HTTP', 'HTTPS'].includes(a.technology)) score += 5;
+  if (a.version) score += 4;
+  if (a.port && [3000, 5000, 8000, 8080, 8081, 9000, 9090].includes(a.port)) score += 4;
+  score += Math.min((a.cves || []).length * 2, 12);
+
+  const findings = a.findings || [];
+  const headerCount = findings
+    .filter((f) => f.type === 'missing_security_headers')
+    .reduce((sum, f) => {
+      const m = String(f.description || '').match(/\((\d+)\)|Missing\s+(\d+)/);
+      return sum + (parseInt(m?.[1] || m?.[2] || '1', 10) || 0);
+    }, 0);
+  score += Math.min(headerCount * 2, 12);
+
+  const count = (type: string) => findings.filter((f) => f.type === type).length;
+  score += Math.min(count('information_disclosure') * 6, 15);
+  score += count('exposed_admin') * 20;
+  score += Math.min((count('ssl_expiring') + count('ssl_self_signed')) * 6, 15);
+
+  const weighted = new Set(['missing_security_headers', 'information_disclosure', 'exposed_admin', 'ssl_expiring', 'ssl_self_signed']);
+  for (const f of findings) {
+    if (weighted.has(String(f.type))) continue;
+    const sev = String(f.severity || '');
+    if (sev === 'critical') score += 20;
+    else if (sev === 'high') score += 10;
+    else if (sev === 'medium') score += 4;
+  }
+  if (a.waf) score -= 5;
+  return Math.min(Math.max(Math.round(score), 0), 95);
 }
 
 // ─── HTTP Analysis ─────────────────────────────────────────────────────────
@@ -194,30 +240,57 @@ async function analyzeHttp(subdomain: string, ip: string): Promise<Record<string
     findings.push({ type: 'cors_misconfiguration', severity: 'medium', description: 'Overly permissive CORS: Access-Control-Allow-Origin: *' });
   }
 
-  // Cookie flags
+  // Cookie flags. Header lookup is already lowercased, and a cookie can only be judged
+  // against the transport it arrived on, so this is evaluated for HTTPS responses only.
   const setCookie = headers['set-cookie'] || '';
-  if (setCookie && (!setCookie.includes('Secure') || !setCookie.includes('HttpOnly'))) {
-    findings.push({ type: 'insecure_cookie', severity: 'medium', description: 'Cookie missing Secure/HttpOnly flags' });
+  if (setCookie && url.startsWith('https')) {
+    const missingFlags = ['secure', 'httponly'].filter((flag) => !setCookie.toLowerCase().includes(flag));
+    if (missingFlags.length > 0) {
+      findings.push({ type: 'insecure_cookie', severity: 'medium', description: `Cookie set without ${missingFlags.join(' / ')} flag(s)` });
+    }
   }
 
   // SSL findings
   if (sslInfo) {
     if (sslInfo.daysRemaining !== undefined && sslInfo.daysRemaining < 30) {
-      findings.push({ type: 'ssl_expiring', severity: sslInfo.daysRemaining < 7 ? 'critical' : 'high', description: `SSL expires in ${sslInfo.daysRemaining} days` });
+      // Renewal window, not an outage: under a week is high, under two weeks medium, the
+      // rest of the 30-day window is a low-priority reminder.
+      const sev = sslInfo.daysRemaining < 7 ? 'high' : sslInfo.daysRemaining < 14 ? 'medium' : 'low';
+      findings.push({ type: 'ssl_expiring', severity: sev, description: `Certificate expires in ${sslInfo.daysRemaining} day(s)` });
     }
-    if (sslInfo.selfSigned) findings.push({ type: 'ssl_self_signed', severity: 'high', description: 'Self-signed SSL certificate' });
+    if (sslInfo.selfSigned) findings.push({ type: 'ssl_self_signed', severity: 'high', description: 'Self-signed certificate is not trusted by browsers' });
   }
 
-  // Body checks
-  if (body.toLowerCase().includes('phpinfo')) findings.push({ type: 'information_disclosure', severity: 'high', description: 'Potential phpinfo() exposure' });
-  if (body.includes('.env')) findings.push({ type: 'information_disclosure', severity: 'critical', description: 'Potential .env file exposure' });
-  if (body.includes('-----BEGIN RSA PRIVATE KEY-----')) findings.push({ type: 'information_disclosure', severity: 'critical', description: 'Private key exposure detected' });
-  if (body.includes('<title>Index of /') || body.includes('Directory Listing For')) findings.push({ type: 'directory_listing', severity: 'medium', description: 'Directory listing enabled' });
+  // Body checks. Each signature has to identify the resource itself; a substring mention
+  // is not evidence. '.env' appears in ordinary markup and bundled JavaScript, and any page
+  // that merely discusses phpinfo() used to be reported as exposing it.
+  const dotenvLines = body.match(/^[A-Z][A-Z0-9_]{2,}\s*=\s*\S{3,}\s*$/gm) || [];
+  const dotenvSensitive = /\b(?:DB_|DATABASE_|APP_KEY|SECRET|PASSWORD|PASSWD|API_KEY|ACCESS_KEY|PRIVATE)/.test(dotenvLines.join('\n'));
+  if (dotenvLines.length >= 3 && dotenvSensitive) {
+    findings.push({ type: 'information_disclosure', severity: 'critical', description: 'Dotenv-style configuration exposed in response body' });
+  }
+  if (/<title>\s*phpinfo\(\)/i.test(body) || /PHP Version\s*=>/.test(body)) {
+    findings.push({ type: 'information_disclosure', severity: 'high', description: 'phpinfo() output is publicly readable' });
+  }
+  if (/-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----/.test(body)) {
+    findings.push({ type: 'information_disclosure', severity: 'critical', description: 'Private key material in response body' });
+  }
+  const autoindex = /<title>\s*Index of \//i.test(body) || body.includes('[To Parent Directory]') || /Directory Listing For /i.test(body);
+  if (autoindex) findings.push({ type: 'directory_listing', severity: 'medium', description: 'Directory listing enabled' });
 
-  // Admin panels
-  const adminPaths = ['/admin','/wp-admin','/dashboard','/login','/manage'];
+  // Admin panels — probed, not guessed from page text. A link labelled /login is normal;
+  // only an interface that actually answers unauthenticated is reported.
+  const adminPaths = ['/wp-admin/', '/admin/', '/manager/html'];
   for (const p of adminPaths) {
-    if (body.toLowerCase().includes(p)) { findings.push({ type: 'admin_panel_reference', severity: 'low', description: `Potential admin panel: ${p}` }); break; }
+    try {
+      const probe = await fetch(`https://${subdomain}${p}`, { method: 'GET', signal: AbortSignal.timeout(4000), redirect: 'follow' });
+      const text = await probe.text().catch(() => '');
+      const isPanel = probe.status === 200 && /wp-login|<title>[^<]*(?:admin|login|manager)|name="(?:log|pwd|username|password)"/i.test(text.slice(0, 4000));
+      if (isPanel) {
+        findings.push({ type: 'exposed_admin', severity: 'medium', description: `Administrative interface reachable: ${p} (HTTP ${probe.status})` });
+        break;
+      }
+    } catch { /* not reachable on this path */ }
   }
 
   // WAF detection
@@ -230,22 +303,13 @@ async function analyzeHttp(subdomain: string, ip: string): Promise<Record<string
   // CVE mapping
   const cves = tech ? mapCves(tech, version || '') : [];
 
-  // Risk score
-  let riskScore = 0;
-  if (cves.length > 0) riskScore += cves.length * 35;
-  for (const f of findings) {
-    const sev = (f as any).severity || '';
-    if (sev === 'critical') riskScore += 40;
-    else if (sev === 'high') riskScore += 25;
-    else if (sev === 'medium') riskScore += 12;
-    else if (sev === 'low') riskScore += 5;
-  }
-  riskScore = Math.min(riskScore, 100);
+  const port = url.startsWith('https') ? 443 : 80;
+  const riskScore = scoreDemoAsset({ port, banner, technology: tech, version, cves, findings, waf });
 
   return {
     subdomain, ip, reachable: true, findings, headers, technology: tech, version, cves, sslInfo, title, waf, riskScore,
     service: url.startsWith('https') ? 'HTTPS' : 'HTTP',
-    port: url.startsWith('https') ? 443 : 80,
+    port,
   };
 }
 
@@ -257,8 +321,14 @@ async function detectCloud(domain: string): Promise<Record<string, unknown>[]> {
   for (const bucket of buckets.slice(0, 3)) {
     try {
       const res = await fetch(`https://${bucket}.s3.amazonaws.com`, { method: 'GET', signal: AbortSignal.timeout(4000) });
-      if (res.status === 200) cloud.push({ provider: 'aws', serviceType: 's3', resourceId: bucket, severity: 'critical', description: `S3 bucket ${bucket} publicly readable` });
-      else if (res.status === 403) cloud.push({ provider: 'aws', serviceType: 's3', resourceId: bucket, severity: 'high', description: `S3 bucket ${bucket} exists but access denied (enumerate)` });
+      // S3 answers 403 both for a private bucket and for a bucket that does not exist, so a
+      // 403 proves nothing. Only a readable listing is reported.
+      if (res.status === 200) {
+        const listing = await res.text().catch(() => '');
+        if (listing.includes('<ListBucketResult') || listing.includes('<Contents>')) {
+          cloud.push({ provider: 'aws', serviceType: 's3', resourceId: bucket, severity: 'critical', description: `S3 bucket ${bucket} lists its contents publicly` });
+        }
+      }
     } catch { /* ignore */ }
   }
   return cloud;
@@ -276,7 +346,7 @@ export interface DemoScanResult {
   cloudAssets: Record<string, unknown>[];
   findings: Record<string, unknown>[];
   statistics: { totalSubdomains: number; totalAssets: number; totalCloudAssets: number; highRiskCount: number; mediumRiskCount: number; lowRiskCount: number };
-  executiveSummary: { overallRisk: string; criticalFindings: number; attackSurfaceSize: number; recommendations: string[] };
+  executiveSummary: { overallRisk: string; riskScore: number; criticalFindings: number; attackSurfaceSize: number; recommendations: string[] };
 }
 
 export async function runDemoScan(target: string): Promise<DemoScanResult> {
@@ -324,7 +394,8 @@ export async function runDemoScan(target: string): Promise<DemoScanResult> {
   const high = allFindings.filter((f) => (f as any).severity === 'high').length + cloudAssets.filter((c) => (c as any).severity === 'high').length;
   const medium = allFindings.filter((f) => (f as any).severity === 'medium').length;
 
-  const overallRisk = critical > 0 ? 'CRITICAL' : high > 0 ? 'HIGH' : medium > 0 ? 'MEDIUM' : 'LOW';
+  const riskScore = assets.reduce((max, a: any) => Math.max(max, Number(a.riskScore) || 0), 0);
+  const overallRisk = riskScore >= 85 ? 'CRITICAL' : riskScore >= 70 ? 'HIGH' : riskScore >= 40 ? 'MEDIUM' : 'LOW';
 
   const recommendations: string[] = [];
   if (subdomains.length > 0) recommendations.push(`Found ${subdomains.length} subdomains — audit for orphaned or forgotten assets`);
@@ -343,12 +414,14 @@ export async function runDemoScan(target: string): Promise<DemoScanResult> {
       totalSubdomains: subdomains.length,
       totalAssets: assets.length,
       totalCloudAssets: cloudAssets.length,
-      highRiskCount: critical,
-      mediumRiskCount: high,
-      lowRiskCount: medium,
+      // These count ASSETS by risk band, not findings by severity.
+      highRiskCount: assets.filter((a: any) => (Number(a.riskScore) || 0) >= 70 && (Number(a.riskScore) || 0) < 85).length,
+      mediumRiskCount: assets.filter((a: any) => (Number(a.riskScore) || 0) >= 40 && (Number(a.riskScore) || 0) < 70).length,
+      lowRiskCount: assets.filter((a: any) => (Number(a.riskScore) || 0) < 40).length,
     },
     executiveSummary: {
       overallRisk,
+      riskScore,
       criticalFindings: critical,
       attackSurfaceSize: subdomains.length + cloudAssets.length,
       recommendations,

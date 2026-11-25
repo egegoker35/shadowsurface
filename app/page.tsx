@@ -14,7 +14,7 @@ const FAQS = [
   },
   {
     q: 'How are subdomains discovered?',
-    a: 'Certificate transparency logs provide the passive half. The active half is a DNS dictionary of 2,292 hostname entries, resolved with bounded concurrency. Before either runs, a random label is resolved to detect wildcard DNS — if the catch-all answers, dictionary hits cannot be distinguished from the wildcard, so only the apex is kept instead of inventing hundreds of hostnames.',
+    a: 'Certificate transparency logs provide the passive half. The active half is a DNS dictionary of 2,292 hostname entries, resolved with bounded concurrency. Before either runs, a random label is resolved to detect wildcard DNS — if the catch-all answers, dictionary hits cannot be distinguished from the wildcard, so only the apex is kept instead of inventing hundreds of hostnames. Every name from the CT feed is validated on a label boundary, because a plain suffix test would accept m.testexample.com as part of example.com.',
   },
   {
     q: 'Which ports are scanned?',
@@ -25,8 +25,8 @@ const FAQS = [
     a: 'A CVE is only reported when the version we actually detected falls inside the affected range for that record, and we hold 456 CVE records that have been checked against MITRE. If a service exposes no version, no CVE is reported — a bare product name is not evidence of a vulnerable build.',
   },
   {
-    q: 'What happens on the free plan?',
-    a: 'The free plan runs subdomain discovery and a top-10 port scan, one scan per hour and two per month, without a card. Paid plans add CVE mapping, cloud checks, SSL analysis and bulk scanning.',
+    q: 'What is different about the free demo?',
+    a: 'The demo runs the same detection logic over HTTP(S) only, using the first 800 dictionary entries so it can finish inside a normal page request. It reports headers, certificates, exposed panels and cloud buckets. The full scan in the dashboard adds TCP port sweeping, CVE mapping and active probes.',
   },
 ];
 
@@ -35,7 +35,7 @@ const METHOD = [
     step: '01',
     name: 'Discovery',
     runs: 'Certificate transparency (crt.sh) plus a 2,292-entry DNS dictionary',
-    proof: 'A random label is resolved first. If wildcard DNS answers, dictionary hits are discarded rather than reported as hostnames.',
+    proof: 'Wildcard DNS is probed first with a random label. Every CT name is parsed and matched on a label boundary, so an email address or an unrelated domain in the feed is discarded.',
   },
   {
     step: '02',
@@ -57,35 +57,96 @@ const METHOD = [
   },
 ];
 
-const COVERAGE = [
+const TABS = [
   {
-    group: 'Discovery',
-    items: 'Subdomains (CT logs + DNS), wildcard detection, A / MX / TXT / NS / SOA / CNAME records, CAA, DNSKEY',
+    id: 'discovery',
+    label: 'Discovery',
+    blurb: 'From one domain to the full list of names that actually exist.',
+    items: [
+      { name: 'Certificate transparency', how: 'crt.sh feed, every name label-validated before use' },
+      { name: 'DNS dictionary', how: '2,292 entries, 10 workers, 3s per lookup, 45s cap' },
+      { name: 'Wildcard detection', how: 'random label probed first; catch-all discards dictionary hits' },
+      { name: 'Record set', how: 'A, MX, TXT, NS, SOA, CNAME, CAA, DNSKEY' },
+    ],
   },
   {
-    group: 'Service',
-    items: 'TCP ports, service banners, TLS version and cipher, certificate validity and expiry, WAF and CDN response headers',
+    id: 'service',
+    label: 'Service',
+    blurb: 'What is listening on each host, and what exactly answers.',
+    items: [
+      { name: 'Port sweep', how: '407 TCP ports in the engine; 10 / 20 / 50 / 100 per plan' },
+      { name: 'Banner', how: 'HTTP request per open port; Server and X-Powered-By parsed' },
+      { name: 'TLS', how: 'certificate, protocol and cipher read from the socket that served the response' },
+      { name: 'WAF / CDN', how: 'provider headers only (CF-RAY, X-Amz-Cf-Id, X-Sucuri-ID)' },
+    ],
   },
   {
-    group: 'Vulnerability',
-    items: 'CVE by affected version range, CVSS, CWE, exploit availability, active probes for injection, traversal, redirect and CORS',
+    id: 'vuln',
+    label: 'Vulnerability',
+    blurb: 'Version-accurate mapping, with the range written into the record.',
+    items: [
+      { name: 'CVE matching', how: '456 records checked against MITRE; version must fall in range' },
+      { name: 'No-version guard', how: 'a product name without a version produces no CVE' },
+      { name: 'Context', how: 'CVSS, CWE and public exploit availability per record' },
+      { name: 'Active probes', how: 'injection, traversal, redirect, CORS — baseline compared' },
+    ],
   },
   {
-    group: 'Cloud',
-    items: 'Public S3, Google Cloud Storage, Azure Blob, Firebase and Spaces buckets, verified by reading the bucket listing',
+    id: 'cloud',
+    label: 'Cloud',
+    blurb: 'Bucket names derived from the domain, then actually read.',
+    items: [
+      { name: 'Object storage', how: 'S3, GCS, Azure Blob, Firebase, Spaces' },
+      { name: 'Verification', how: 'a bucket counts only when its listing can be read' },
+      { name: 'Access denied', how: '403 is private, not exposed — reported as nothing' },
+      { name: 'Cloud findings', how: 'public read/write, missing encryption, object counts' },
+    ],
   },
   {
-    group: 'Hygiene',
-    items: 'Security headers, cookie flags, SPF and DMARC enforcement, DNSSEC, exposed admin paths, directory listing, server version leakage',
+    id: 'hygiene',
+    label: 'Hygiene',
+    blurb: 'Cheap to fix, expensive to ignore.',
+    items: [
+      { name: 'Headers', how: 'CSP, HSTS, XFO, XCTO, Referrer, Permissions — one finding per host' },
+      { name: 'Email auth', how: 'SPF from apex TXT, DMARC from _dmarc, DNSSEC from DNSKEY' },
+      { name: 'Exposed interfaces', how: 'admin paths, autoindex signatures, fetched sensitive files' },
+      { name: 'Cookies', how: 'HttpOnly, Secure, SameSite per cookie' },
+    ],
   },
 ];
 
-const NOT_REPORTED = [
-  'A CVE for a service whose version we could not read. A product name alone is not a vulnerable build.',
-  'A missing DKIM record. Selectors are chosen by the mail provider, so we report a positive hit and stay silent otherwise.',
-  'Missing headers on a host that returned no headers. Without a response there is nothing to measure.',
-  'A WAF brand found in page text. Only headers issued by the provider count as evidence.',
-  'A clean verdict for a target that never answered. That scan is marked INCONCLUSIVE and says so in the report.',
+const LEDGER = [
+  {
+    was: 'Any page containing the string ".env" reported as critical exposure',
+    now: 'Credential material is reported only when real key formats or non-placeholder KEY=value pairs are present',
+  },
+  {
+    was: 'WAF detected from page text: "Wix", "Imperva", "F5" on sites that ran none',
+    now: 'Only response headers issued by the provider count as evidence',
+  },
+  {
+    was: 'A CVE for every product name, whether or not a version was exposed',
+    now: 'No version means no CVE — a name is not a vulnerable build',
+  },
+  {
+    was: '"8 security headers missing" on hosts that returned no headers at all',
+    now: 'A header finding cannot outlive the header map that produced it',
+  },
+  {
+    was: 'DMARC reported missing on every domain, including ones enforcing quarantine',
+    now: '_dmarc.<domain> is queried and the policy value is recorded',
+  },
+  {
+    was: 'example.com produced 36 web vulnerabilities',
+    now: 'The same host produces 0 — every one of them was a pattern match with no observation behind it',
+  },
+];
+
+const BANDS = [
+  { label: 'LOW', range: '0–39', tone: 'bg-emerald-500/70', text: 'text-emerald-400', width: 'w-[40%]' },
+  { label: 'MEDIUM', range: '40–69', tone: 'bg-amber-500/70', text: 'text-amber-400', width: 'w-[30%]' },
+  { label: 'HIGH', range: '70–84', tone: 'bg-orange-500/70', text: 'text-orange-400', width: 'w-[15%]' },
+  { label: 'CRITICAL', range: '85–100', tone: 'bg-red-500/70', text: 'text-red-400', width: 'w-[15%]' },
 ];
 
 const AUDIENCE = [
@@ -109,6 +170,8 @@ export default function LandingPage() {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [tab, setTab] = useState(TABS[0].id);
+  const activeTab = TABS.find((t) => t.id === tab) || TABS[0];
 
   const runDemo = async () => {
     if (!target) return;
@@ -123,8 +186,7 @@ export default function LandingPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        if (res.status === 429) setError(data.error || 'Rate limit: 1 demo scan per 30 minutes.');
-        else setError(data.error || 'Scan failed');
+        setError(data.error || 'Scan failed');
         setLoading(false);
         return;
       }
@@ -137,13 +199,30 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200">
+    <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-emerald-500/30">
       <SchemaOrg />
       <Navbar />
 
       {/* ─── HERO ─────────────────────────────────────────────── */}
-      <section className="pt-24 pb-14 px-6">
-        <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+      <section className="relative overflow-hidden pt-24 pb-16 px-6">
+        {/* depth: blueprint grid + soft glow, no imagery */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.18]"
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, rgb(148 163 184 / 0.25) 1px, transparent 1px), linear-gradient(to bottom, rgb(148 163 184 / 0.25) 1px, transparent 1px)',
+            backgroundSize: '56px 56px',
+            maskImage: 'radial-gradient(ellipse 70% 60% at 50% 0%, black 20%, transparent 75%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 50% 0%, black 20%, transparent 75%)',
+          }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-40 left-1/2 h-[32rem] w-[52rem] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-[110px]"
+        />
+
+        <div className="relative max-w-6xl mx-auto grid lg:grid-cols-12 gap-12 lg:gap-14 items-start">
           <div className="lg:col-span-7">
             <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-400/80 mb-5">
               External attack surface management
@@ -181,7 +260,7 @@ export default function LandingPage() {
                 </button>
               </div>
               <p className="mt-2.5 text-xs text-slate-500">
-                No account required. One free scan per 30 minutes.
+                Three free scans per 30 minutes. The demo checks the first 800 hostnames over HTTP(S).
               </p>
               {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
               {result && <DemoResult result={result} />}
@@ -198,24 +277,41 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="lg:col-span-5 w-full">
+          <div className="lg:col-span-5 w-full lg:pt-2">
             <ReportPreview />
+            <div className="mt-3 rounded-md border border-slate-800 bg-slate-900/30 px-3.5 py-2.5">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500 mb-1.5">How that risk is built</p>
+              <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                {BANDS.map((b) => (
+                  <span key={b.label} className={`${b.tone} ${b.width}`} />
+                ))}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                {BANDS.map((b) => (
+                  <span key={b.label} className="flex items-center gap-1 text-[10px] text-slate-500">
+                    <span className={`h-1.5 w-1.5 rounded-full ${b.tone}`} />
+                    <span className={b.text}>{b.label}</span>
+                    <span className="text-slate-600">{b.range}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ─── REAL CAPABILITY NUMBERS ──────────────────────────── */}
-      <section className="border-y border-slate-800/70">
+      <section className="border-y border-slate-800/70 bg-slate-900/20">
         <div className="max-w-6xl mx-auto px-6 py-5">
           <dl className="grid grid-cols-2 lg:grid-cols-4 gap-y-5 gap-x-8">
             {[
               { v: '456', l: 'CVE records checked against MITRE' },
               { v: '2,292', l: 'subdomain dictionary entries' },
               { v: '407', l: 'TCP ports in the engine' },
-              { v: '1', l: 'evidence trail per finding' },
+              { v: '0', l: 'CVEs reported without a detected version' },
             ].map((s) => (
-              <div key={s.l}>
-                <dt className="font-mono text-xl text-white">{s.v}</dt>
+              <div key={s.l} className="group">
+                <dt className="font-mono text-xl text-white group-hover:text-emerald-400 transition-colors">{s.v}</dt>
                 <dd className="mt-0.5 text-xs text-slate-500 leading-snug">{s.l}</dd>
               </div>
             ))}
@@ -235,12 +331,23 @@ export default function LandingPage() {
               Four stages. Each one produces the evidence the next stage depends on, and nothing
               leaves the last stage without it.
             </p>
+            <div className="mt-6 hidden lg:block">
+              <div className="font-mono text-[11px] text-slate-600">engine.ts</div>
+              <div className="mt-1 space-y-1 border-l border-slate-800 pl-3">
+                <p className="font-mono text-[11px] text-slate-500">enumerate() → hosts[]</p>
+                <p className="font-mono text-[11px] text-slate-500">probe() → services[]</p>
+                <p className="font-mono text-[11px] text-slate-500">match() → cves[]</p>
+                <p className="font-mono text-[11px] text-emerald-500/70">gate() → findings[]</p>
+              </div>
+            </div>
           </div>
 
           <div className="lg:col-span-8 divide-y divide-slate-800/80 border-t border-slate-800/80">
             {METHOD.map((m) => (
-              <div key={m.step} className="py-6 grid sm:grid-cols-[44px_1fr] gap-x-5 gap-y-2">
-                <span className="font-mono text-xs text-slate-600 pt-1">{m.step}</span>
+              <div key={m.step} className="py-6 grid sm:grid-cols-[44px_1fr] gap-x-5 gap-y-2 group">
+                <span className="font-mono text-xs text-slate-600 pt-1 group-hover:text-emerald-500/70 transition-colors">
+                  {m.step}
+                </span>
                 <div>
                   <h3 className="text-sm font-semibold text-white">{m.name}</h3>
                   <p className="mt-1.5 text-sm text-slate-400 leading-relaxed">{m.runs}</p>
@@ -254,8 +361,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── COVERAGE ─────────────────────────────────────────── */}
-      <section id="coverage" className="py-20 px-6 border-t border-slate-800/70">
+      {/* ─── COVERAGE EXPLORER ────────────────────────────────── */}
+      <section id="coverage" className="py-20 px-6 border-t border-slate-800/70 bg-slate-900/20">
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl">
             <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 mb-4">Coverage</p>
@@ -263,47 +370,83 @@ export default function LandingPage() {
               What gets checked
             </h2>
             <p className="mt-4 text-sm text-slate-400 leading-relaxed">
-              Five groups of checks, all from the internet side. Plan limits decide how many ports
-              are probed and which scan types are available, not what the engine is capable of.
+              Five groups of checks, all from the internet side. Pick one to see the technique
+              behind it.
             </p>
           </div>
 
-          <div className="mt-10 border-t border-slate-800/80">
-            {COVERAGE.map((c) => (
-              <div key={c.group} className="py-5 grid sm:grid-cols-[140px_1fr] gap-x-6 gap-y-1 border-b border-slate-800/80">
-                <span className="text-sm font-medium text-slate-300">{c.group}</span>
-                <span className="text-sm text-slate-400 leading-relaxed">{c.items}</span>
-              </div>
-            ))}
+          <div className="mt-9 rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden">
+            <div className="flex flex-wrap gap-px bg-slate-800/60">
+              {TABS.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  aria-selected={tab === t.id}
+                  className={`flex-1 min-w-[110px] px-4 py-3 text-xs font-medium transition-colors ${
+                    tab === t.id
+                      ? 'bg-slate-900 text-emerald-400'
+                      : 'bg-slate-950 text-slate-500 hover:text-slate-300 hover:bg-slate-900/60'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <div className="p-5 sm:p-6">
+              <p className="text-sm text-slate-300">{activeTab.blurb}</p>
+              <dl className="mt-4 divide-y divide-slate-800/70">
+                {activeTab.items.map((i) => (
+                  <div key={i.name} className="py-3 grid sm:grid-cols-[190px_1fr] gap-x-6 gap-y-1">
+                    <dt className="text-[13px] font-medium text-slate-200">{i.name}</dt>
+                    <dd className="text-[13px] text-slate-500 leading-relaxed">{i.how}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
           </div>
 
-          <p className="mt-6 text-xs text-slate-500">
+          <p className="mt-5 text-xs text-slate-500">
             Full technical detail on <Link href="/features" className="text-slate-400 underline decoration-slate-700 underline-offset-2 hover:text-slate-200">the features page</Link>.
           </p>
         </div>
       </section>
 
-      {/* ─── WHAT WE DO NOT REPORT ────────────────────────────── */}
+      {/* ─── LEDGER: WHAT WE STOPPED REPORTING ────────────────── */}
       <section className="py-20 px-6 border-t border-slate-800/70">
-        <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-10 lg:gap-16">
-          <div className="lg:col-span-4">
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 mb-4">Restraint</p>
-            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-snug">
-              What we do not report
-            </h2>
-            <p className="mt-4 text-sm text-slate-400 leading-relaxed">
-              A scanner is only useful if its findings survive scrutiny. These are the rules the
-              engine enforces before anything reaches a report.
-            </p>
+        <div className="max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-12 gap-10 lg:gap-16">
+            <div className="lg:col-span-4">
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 mb-4">Restraint</p>
+              <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-snug">
+                What we stopped reporting
+              </h2>
+              <p className="mt-4 text-sm text-slate-400 leading-relaxed">
+                A scanner is only useful if its findings survive scrutiny. Every row below is a
+                class of false positive this engine used to produce, and the rule that replaced it.
+              </p>
+            </div>
+
+            <div className="lg:col-span-8">
+              <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 pb-2">
+                <span className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Before</span>
+                <span />
+                <span className="text-[10px] uppercase tracking-[0.14em] text-emerald-500/70">Rule now</span>
+              </div>
+              <ul className="border-t border-slate-800/80">
+                {LEDGER.map((l) => (
+                  <li key={l.now} className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-1.5 py-4 border-b border-slate-800/80">
+                    <span className="text-[13px] text-slate-500 line-through decoration-slate-700 leading-relaxed">
+                      {l.was}
+                    </span>
+                    <span aria-hidden className="hidden sm:block text-slate-700 pt-0.5">→</span>
+                    <span className="text-[13px] text-slate-300 leading-relaxed border-l-2 border-emerald-500/30 pl-3 sm:border-l-0 sm:pl-0">
+                      {l.now}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-          <ul className="lg:col-span-8 space-y-4">
-            {NOT_REPORTED.map((n) => (
-              <li key={n} className="flex gap-3">
-                <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-slate-600" />
-                <span className="text-sm text-slate-400 leading-relaxed">{n}</span>
-              </li>
-            ))}
-          </ul>
         </div>
       </section>
 
@@ -316,7 +459,7 @@ export default function LandingPage() {
           </h2>
           <div className="mt-10 grid sm:grid-cols-3 gap-x-10 gap-y-8">
             {AUDIENCE.map((a) => (
-              <div key={a.role} className="border-t border-slate-800 pt-5">
+              <div key={a.role} className="border-t border-slate-800 pt-5 hover:border-emerald-500/40 transition-colors">
                 <h3 className="text-sm font-semibold text-white">{a.role}</h3>
                 <p className="mt-2 text-sm text-slate-400 leading-relaxed">{a.body}</p>
               </div>
@@ -359,8 +502,12 @@ export default function LandingPage() {
       <FAQSchema faqs={FAQS.map((f) => ({ q: f.q, a: f.a }))} />
 
       {/* ─── CTA ──────────────────────────────────────────────── */}
-      <section className="py-16 px-6 border-t border-slate-800/70">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+      <section className="relative py-16 px-6 border-t border-slate-800/70 overflow-hidden">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-32 left-1/2 h-64 w-[40rem] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-[100px]"
+        />
+        <div className="relative max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-6">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight text-white">
               Run the first scan on your own domain.

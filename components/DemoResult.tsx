@@ -34,12 +34,11 @@ export default function DemoResult({ result }: { result: any }) {
   const findings = result.findings || [];
   const ports = result.ports || [];
   
-  // Risk score: 0 = safe, 100 = critical (based on findings severity)
-  const crit = findings.filter((f: any) => f.severity === 'critical').length;
-  const high = findings.filter((f: any) => f.severity === 'high').length;
-  const med = findings.filter((f: any) => f.severity === 'medium').length;
-  const low = findings.filter((f: any) => f.severity === 'low').length;
-  const riskScore = Math.min(100, (crit * 25) + (high * 15) + (med * 5) + (low * 1));
+  // Risk comes from the scanner that produced the result, using the same weights as the
+  // full report. Recomputing it here with a second formula made the demo and the report
+  // disagree about the same host.
+  const riskScore = Number(result.executiveSummary?.riskScore)
+    || Math.max(0, ...(result.assets || []).map((a: any) => Number(a.riskScore) || 0));
 
   return (
     <div className="mt-4 text-left space-y-4">
