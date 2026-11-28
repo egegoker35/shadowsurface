@@ -8,15 +8,15 @@ export default function ErrorBoundary({ error, reset }: { error: Error & { diges
   }, [error]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+    <div className="min-h-screen flex items-center justify-center bg-ink text-cream">
       <div className="text-center max-w-md px-6">
-        <h1 className="text-4xl font-bold text-red-400 mb-4">Something went wrong</h1>
-        <p className="text-slate-400 mb-6">
+        <h1 className="text-4xl font-bold text-[#E28B7B] mb-4">Something went wrong</h1>
+        <p className="text-dim mb-6">
           {error.message || 'An unexpected error occurred. Our team has been notified.'}
         </p>
         <button
           onClick={reset}
-          className="px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
+          className="px-6 py-3 rounded-lg bg-jade hover:bg-[#6FC7A5] text-ink font-semibold"
         >
           Try Again
         </button>

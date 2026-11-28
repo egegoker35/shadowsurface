@@ -19,26 +19,26 @@ export default function MonitoringPage() {
       <Navbar />
       <main className="pt-24 pb-10 px-4 max-w-7xl mx-auto">
         <h1 className="text-2xl font-bold mb-2">Scan Activity</h1>
-        <p className="text-sm text-slate-400 mb-6">Every completed scan for your organization. For recurring coverage, create a <a href="/dashboard/scheduled-scans" className="text-emerald-400 hover:underline">scheduled scan</a>.</p>
-        {loading ? <p className="text-slate-400">Loading...</p> : (
+        <p className="text-sm text-dim mb-6">Every completed scan for your organization. For recurring coverage, create a <a href="/dashboard/scheduled-scans" className="text-jade hover:underline">scheduled scan</a>.</p>
+        {loading ? <p className="text-dim">Loading...</p> : (
           <div className="space-y-6">
             {scans.map((scan) => (
-              <div key={scan.id} className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+              <div key={scan.id} className="bg-ink2 border border-cream/12 rounded-xl p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h2 className="font-semibold">{scan.target}</h2>
-                    <p className="text-xs text-slate-400">{new Date(scan.createdAt).toLocaleString()}</p>
+                    <p className="text-xs text-dim">{new Date(scan.createdAt).toLocaleString()}</p>
                   </div>
-                  <span className={`px-2 py-1 rounded text-xs ${scan.status === 'completed' ? 'bg-emerald-900 text-emerald-300' : 'bg-yellow-900 text-yellow-300'}`}>{scan.status}</span>
+                  <span className={`px-2 py-1 rounded text-xs ${scan.status === 'completed' ? 'bg-jadeDeep text-jadeLight' : 'bg-[#DDB271]/10 text-[#E5C48D]'}`}>{scan.status}</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                  <div className="bg-slate-950 rounded-lg p-3"><div className="text-lg font-bold">{scan._count?.assets ?? 0}</div><div className="text-[10px] text-slate-400">Assets</div></div>
-                  <div className="bg-slate-950 rounded-lg p-3"><div className="text-lg font-bold">{scan._count?.cloudAssets ?? 0}</div><div className="text-[10px] text-slate-400">Cloud</div></div>
-                  <div className="bg-slate-950 rounded-lg p-3"><div className="text-lg font-bold text-red-400">{scan.highRiskAssets ?? 0}</div><div className="text-[10px] text-slate-400">High Risk</div></div>
-                  <div className="bg-slate-950 rounded-lg p-3"><div className="text-lg font-bold">{scan.durationSeconds ? `${scan.durationSeconds.toFixed(1)}s` : '-'}</div><div className="text-[10px] text-slate-400">Duration</div></div>
+                  <div className="bg-ink rounded-lg p-3"><div className="text-lg font-bold">{scan._count?.assets ?? 0}</div><div className="text-[10px] text-dim">Assets</div></div>
+                  <div className="bg-ink rounded-lg p-3"><div className="text-lg font-bold">{scan._count?.cloudAssets ?? 0}</div><div className="text-[10px] text-dim">Cloud</div></div>
+                  <div className="bg-ink rounded-lg p-3"><div className="text-lg font-bold text-[#E28B7B]">{scan.highRiskAssets ?? 0}</div><div className="text-[10px] text-dim">High Risk</div></div>
+                  <div className="bg-ink rounded-lg p-3"><div className="text-lg font-bold">{scan.durationSeconds ? `${scan.durationSeconds.toFixed(1)}s` : '-'}</div><div className="text-[10px] text-dim">Duration</div></div>
                 </div>
                 {scan.executiveSummary && (
-                  <div className="text-sm text-slate-300">
+                  <div className="text-sm text-cream/80">
                     <p>Risk: <span className="font-semibold">{(scan.executiveSummary as any).overallRisk}</span></p>
                     <p className="mt-1">Recommendations: {(scan.executiveSummary as any).recommendations?.join(', ')}</p>
                   </div>

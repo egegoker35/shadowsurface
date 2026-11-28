@@ -48,6 +48,7 @@ export default function ReportPreview() {
         className="absolute inset-x-2 -bottom-2 top-3 bg-paper/25"
       />
       <div className="relative bg-paper text-[#141310]">
+        <div aria-hidden className="h-[3px] bg-[#1B4B3C]" />
         <div className="flex items-start justify-between border-b border-black/15 px-5 py-4">
           <div>
             <div className="font-mono text-[8.5px] uppercase tracking-[0.18em] text-black/45">

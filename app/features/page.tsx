@@ -1,5 +1,14 @@
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+import MarketingFooter from '@/components/landing/MarketingFooter';
+
+// Each group gets one accent, rotated down the page. The hue carries structure only —
+// the section marker and its hairline — so the list stays readable.
+const ACCENTS = [
+  { dot: 'bg-jade', rule: 'bg-jade', note: 'text-jadeLight/85' },
+  { dot: 'bg-steel', rule: 'bg-steel', note: 'text-steel/85' },
+  { dot: 'bg-clay', rule: 'bg-clay', note: 'text-clay/85' },
+] as const;
 
 const GROUPS: { title: string; note: string; rows: { check: string; how: string }[] }[] = [
   {
@@ -130,28 +139,28 @@ const GROUPS: { title: string; note: string; rows: { check: string; how: string 
 
 export default function FeaturesPage() {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200">
+    <div className="min-h-screen bg-ink text-cream/85">
       <Navbar />
 
       <section className="pt-24 pb-12 px-6">
         <div className="max-w-5xl mx-auto">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-400/80 mb-5">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-jadeLight/80 mb-5">
             Technical reference
           </p>
-          <h1 className="text-[2rem] sm:text-[2.5rem] font-semibold tracking-tight leading-tight text-white max-w-3xl">
+          <h1 className="max-w-3xl font-serif text-[2.1rem] font-normal leading-[1.1] tracking-[-0.015em] text-cream sm:text-[2.7rem]">
             What the scanner checks, and how each result is verified
           </h1>
-          <p className="mt-5 text-base text-slate-400 leading-relaxed max-w-2xl">
+          <p className="mt-5 text-base text-dim leading-relaxed max-w-2xl">
             Every row below describes a check the engine performs and the evidence required before
             it becomes a finding. Numbers reflect the current build: 456 CVE records, a 2,292-entry
             DNS dictionary and 407 TCP ports.
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-            <Link href="/register" className="text-emerald-400 hover:text-emerald-300 font-medium">
+            <Link href="/register" className="text-jade hover:text-jadeLight font-medium">
               Run a free scan
             </Link>
-            <span className="text-slate-700">·</span>
-            <Link href="/pricing" className="text-slate-400 hover:text-slate-200">
+            <span className="text-faint">·</span>
+            <Link href="/pricing" className="text-dim hover:text-cream/85">
               Plan limits
             </Link>
           </div>
@@ -159,28 +168,39 @@ export default function FeaturesPage() {
       </section>
 
       <div className="max-w-5xl mx-auto px-6 pb-20">
-        {GROUPS.map((g) => (
+        {GROUPS.map((g, gi) => {
+          const a = ACCENTS[gi % ACCENTS.length];
+          return (
           <section key={g.title} className="pt-12 first:pt-4">
-            <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 border-b border-slate-800 pb-3">
-              <h2 className="text-lg font-semibold text-white">{g.title}</h2>
-              <p className="text-xs text-slate-500">{g.note}</p>
+            <div className="relative flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 border-b border-cream/12 pb-3">
+              <h2 className="flex items-center gap-2.5 text-lg font-semibold text-cream">
+                <span aria-hidden className={`h-2 w-2 ${a.dot}`} />
+                {g.title}
+              </h2>
+              <p className={`text-xs ${a.note}`}>{g.note}</p>
+              <span aria-hidden className={`absolute -bottom-px left-0 h-px w-10 ${a.rule}`} />
             </div>
-            <dl className="divide-y divide-slate-800/70">
+            <dl className="divide-y divide-cream/10">
               {g.rows.map((r) => (
                 <div key={r.check} className="py-4 grid sm:grid-cols-[210px_1fr] gap-x-8 gap-y-1.5">
-                  <dt className="text-sm font-medium text-slate-300">{r.check}</dt>
-                  <dd className="text-sm text-slate-400 leading-relaxed">{r.how}</dd>
+                  <dt className="text-sm font-medium text-cream/80">{r.check}</dt>
+                  <dd className="text-sm text-dim leading-relaxed">{r.how}</dd>
                 </div>
               ))}
             </dl>
           </section>
-        ))}
+          );
+        })}
 
         <section className="pt-12">
-          <div className="border-b border-slate-800 pb-3">
-            <h2 className="text-lg font-semibold text-white">Limits</h2>
+          <div className="relative border-b border-cream/12 pb-3">
+            <h2 className="flex items-center gap-2.5 text-lg font-semibold text-cream">
+              <span aria-hidden className="h-2 w-2 bg-[#DDB271]" />
+              Limits
+            </h2>
+            <span aria-hidden className="absolute -bottom-px left-0 h-px w-10 bg-[#DDB271]" />
           </div>
-          <div className="pt-4 space-y-3 text-sm text-slate-400 leading-relaxed">
+          <div className="pt-4 space-y-3 text-sm text-dim leading-relaxed">
             <p>
               Scanning runs from a single vantage point on the public internet. A CDN, geo-block or
               rate limiter can therefore change what a scan sees compared with your own network.
@@ -199,16 +219,7 @@ export default function FeaturesPage() {
         </section>
       </div>
 
-      <footer className="border-t border-slate-800/70 py-10 px-6">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-slate-600">
-          <span>© {new Date().getFullYear()} ShadowSurface</span>
-          <div className="flex gap-5">
-            <Link href="/pricing" className="hover:text-slate-400">Pricing</Link>
-            <Link href="/privacy" className="hover:text-slate-400">Privacy</Link>
-            <Link href="/terms" className="hover:text-slate-400">Terms</Link>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }

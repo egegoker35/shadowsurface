@@ -18,19 +18,19 @@ export default function VerifyContent() {
   }, [token]);
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 shadow-xl">
-      {status === 'loading' && <p className="text-slate-400">Verifying your email...</p>}
+    <div className="bg-ink2 border border-cream/12 rounded-xl p-8 shadow-xl">
+      {status === 'loading' && <p className="text-dim">Verifying your email...</p>}
       {status === 'success' && (
         <>
-          <h1 className="text-2xl font-bold text-emerald-400 mb-2">Verified!</h1>
-          <p className="text-slate-300 mb-6">{message}</p>
-          <Link href="/dashboard" className="inline-block px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">Go to Dashboard</Link>
+          <h1 className="text-2xl font-bold text-jade mb-2">Verified!</h1>
+          <p className="text-cream/80 mb-6">{message}</p>
+          <Link href="/dashboard" className="inline-block px-5 py-2.5 rounded-lg bg-jade hover:bg-[#6FC7A5] text-ink font-semibold">Go to Dashboard</Link>
         </>
       )}
       {status === 'error' && (
         <>
-          <h1 className="text-2xl font-bold text-red-400 mb-2">Failed</h1>
-          <p className="text-slate-300">{message}</p>
+          <h1 className="text-2xl font-bold text-[#E28B7B] mb-2">Failed</h1>
+          <p className="text-cream/80">{message}</p>
         </>
       )}
     </div>

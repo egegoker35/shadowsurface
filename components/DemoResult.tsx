@@ -40,18 +40,20 @@ export default function DemoResult({ result }: { result: any }) {
   const riskScore = Number(result.executiveSummary?.riskScore)
     || Math.max(0, ...(result.assets || []).map((a: any) => Number(a.riskScore) || 0));
 
+  // One accent per metric so the numbers read as a set: discovery is neutral, exposure and
+  // risk carry the warning colours.
   const metrics = [
-    { value: subdomains.length, label: 'Subdomains' },
-    { value: ports.length, label: 'Open ports' },
-    { value: findings.length, label: 'Findings' },
-    { value: riskScore, label: 'Risk score' },
+    { value: subdomains.length, label: 'Subdomains', tone: 'border-t-jade' },
+    { value: ports.length, label: 'Open ports', tone: 'border-t-jade/60' },
+    { value: findings.length, label: 'Findings', tone: 'border-t-[#DDB271]' },
+    { value: riskScore, label: 'Risk score', tone: 'border-t-[#E5A87C]' },
   ];
 
   return (
     <div className="mt-6 border border-cream/12">
       <dl className="grid grid-cols-2 gap-px bg-cream/10 sm:grid-cols-4">
         {metrics.map((m) => (
-          <div key={m.label} className="bg-ink2 px-4 py-3">
+          <div key={m.label} className={`border-t-2 bg-ink2 px-4 py-3 ${m.tone}`}>
             <dt className="font-mono text-[9px] uppercase tracking-[0.14em] text-faint">{m.label}</dt>
             <dd className="mt-1 font-mono text-[19px] leading-none text-cream">{m.value}</dd>
           </div>

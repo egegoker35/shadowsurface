@@ -8,6 +8,7 @@ import DemoResult from '@/components/DemoResult';
 import ReportPreview from '@/components/landing/ReportPreview';
 import ProductPanel from '@/components/landing/ProductPanel';
 import EvidencePanel from '@/components/landing/EvidencePanel';
+import MarketingFooter from '@/components/landing/MarketingFooter';
 
 const FAQS = [
   {
@@ -145,10 +146,10 @@ const LEDGER = [
 ];
 
 const BANDS = [
-  { label: 'Low', range: '0–39', tone: 'bg-[#4C8C6B]', text: 'text-[#6FA98A]', width: 'w-[40%]' },
-  { label: 'Medium', range: '40–69', tone: 'bg-[#B58A45]', text: 'text-[#C4A16B]', width: 'w-[30%]' },
-  { label: 'High', range: '70–84', tone: 'bg-[#C06B45]', text: 'text-[#CF8A67]', width: 'w-[15%]' },
-  { label: 'Critical', range: '85–100', tone: 'bg-[#B0453C]', text: 'text-[#C9726A]', width: 'w-[15%]' },
+  { label: 'Low', range: '0–39', tone: 'bg-[#3F9D74]', text: 'text-[#6FBF9B]', width: 'w-[40%]' },
+  { label: 'Medium', range: '40–69', tone: 'bg-[#C99540]', text: 'text-[#DDB271]', width: 'w-[30%]' },
+  { label: 'High', range: '70–84', tone: 'bg-[#D0724A]', text: 'text-[#E08F67]', width: 'w-[15%]' },
+  { label: 'Critical', range: '85–100', tone: 'bg-[#C0453A]', text: 'text-[#DE8B80]', width: 'w-[15%]' },
 ];
 
 const AUDIENCE = [
@@ -192,11 +193,18 @@ const SPECS = [
   { v: '0', l: 'CVEs reported without a version' },
 ];
 
-function Label({ n, children }: { n: string; children: ReactNode }) {
+const LABEL_TONE = {
+  jade: { n: 'text-jade', rule: 'bg-jade/40' },
+  steel: { n: 'text-steel', rule: 'bg-steel/40' },
+  clay: { n: 'text-clay', rule: 'bg-clay/40' },
+} as const;
+
+function Label({ n, children, tone = 'jade' }: { n: string; children: ReactNode; tone?: keyof typeof LABEL_TONE }) {
+  const t = LABEL_TONE[tone];
   return (
     <div className="flex items-center gap-3 font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">
-      <span className="text-cream/45">{n}</span>
-      <span aria-hidden className="h-px w-5 bg-cream/20" />
+      <span className={t.n}>{n}</span>
+      <span aria-hidden className={`h-px w-5 ${t.rule}`} />
       <span>{children}</span>
     </div>
   );
@@ -254,15 +262,15 @@ export default function LandingPage() {
         <div className="mx-auto max-w-[1180px]">
           <div className="max-w-[52rem]">
             <div className="flex items-center gap-3">
-              <span aria-hidden className="h-px w-8 bg-cream/25" />
-              <span className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-dim">
+              <span aria-hidden className="h-px w-8 bg-jade/60" />
+              <span className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-jade">
                 External attack surface management
               </span>
             </div>
 
             <h1 className="mt-6 font-serif text-[2.6rem] leading-[1.04] tracking-[-0.022em] text-cream sm:text-[3.35rem] lg:text-[3.65rem]">
               Find what you have exposed,
-              <span className="block italic text-cream/65">before someone else does.</span>
+              <span className="block italic text-jadeLight">before someone else does.</span>
             </h1>
 
             <p className="mt-6 max-w-[40rem] text-[15.5px] leading-[1.75] text-dim">
@@ -286,13 +294,13 @@ export default function LandingPage() {
                   placeholder="yourcompany.com"
                   autoComplete="off"
                   spellCheck={false}
-                  className="flex-1 rounded-[3px] border border-cream/15 bg-ink2 px-3.5 py-3 font-mono text-[13px] text-cream placeholder:text-faint focus:border-cream/45 focus:outline-none"
+                  className="flex-1 rounded-[3px] border border-cream/15 bg-ink2 px-3.5 py-3 font-mono text-[13px] text-cream placeholder:text-faint focus:border-jade/60 focus:outline-none"
                   onKeyDown={(e) => e.key === 'Enter' && runDemo()}
                 />
                 <button
                   onClick={runDemo}
                   disabled={loading}
-                  className="rounded-[3px] bg-cream px-5 py-3 text-[13px] font-semibold text-ink transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-[3px] bg-jade px-5 py-3 text-[13px] font-semibold text-ink transition-colors hover:bg-[#6FC7A5] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading ? 'Scanning…' : 'Run scan'}
                 </button>
@@ -308,7 +316,7 @@ export default function LandingPage() {
             <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px]">
               <Link
                 href="/register"
-                className="text-cream underline decoration-cream/30 underline-offset-4 transition-colors hover:decoration-cream"
+                className="text-cream underline decoration-jade/45 underline-offset-4 transition-colors hover:decoration-jade"
               >
                 Create an account
               </Link>
@@ -329,12 +337,18 @@ export default function LandingPage() {
       </section>
 
       {/* ─── REAL CAPABILITY NUMBERS ──────────────────────────── */}
-      <section className="mt-16 border-y border-cream/10">
-        <dl className="mx-auto grid max-w-[1180px] grid-cols-2 gap-px bg-cream/10 sm:grid-cols-4">
-          {SPECS.map((s) => (
-            <div key={s.l} className="bg-ink px-6 py-6">
-              <dt className="font-mono text-[1.6rem] leading-none text-cream">{s.v}</dt>
-              <dd className="mt-2 text-[11.5px] leading-snug text-faint">{s.l}</dd>
+      <section className="mt-16 border-y border-jade/20 bg-jadeDeep">
+        <dl className="mx-auto grid max-w-[1180px] grid-cols-2 gap-px bg-jade/15 sm:grid-cols-4">
+          {SPECS.map((s, i) => (
+            <div key={s.l} className="bg-jadeDeep px-6 py-6">
+              <dt
+                className={`font-mono text-[1.6rem] leading-none ${
+                  ['text-jadeLight', 'text-steel', 'text-clay', 'text-cream'][i % 4]
+                }`}
+              >
+                {s.v}
+              </dt>
+              <dd className="mt-2 text-[11.5px] leading-snug text-jadeLight/75">{s.l}</dd>
             </div>
           ))}
         </dl>
@@ -374,7 +388,7 @@ export default function LandingPage() {
         <div className="mx-auto grid max-w-[1180px] gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-4">
             <div className="lg:sticky lg:top-24">
-              <Label n="03">Method</Label>
+              <Label n="03" tone="steel">Method</Label>
               <SectionTitle>How a scan runs</SectionTitle>
               <p className="mt-4 max-w-sm text-[14px] leading-[1.75] text-dim">
                 Four stages. Each one produces the evidence the next stage depends on, and nothing
@@ -394,18 +408,31 @@ export default function LandingPage() {
 
           <div className="lg:col-span-8">
             <ol className="border-t border-cream/12">
-              {METHOD.map((m) => (
+              {METHOD.map((m, i) => (
                 <li
                   key={m.step}
                   className="group grid gap-x-6 gap-y-2 border-b border-cream/12 py-6 sm:grid-cols-[3rem_1fr]"
                 >
-                  <span className="font-mono text-[11px] text-faint transition-colors group-hover:text-cream">
+                  <span
+                    className={`font-mono text-[11px] transition-colors ${
+                      [
+                        'text-jade/80 group-hover:text-jade',
+                        'text-steel/80 group-hover:text-steel',
+                        'text-clay/80 group-hover:text-clay',
+                        'text-jadeLight/80 group-hover:text-jadeLight',
+                      ][i % 4]
+                    }`}
+                  >
                     {m.step}
                   </span>
                   <div>
                     <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-cream">{m.name}</h3>
                     <p className="mt-1.5 text-[13.5px] leading-relaxed text-dim">{m.runs}</p>
-                    <p className="mt-2.5 border-l border-cream/15 pl-3 text-[12.5px] leading-relaxed text-faint">
+                    <p
+                      className={`mt-2.5 border-l pl-3 text-[12.5px] leading-relaxed text-faint ${
+                        ['border-jade/35', 'border-steel/35', 'border-clay/35', 'border-jadeLight/35'][i % 4]
+                      }`}
+                    >
                       {m.proof}
                     </p>
                   </div>
@@ -420,7 +447,7 @@ export default function LandingPage() {
       <section className="border-t border-cream/10 px-6 py-16 sm:py-20">
         <div className="mx-auto grid max-w-[1180px] gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-7">
-            <Label n="04">Deliverable</Label>
+            <Label n="04" tone="clay">Deliverable</Label>
             <SectionTitle>What lands on your desk</SectionTitle>
             <p className="mt-4 max-w-lg text-[14px] leading-[1.75] text-dim">
               A scan is only worth running if the output survives a meeting. Four artefacts come out
@@ -494,8 +521,8 @@ export default function LandingPage() {
                   aria-selected={tab === t.id}
                   className={`flex-1 px-4 py-3 font-mono text-[10.5px] uppercase tracking-[0.14em] transition-colors ${
                     tab === t.id
-                      ? 'bg-cream text-ink'
-                      : 'bg-ink text-faint hover:bg-ink2 hover:text-cream'
+                      ? 'bg-jade text-ink'
+                      : 'bg-ink text-faint hover:bg-ink2 hover:text-jadeLight'
                   }`}
                 >
                   {t.label}
@@ -503,7 +530,7 @@ export default function LandingPage() {
               ))}
             </div>
 
-            <div className="border-x border-b border-cream/12 px-5 py-6 sm:px-6">
+            <div className="border-x border-b border-cream/12 bg-jade/[0.04] px-5 py-6 sm:px-6">
               <p className="text-[13.5px] text-cream">{activeTab.blurb}</p>
               <dl className="mt-4 border-t border-cream/10">
                 {activeTab.items.map((i) => (
@@ -526,9 +553,9 @@ export default function LandingPage() {
         <div className="mx-auto max-w-[1180px]">
           <div className="grid gap-10 lg:grid-cols-12 lg:gap-16">
             <div className="lg:col-span-4">
-              <div className="flex items-center gap-3 font-mono text-[10.5px] uppercase tracking-[0.18em] text-ink/45">
+              <div className="flex items-center gap-3 font-mono text-[10.5px] uppercase tracking-[0.18em] text-[#1B4B3C]">
                 <span>06</span>
-                <span aria-hidden className="h-px w-5 bg-ink/25" />
+                <span aria-hidden className="h-px w-5 bg-[#1B4B3C]/40" />
                 <span>Restraint</span>
               </div>
               <h2 className="mt-5 font-serif text-[2rem] leading-[1.12] tracking-[-0.015em] text-ink sm:text-[2.35rem]">
@@ -555,10 +582,10 @@ export default function LandingPage() {
                     key={l.now}
                     className="grid gap-x-8 gap-y-1.5 border-b border-ink/15 py-4 sm:grid-cols-[1fr_1fr]"
                   >
-                    <span className="text-[12.5px] leading-relaxed text-ink/45 line-through decoration-ink/30">
+                    <span className="text-[12.5px] leading-relaxed text-ink/40 line-through decoration-[#B0453C]/50">
                       {l.was}
                     </span>
-                    <span className="text-[12.5px] leading-relaxed text-ink">{l.now}</span>
+                    <span className="text-[12.5px] leading-relaxed text-[#173F32]">{l.now}</span>
                   </li>
                 ))}
               </ul>
@@ -570,12 +597,17 @@ export default function LandingPage() {
       {/* ─── 07 AUDIENCE ──────────────────────────────────────── */}
       <section className="px-6 py-16 sm:py-20">
         <div className="mx-auto max-w-[1180px]">
-          <Label n="07">Where it fits</Label>
+          <Label n="07" tone="steel">Where it fits</Label>
           <SectionTitle>Built for the people who own the surface</SectionTitle>
           <div className="mt-10 grid gap-x-10 gap-y-8 sm:grid-cols-3">
             {AUDIENCE.map((a, i) => (
-              <div key={a.role} className="border-t border-cream/15 pt-5">
-                <span className="font-mono text-[10px] text-faint">0{i + 1}</span>
+              <div
+                key={a.role}
+                className={`border-t pt-5 ${['border-jade/25', 'border-steel/25', 'border-clay/25'][i % 3]}`}
+              >
+                <span className={`font-mono text-[10px] ${['text-jade/80', 'text-steel/80', 'text-clay/80'][i % 3]}`}>
+                  0{i + 1}
+                </span>
                 <h3 className="mt-2 text-[14px] font-semibold text-cream">{a.role}</h3>
                 <p className="mt-2 text-[13px] leading-[1.7] text-dim">{a.body}</p>
               </div>
@@ -589,7 +621,7 @@ export default function LandingPage() {
         <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-4">
             <div className="lg:sticky lg:top-24">
-              <Label n="08">Questions</Label>
+              <Label n="08" tone="clay">Questions</Label>
               <SectionTitle>Technical FAQ</SectionTitle>
               <p className="mt-4 max-w-xs text-[13.5px] leading-relaxed text-dim">
                 The answers are the same rules the engine runs on.
@@ -608,7 +640,7 @@ export default function LandingPage() {
                     <span className="text-[14px] font-medium text-cream/90 transition-colors group-hover:text-cream">
                       {faq.q}
                     </span>
-                    <span className="shrink-0 pt-0.5 font-mono text-[13px] leading-none text-faint">
+                    <span className="shrink-0 pt-0.5 font-mono text-[13px] leading-none text-jade/80">
                       {openFaq === i ? '−' : '+'}
                     </span>
                   </button>
@@ -627,26 +659,26 @@ export default function LandingPage() {
       <FAQSchema faqs={FAQS.map((f) => ({ q: f.q, a: f.a }))} />
 
       {/* ─── CTA ──────────────────────────────────────────────── */}
-      <section className="border-t border-cream/10 px-6 py-14">
+      <section className="border-t border-jade/20 bg-jadeDeep px-6 py-14">
         <div className="mx-auto flex max-w-[1180px] flex-col justify-between gap-8 sm:flex-row sm:items-end">
           <div>
             <h2 className="font-serif text-[1.8rem] leading-[1.15] tracking-[-0.015em] text-cream sm:text-[2.1rem]">
               Run the first scan on your own domain.
             </h2>
-            <p className="mt-3 text-[13.5px] text-dim">
+            <p className="mt-3 text-[13.5px] text-jadeLight/80">
               Free plan covers subdomain discovery and the top 10 ports. No card required.
             </p>
           </div>
           <div className="flex shrink-0 gap-3">
             <Link
               href="/register"
-              className="rounded-[3px] bg-cream px-5 py-2.5 text-[13px] font-semibold text-ink transition-colors hover:bg-white"
+              className="rounded-[3px] bg-jade px-5 py-2.5 text-[13px] font-semibold text-ink transition-colors hover:bg-[#6FC7A5]"
             >
               Create account
             </Link>
             <Link
               href="/pricing"
-              className="rounded-[3px] border border-cream/20 px-5 py-2.5 text-[13px] font-medium text-cream transition-colors hover:border-cream/40"
+              className="rounded-[3px] border border-jade/40 px-5 py-2.5 text-[13px] font-medium text-cream transition-colors hover:border-jade"
             >
               See pricing
             </Link>
@@ -654,58 +686,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── FOOTER ───────────────────────────────────────────── */}
-      <footer className="border-t border-cream/10 px-6 pb-10 pt-12">
-        <div className="mx-auto grid max-w-[1180px] grid-cols-2 gap-8 sm:grid-cols-4">
-          <div className="col-span-2 sm:col-span-1">
-            <div className="flex items-center gap-2">
-              <span aria-hidden className="grid h-[14px] w-[14px] grid-cols-2 gap-[3px]">
-                <span className="bg-cream" />
-                <span className="bg-cream/30" />
-                <span className="bg-cream/30" />
-                <span className="bg-cream" />
-              </span>
-              <span className="text-[13px] font-semibold tracking-[-0.01em] text-cream">
-                ShadowSurface
-              </span>
-            </div>
-            <p className="mt-3 max-w-[15rem] text-[11.5px] leading-relaxed text-faint">
-              External attack surface management with an evidence trail behind every finding.
-            </p>
-          </div>
-          <div>
-            <div className="mb-3 font-mono text-[9.5px] uppercase tracking-[0.16em] text-faint">
-              Product
-            </div>
-            <ul className="space-y-2 text-[12.5px]">
-              <li><Link href="/features" className="text-dim hover:text-cream">Features</Link></li>
-              <li><Link href="/pricing" className="text-dim hover:text-cream">Pricing</Link></li>
-              <li><Link href="/register" className="text-dim hover:text-cream">Get started</Link></li>
-            </ul>
-          </div>
-          <div>
-            <div className="mb-3 font-mono text-[9.5px] uppercase tracking-[0.16em] text-faint">
-              Company
-            </div>
-            <ul className="space-y-2 text-[12.5px]">
-              <li><Link href="/blog" className="text-dim hover:text-cream">Blog</Link></li>
-              <li><Link href="/contact" className="text-dim hover:text-cream">Contact</Link></li>
-            </ul>
-          </div>
-          <div>
-            <div className="mb-3 font-mono text-[9.5px] uppercase tracking-[0.16em] text-faint">
-              Legal
-            </div>
-            <ul className="space-y-2 text-[12.5px]">
-              <li><Link href="/privacy" className="text-dim hover:text-cream">Privacy</Link></li>
-              <li><Link href="/terms" className="text-dim hover:text-cream">Terms</Link></li>
-            </ul>
-          </div>
-        </div>
-        <div className="mx-auto mt-10 max-w-[1180px] border-t border-cream/10 pt-5 font-mono text-[10.5px] text-faint">
-          © {new Date().getFullYear()} ShadowSurface
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }

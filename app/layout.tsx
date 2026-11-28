@@ -15,6 +15,8 @@ const serif = Newsreader({
   style: ['normal', 'italic'],
   variable: '--font-serif',
   display: 'swap',
+  // Newsreader has no published fallback metrics, so next/font warned on every build.
+  adjustFontFallback: false,
 });
 
 export const metadata = {

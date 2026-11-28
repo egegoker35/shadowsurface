@@ -18,7 +18,7 @@ export default function EvidencePanel() {
       {/* the finding */}
       <div className="bg-ink px-5 py-5">
         <div className="flex items-center gap-2">
-          <span className="border border-[#C4A16B]/35 px-1.5 py-px font-mono text-[8.5px] uppercase tracking-[0.1em] text-[#C4A16B]">
+          <span className="border border-[#DDB271]/45 px-1.5 py-px font-mono text-[8.5px] uppercase tracking-[0.1em] text-[#DDB271]">
             medium
           </span>
           <span className="font-mono text-[8.5px] uppercase tracking-[0.12em] text-faint">
@@ -77,12 +77,12 @@ export default function EvidencePanel() {
                 key={r.line}
                 className={
                   r.highlight
-                    ? 'relative bg-[#C4A16B]/10 py-0.5 pl-2.5 font-mono text-[10px] leading-[1.6] text-[#D6B47C]'
+                    ? 'relative bg-[#DDB271]/10 py-0.5 pl-2.5 font-mono text-[10px] leading-[1.6] text-[#E5C48D]'
                     : 'py-0.5 font-mono text-[10px] leading-[1.6] text-dim'
                 }
               >
                 {r.highlight && (
-                  <span aria-hidden className="absolute left-0 top-0 h-full w-[2px] bg-[#C4A16B]" />
+                  <span aria-hidden className="absolute left-0 top-0 h-full w-[2px] bg-[#DDB271]" />
                 )}
                 {r.line}
               </div>
@@ -90,7 +90,7 @@ export default function EvidencePanel() {
           </div>
         </div>
 
-        <div className="border-t border-cream/10 px-4 py-2.5 font-mono text-[8.5px] leading-relaxed text-faint">
+        <div className="border-t border-jade/20 px-4 py-2.5 font-mono text-[8.5px] leading-relaxed text-jadeLight/80">
           control request → identical header set · finding kept
         </div>
       </div>

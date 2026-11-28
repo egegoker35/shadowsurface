@@ -60,13 +60,13 @@ export default function Navbar() {
       <nav className="mx-auto flex h-16 max-w-[1180px] items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2" aria-label="ShadowSurface home">
           <span aria-hidden className="grid h-[15px] w-[15px] grid-cols-2 gap-[3px]">
-            <span className="bg-cream" />
-            <span className="bg-cream/30" />
-            <span className="bg-cream/30" />
-            <span className="bg-cream" />
+            <span className="bg-jade" />
+            <span className="bg-jade/30" />
+            <span className="bg-jade/30" />
+            <span className="bg-jade" />
           </span>
           <span className="text-[14px] font-semibold tracking-[-0.01em] text-cream">
-            Shadow<span className="text-cream/55">Surface</span>
+            Shadow<span className="text-jadeLight/70">Surface</span>
           </span>
         </Link>
 
@@ -78,7 +78,7 @@ export default function Navbar() {
                 key={l.href}
                 href={l.href}
                 className={`text-[13px] transition-colors ${
-                  active ? 'text-cream' : 'text-dim hover:text-cream'
+                  active ? 'text-jadeLight' : 'text-dim hover:text-cream'
                 }`}
               >
                 {l.label}
@@ -98,7 +98,7 @@ export default function Navbar() {
                   onClick={() => setMenuOpen((v) => !v)}
                   className="flex items-center gap-2 rounded-[3px] border border-cream/15 px-3 py-1.5 text-[13px] text-cream transition-colors hover:border-cream/30"
                 >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-cream text-[10px] font-bold text-ink">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-jade text-[10px] font-bold text-ink">
                     P
                   </span>
                   <span>Profile</span>
@@ -119,7 +119,7 @@ export default function Navbar() {
                         key={m.href}
                         href={m.href}
                         onClick={() => setMenuOpen(false)}
-                        className="block px-4 py-2.5 text-[13px] text-dim transition-colors hover:bg-cream/5 hover:text-cream"
+                        className="block px-4 py-2.5 text-[13px] text-dim transition-colors hover:bg-jade/10 hover:text-cream"
                       >
                         {m.label}
                       </Link>
@@ -128,14 +128,14 @@ export default function Navbar() {
                     <Link
                       href="/privacy"
                       onClick={() => setMenuOpen(false)}
-                      className="block px-4 py-2.5 text-[13px] text-dim transition-colors hover:bg-cream/5 hover:text-cream"
+                      className="block px-4 py-2.5 text-[13px] text-dim transition-colors hover:bg-jade/10 hover:text-cream"
                     >
                       Privacy Policy
                     </Link>
                     <Link
                       href="/terms"
                       onClick={() => setMenuOpen(false)}
-                      className="block px-4 py-2.5 text-[13px] text-dim transition-colors hover:bg-cream/5 hover:text-cream"
+                      className="block px-4 py-2.5 text-[13px] text-dim transition-colors hover:bg-jade/10 hover:text-cream"
                     >
                       Terms of Service
                     </Link>
@@ -152,12 +152,12 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Link href="/login" className="text-[13px] text-dim transition-colors hover:text-cream">
+              <Link href="/login" className="text-[13px] text-dim transition-colors hover:text-jadeLight">
                 Sign in
               </Link>
               <Link
                 href="/register"
-                className="rounded-[3px] bg-cream px-4 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-white"
+                className="rounded-[3px] bg-jade px-4 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-[#6FC7A5]"
               >
                 Start scanning
               </Link>
@@ -233,7 +233,7 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/register"
-                className="flex-1 rounded-[3px] bg-cream py-2.5 text-center text-[13px] font-semibold text-ink"
+                className="flex-1 rounded-[3px] bg-jade py-2.5 text-center text-[13px] font-semibold text-ink"
               >
                 Start scanning
               </Link>

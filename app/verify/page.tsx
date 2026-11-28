@@ -9,8 +9,8 @@ export default function VerifyPage() {
       <Navbar />
       <main className="pt-32 px-4 max-w-md mx-auto text-center">
         <Suspense fallback={
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 shadow-xl">
-            <p className="text-slate-400">Verifying your email...</p>
+          <div className="bg-ink2 border border-cream/12 rounded-xl p-8 shadow-xl">
+            <p className="text-dim">Verifying your email...</p>
           </div>
         }>
           <VerifyContent />
