@@ -326,7 +326,8 @@ async function detectCloud(domain: string): Promise<Record<string, unknown>[]> {
       // 403 proves nothing. Only a readable listing is reported.
       if (res.status === 200) {
         const listing = await res.text().catch(() => '');
-        if (listing.includes('<ListBucketResult') || listing.includes('<Contents>')) {
+        // A real listing carries both the result element and at least one key.
+        if (listing.includes('<ListBucketResult') && listing.includes('<Key>')) {
           cloud.push({ provider: 'aws', serviceType: 's3', resourceId: bucket, severity: 'critical', description: `S3 bucket ${bucket} lists its contents publicly` });
         }
       }

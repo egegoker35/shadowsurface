@@ -2,6 +2,7 @@ import { request as httpRequest } from 'http';
 import { request as httpsRequest } from 'https';
 import { resolve4, resolveCname } from 'dns/promises';
 import { isPrivateIp } from '@/lib/middleware/security';
+import { looksLikePlaceholderSecret } from './detection';
 import { URL } from 'url';
 
 export interface AgentSurfaceFinding {
@@ -226,6 +227,8 @@ async function scanHost(host: string, result: AgentSurfaceResult, deadline: numb
     if (!bodiesToScan) break;
     const m = bodiesToScan.match(p.regex);
     if (!m) continue;
+    // Documentation examples (`OPENAI_API_KEY=your-key-here`, AKIAIOSFODNN7EXAMPLE) are not leaks.
+    if (looksLikePlaceholderSecret(m[0])) continue;
     const snippet = redactSnippet(m[0].slice(0, 120));
     result.leakedSecrets.push({ host, pattern: p.name, snippet: `${m[0].slice(0, 24)}...` });
     result.findings.push({

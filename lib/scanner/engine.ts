@@ -2136,21 +2136,32 @@ async function probePaths(baseUrl: string, timeout=8000): Promise<WebVuln[]> {
           }
         }
         if ((p === '/actuator' || p === '/health' || p === '/metrics') && !isSoft404) {
+          // A plain {"status":"ok"} health endpoint is normal application behaviour, not proof of
+          // Spring Boot actuator. Only Spring-specific structure counts as evidence.
           const j = res.body.trim();
-          if (j.startsWith('{') && (j.includes('"status"') || j.includes('"UP"') || j.includes('jvm') || j.includes('"health"') || j.includes('"mem"') || j.includes('"gauge"') || j.includes('"names"'))) {
-            vulns.push({ type: 'api_exposure', severity: 'medium', url: testUrl, description: 'Spring Boot actuator endpoint exposed — may leak internal state', evidence: p, confidence: 'confirmed' });
+          const springActuator = p === '/actuator' ? /"_links"|"self"|"health"/.test(j)
+            : /"(?:jvm|diskSpace|components|gauge|heap|threads)"\s*:|"(?:db|dbConnection|ping)"\s*:\s*\{/.test(j);
+          if (j.startsWith('{') && springActuator) {
+            vulns.push({ type: 'api_exposure', severity: 'medium', url: testUrl, description: 'Spring Boot actuator endpoint exposed — may leak internal state', evidence: j.slice(0,180), confidence: 'confirmed' });
           }
         }
         if (p === '/debug/vars' || p === '/debug/pprof') {
-          if (res.body.includes('memstats') || res.body.includes('pprof') || res.body.includes('goroutine') || res.body.includes('expvar')) {
-            vulns.push({ type: 'api_exposure', severity: 'high', url: testUrl, description: 'Go debug/pprof or expvar endpoint exposed — memory dumps and profiling accessible', evidence: p, confidence: 'confirmed' });
+          // The word "pprof" alone appears in unrelated bundles; require the actual runtime output.
+          const goRuntime = /"memstats"|"cmdline"|^goroutine \d+|profile\?debug=1|\/debug\/pprof\/profile/.test(res.body);
+          if (goRuntime) {
+            vulns.push({ type: 'api_exposure', severity: 'high', url: testUrl, description: 'Go debug/pprof or expvar endpoint exposed — memory dumps and profiling accessible', evidence: res.body.slice(0,180), confidence: 'confirmed' });
           }
         }
         if (p === '/server-status' && res.body.includes('Apache Server Status')) {
           vulns.push({ type: 'info_disclosure', severity: 'medium', url: testUrl, description: 'Apache server-status page exposed — reveals request details and internal IPs', evidence: p, confidence: 'confirmed' });
         }
-        if ((p === '/trace.axd' || p === '/elmah.axd') && (res.body.includes('trace') || res.body.includes('elmah') || res.body.includes('System.Web'))) {
-          vulns.push({ type: 'info_disclosure', severity: 'high', url: testUrl, description: 'ASP.NET trace/ELMAH error log exposed — may contain sensitive request data', evidence: p, confidence: 'confirmed' });
+        if (p === '/trace.axd' || p === '/elmah.axd') {
+          // Any page can contain the substring "trace"; require the diagnostic page itself.
+          const isTracePage = p === '/trace.axd' && /Application Trace|Request Details|Trace Information|<h1>Trace/i.test(res.body);
+          const isElmahPage = p === '/elmah.axd' && /elmah\.axd|Error Log for|System\.Web\.HttpException/i.test(res.body) && /error|exception/i.test(res.body);
+          if (isTracePage || isElmahPage) {
+            vulns.push({ type: 'info_disclosure', severity: 'high', url: testUrl, description: 'ASP.NET trace/ELMAH error log exposed — may contain sensitive request data', evidence: res.body.slice(0,180), confidence: 'confirmed' });
+          }
         }
       }
     } catch {}
@@ -2284,14 +2295,16 @@ async function testParameterInjection(baseUrl: string, headers: Record<string, s
   const ssrfParams = ['url','path','file','image','avatar','logo','photo','doc','download','redirect','return','callback','next','target','link','href','src','uri','host','domain','site','page','web','api','endpoint','service','proxy','fetch','load','import','include','require','source','origin','referer','request'];
   let ssrfControlBody = '';
   try { const ctrl = await fetchURL(base, 'GET', { 'Connection': 'close' }, undefined, timeout); ssrfControlBody = ctrl.body; } catch {}
+  // The same signature in the control page means the content is the site's own, not fetched by us.
+  const INTERNAL_CONTENT_RX = /ami-id|instance-id|local-ipv4|iam\/security-credentials|root:x:0:0|daemon:x:|bin:x:|sys:x:/i;
   await Promise.all(ssrfParams.slice(0,10).map(async (param) => {
     for (const payload of ssrfPayloads) {
       try {
         const testUrl = `${base}?${param}=${encodeURIComponent(payload)}`;
         const res = await fetchURL(testUrl, 'GET', { 'Connection': 'close' }, undefined, timeout);
         const rb = res.body;
-        const definitive = /ami-id|instance-id|local-ipv4|iam\/security-credentials|root:x:0:0|daemon:x:|bin:x:|sys:x:/i.test(rb);
-        if (definitive && rb !== ssrfControlBody) {
+        const definitive = INTERNAL_CONTENT_RX.test(rb) && !INTERNAL_CONTENT_RX.test(ssrfControlBody);
+        if (definitive) {
           vulns.push({ type: 'ssrf', severity: 'critical', url: testUrl, description: `SSRF confirmed — parameter "${param}" fetches internal resource: "${payload}"`, evidence: res.body.slice(0,200), confidence: 'confirmed' });
           return;
         }
@@ -2326,12 +2339,17 @@ async function testParameterInjection(baseUrl: string, headers: Record<string, s
   // LFI / Path Traversal probe
   const lfiPayloads = ['../../../etc/passwd', '..\\..\\..\\windows\\win.ini', '....//....//....//etc/passwd', '%252e%252e%252fetc%252fpasswd', '/etc/passwd%00', '..%2f..%2f..%2fetc%2fpasswd'];
   const lfiParams = ['file','path','page','template','view','document','folder','directory','include','require','load','read','open','dir','filename','filepath','log','config','data'];
+  const LFI_RX = /root:x:0:0|daemon:x:|bin:x:|sys:x:|nogroup:|nobody:|\[fonts\]|\[mci extensions\]|for 16-bit app support/i;
+  // Control: the same parameter with a harmless value. A page that already quotes passwd/win.ini
+  // content (docs, tutorials, sample logs) is not a local file inclusion.
+  let lfiControl = baselineText;
+  try { const c = await fetchURL(`${base}?${lfiParams[0]}=index`, 'GET', { 'Connection': 'close' }, undefined, timeout); lfiControl += '\n' + c.body; } catch {}
   await Promise.all(lfiParams.slice(0,8).map(async (param) => {
     for (const payload of lfiPayloads.slice(0,3)) {
       try {
         const testUrl = `${base}?${param}=${encodeURIComponent(payload)}`;
         const res = await fetchURL(testUrl, 'GET', { 'Connection': 'close' }, undefined, timeout);
-        if (/root:x:0:0|daemon:x:|bin:x:|sys:x:|nogroup:|nobody:|\[fonts\]|\[extensions\]|\[mci extensions\]|for 16-bit app support/i.test(res.body)) {
+        if (LFI_RX.test(res.body) && !LFI_RX.test(lfiControl)) {
           vulns.push({ type: 'lfi', severity: 'critical', url: testUrl, description: `Local File Inclusion (LFI) confirmed — parameter "${param}" reads system files with "${payload}"`, evidence: res.body.slice(0,200), confidence: 'confirmed' });
           return;
         }
@@ -2344,12 +2362,16 @@ async function testParameterInjection(baseUrl: string, headers: Record<string, s
     const res = await fetchURL(base, 'GET', { 'Origin': 'https://evil.com', 'Connection': 'close' }, undefined, timeout);
     const acao = res.headers['access-control-allow-origin'] || '';
     const acac = res.headers['access-control-allow-credentials'] || '';
-    if (acao === 'https://evil.com' || acao === '*') {
-      if (acac === 'true' || acac === 'TRUE') {
+    const creds = acac === 'true' || acac === 'TRUE';
+    if (acao === 'https://evil.com') {
+      if (creds) {
         vulns.push({ type: 'cors', severity: 'high', url: base, description: 'CORS misconfiguration — reflects arbitrary Origin and allows credentials, enabling cross-origin authenticated attacks', evidence: `Access-Control-Allow-Origin: ${acao}, Access-Control-Allow-Credentials: ${acac}`, confidence: 'confirmed' });
       } else {
         vulns.push({ type: 'cors', severity: 'medium', url: base, description: 'CORS misconfiguration — reflects arbitrary Origin without proper whitelist validation', evidence: `Access-Control-Allow-Origin: ${acao}`, confidence: 'confirmed' });
       }
+    } else if (acao === '*' && creds) {
+      // Browsers reject credentialed requests against a wildcard; this is a configuration error only.
+      vulns.push({ type: 'cors', severity: 'medium', url: base, description: 'CORS wildcard combined with Allow-Credentials — inconsistent configuration (browsers block credentialed wildcard requests)', evidence: `Access-Control-Allow-Origin: *, Access-Control-Allow-Credentials: ${acac}`, confidence: 'confirmed' });
     }
   } catch {}
 
@@ -2358,7 +2380,11 @@ async function testParameterInjection(baseUrl: string, headers: Record<string, s
     try {
       const xxePayload = `<?xml version="1.0"?><!DOCTYPE x [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><x>&xxe;</x>`;
       const res = await fetchURL(base, 'POST', { 'Content-Type': 'application/xml', 'Connection': 'close' }, xxePayload, timeout);
-      if (/root:x:0:0|bin:x|daemon:x|nogroup/i.test(res.body)) {
+      const XXE_RX = /root:x:0:0|bin:x|daemon:x|nogroup/i;
+      // Control POST with a well-formed document but no entity: only content the entity added counts.
+      let xxeControlBody = body || '';
+      try { const ctrl = await fetchURL(base, 'POST', { 'Content-Type': 'application/xml', 'Connection': 'close' }, '<?xml version="1.0"?><x>hello</x>', timeout); xxeControlBody += '\n' + ctrl.body; } catch {}
+      if (XXE_RX.test(res.body) && !XXE_RX.test(xxeControlBody)) {
         vulns.push({ type: 'xxe', severity: 'critical', url: base, description: 'XXE (XML External Entity) confirmed — external entity resolves to local system files', evidence: res.body.slice(0,200), confidence: 'confirmed' });
       }
     } catch {}
@@ -2893,7 +2919,8 @@ async function scanCloud(domain: string): Promise<CloudAsset[]> {
   // GCP - only if actually public
   try {
     const res = await fetchURL(`https://storage.googleapis.com/${domain}`, 'GET', {}, undefined, 8000);
-    if (res.status === 200 && (res.body.includes('<ListBucketResult') || res.body.includes('<Name>'))) {
+    // A public GCS listing is XML with ListBucketResult and at least one <Key>; <Name> alone is not a listing.
+    if (res.status === 200 && res.body.includes('<ListBucketResult') && res.body.includes('<Key>')) {
       assets.push({ id: genId(), provider: 'gcp', serviceType: 'Cloud Storage', resourceId: domain, url: `https://storage.googleapis.com/${domain}`, permissions: ['Read'], misconfigurations: [{ type: 'cloud_misconfig', severity: 'high', description: `Google Cloud Storage bucket ${domain} is publicly listable` }], riskScore: 70, severity: 'high', exposureLevel: 'public' });
     }
   } catch {}
