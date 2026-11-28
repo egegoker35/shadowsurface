@@ -234,28 +234,29 @@ export default function PricingPage() {
             {plans.map((plan) => {
               const acc = PLAN_ACCENT[plan.planId];
               return (
-              <div key={plan.name} className={`relative overflow-hidden bg-ink2 border ${acc.card} rounded-xl p-5 pt-6 text-left transition-colors flex flex-col h-full`}>
+              <div key={plan.name} className={`relative flex h-full flex-col overflow-hidden rounded-[3px] border bg-ink2 p-5 pt-6 text-left transition-colors ${acc.card}`}>
                 <span aria-hidden className={`absolute inset-x-0 top-0 h-[2px] ${acc.bar}`} />
                 <h3 className={`text-sm font-bold mb-1 uppercase tracking-wider ${acc.name}`}>{plan.name}</h3>
                 <div className="text-2xl font-bold mb-1">{plan.price}<span className="text-xs font-normal text-dim">{plan.period}</span></div>
                 <p className="text-dim text-xs mb-3 leading-relaxed">{plan.description}</p>
-                <ul className="mb-1 space-y-1.5 text-xs text-cream/80">
+                <ul className="space-y-1.5 text-xs text-cream/80">
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-start gap-2"><Tick className={acc.check} /><span>{f}</span></li>
                   ))}
                 </ul>
-                <div className="mt-auto pt-5">
-                  {plan.unavailable.length > 0 && (
-                    <ul className="mb-3 space-y-1 text-xs text-faint">
-                      {plan.unavailable.map((f) => (
-                        <li key={f} className="flex items-start gap-2"><Cross className="text-faint/70" /><span>{f}</span></li>
-                      ))}
-                    </ul>
-                  )}
+                {plan.unavailable.length > 0 && (
+                  <ul className="mt-3 space-y-1 border-t border-cream/10 pt-3 text-xs text-faint">
+                    {plan.unavailable.map((f) => (
+                      <li key={f} className="flex items-start gap-2"><Cross className="text-faint/70" /><span>{f}</span></li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex-1" />
+                <div className="pt-4">
                   {plan.planId === 'free' ? (
-                    <a href="/register" className={`block w-full rounded-lg py-2 text-center text-sm font-semibold transition-colors ${acc.cta}`}>Sign Up Free</a>
+                    <a href="/register" className={`block w-full rounded-[3px] py-2 text-center text-sm font-semibold transition-colors ${acc.cta}`}>Sign Up Free</a>
                   ) : (
-                    <button onClick={() => openModal(plan)} className={`block w-full rounded-lg py-2 text-center text-sm font-semibold transition-colors ${acc.cta}`}>
+                    <button onClick={() => openModal(plan)} className={`block w-full rounded-[3px] py-2 text-center text-sm font-semibold transition-colors ${acc.cta}`}>
                       Get Started
                     </button>
                   )}
