@@ -86,7 +86,7 @@ export default function ScanReportPage() {
             'bg-emerald-50 border-emerald-200 text-emerald-900'
           }`}>
             <h2 className="text-sm font-bold uppercase tracking-wider opacity-70 mb-2">Overall Risk</h2>
-            <p className="text-3xl font-extrabold">{summary.overallRisk || 'LOW'}</p>
+            <p className="text-3xl font-extrabold">{summary.overallRisk || 'INCONCLUSIVE'}</p>
             <p className="text-sm opacity-70 mt-1">{summary.criticalFindings || 0} critical findings</p>
             <p className="text-xs opacity-60 mt-1">Risk Score: {summary.riskScore || 0}/100</p>
           </div>

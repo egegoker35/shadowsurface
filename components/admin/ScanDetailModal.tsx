@@ -33,8 +33,8 @@ export default function ScanDetailModal({ scan, onClose }: { scan: any; onClose:
           <div>
             <div className="flex items-center gap-3 mb-1">
               <h2 className="text-2xl font-bold">{scan.target}</h2>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${exec.overallRisk === 'CRITICAL' ? 'bg-red-900/50 text-red-300 border border-red-700' : exec.overallRisk === 'HIGH' ? 'bg-orange-900/50 text-orange-300 border border-orange-700' : exec.overallRisk === 'MEDIUM' ? 'bg-yellow-900/50 text-yellow-300 border border-yellow-700' : 'bg-emerald-900/50 text-emerald-300 border border-emerald-700'}`}>
-                {exec.overallRisk || 'LOW'} RISK
+              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${exec.overallRisk === 'CRITICAL' ? 'bg-red-900/50 text-red-300 border border-red-700' : exec.overallRisk === 'HIGH' ? 'bg-orange-900/50 text-orange-300 border border-orange-700' : exec.overallRisk === 'MEDIUM' ? 'bg-yellow-900/50 text-yellow-300 border border-yellow-700' : (exec.overallRisk === 'LOW' || exec.overallRisk === 'INFO') ? 'bg-emerald-900/50 text-emerald-300 border border-emerald-700' : 'bg-slate-800 text-slate-300 border border-slate-600'}`}>
+                {exec.overallRisk || 'INCONCLUSIVE'} RISK
               </span>
             </div>
             <p className="text-sm text-slate-400">{scan.createdBy?.email} — {new Date(scan.createdAt).toLocaleString()}</p>
