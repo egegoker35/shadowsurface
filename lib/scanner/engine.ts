@@ -3054,9 +3054,13 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                       const m = serverHdrWeb.match(/^([A-Za-z][A-Za-z0-9._\-]+)(?:\/(\d[\d.]+))?/i);
                       if (m) { svc = m[1]; svcVersion = m[2] || null; }
                     }
-                    // Security header findings — skip on 3xx responses (headers belong to the redirect target)
+                    // Security header findings — only on real HTML application responses. A 3xx belongs to
+                    // the redirect target, and an edge error page (403/409/5xx text or JSON) is not the
+                    // application's own markup, so its headers say nothing about the app's hardening.
                     const secHeaders = web.headers;
-                    if ((web.status < 300 || web.status >= 400) && Object.keys(secHeaders || {}).length > 0) {
+                    const webCtype = String(web.headers['content-type'] || '').toLowerCase();
+                    const isHtmlApp = web.status >= 200 && web.status < 300 && webCtype.includes('html');
+                    if (isHtmlApp && Object.keys(secHeaders || {}).length > 0) {
                       const headerSeverity: Record<string, string> = {
                         'Strict-Transport-Security': 'medium',
                         'Content-Security-Policy': 'medium',
@@ -3089,9 +3093,12 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                     }
                   } catch {}
                 } else if ([80,443,8080,8443,3000,5000,8000,9000].includes(port)) {
-                  // Even if fetchURL failed, create findings from bannerGrab headers (skip on redirects)
+                  // Even if fetchURL failed, create findings from bannerGrab headers — again only when the
+                  // response is an HTML page, never for redirects, edge errors or plain-text bodies.
                   const ph = probe.headers;
-                  if ((probe.status < 300 || probe.status >= 400) && Object.keys(ph || {}).length > 0) {
+                  const probeCtype = String((ph || {})['content-type'] || '').toLowerCase();
+                  const probeIsHtml = probe.status >= 200 && probe.status < 300 && probeCtype.includes('html');
+                  if (probeIsHtml && Object.keys(ph || {}).length > 0) {
                     const headerSeverity: Record<string, string> = {
                       'Strict-Transport-Security': 'medium',
                       'Content-Security-Policy': 'medium',
