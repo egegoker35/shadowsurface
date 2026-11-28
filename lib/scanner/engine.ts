@@ -3217,10 +3217,9 @@ function calculateRiskScores(assets: DiscoveredAsset[], cloudAssets: CloudAsset[
     // Baseline: internet-exposed service on public IP
     score += 12;
     score += a.port && a.port < 1024 ? 4 : 2;
-    // Banner/technology enrichment bonus
-    if (a.banner && a.banner.length > 5) score += 3;
-    if (a.technology && a.technology !== 'Unknown' && a.technology !== 'HTTP' && a.technology !== 'HTTPS') score += 5;
-    if (a.version) score += 4;
+    // No points for fingerprint detail (banner length, detected technology, version). Knowing
+    // more about a host is not extra risk, and it made two scans of the same unchanged target
+    // produce different scores. Only observable exposure and findings move the score.
     // Non-standard web port
     if ([3000,5000,8000,8080,8081,9000,9090].includes(a.port)) score += 4;
     // CVE impact
