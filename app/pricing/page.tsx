@@ -224,11 +224,22 @@ export default function PricingPage() {
           <h1 className="mb-4 font-serif text-[2.5rem] font-normal leading-[1.08] tracking-[-0.02em] text-cream sm:text-[3.1rem]">
             Simple, transparent pricing
           </h1>
-          <p className="text-lg text-dim max-w-2xl mx-auto mb-12">
-            {USDT_ADDRESS_FORMAT_OK
-              ? 'Pay with crypto. No hidden fees. Cancel anytime.'
-              : 'Online checkout is paused while we update the payment wallet. Email us and we will activate your plan manually.'}
-          </p>
+          {USDT_ADDRESS_FORMAT_OK ? (
+            <p className="mx-auto mb-12 max-w-2xl text-lg text-dim">
+              Pay with crypto. No hidden fees. Cancel anytime.
+            </p>
+          ) : (
+            <div className="mx-auto mb-10 flex max-w-xl items-start gap-2.5 border border-[#DDB271]/30 bg-[#DDB271]/10 px-4 py-3 text-left">
+              <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 bg-[#DDB271]" />
+              <p className="text-[12.5px] leading-relaxed text-[#E5C48D]">
+                Online checkout is paused while the payment wallet is updated. Email{' '}
+                <a href="mailto:egegoker35@gmail.com" className="underline underline-offset-2">
+                  egegoker35@gmail.com
+                </a>{' '}
+                and the plan is activated manually.
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 max-w-7xl mx-auto">
             {plans.map((plan) => {
@@ -273,16 +284,16 @@ export default function PricingPage() {
             <span className="text-faint">/</span>
             <span>Scope · external surface only</span>
           </div>
-          <p className="mt-4 text-center text-[10px] text-faint">We do not perform intrusive or exploitative scanning.</p>
+          <p className="mt-4 text-center text-[10px] text-faint">Every finding is reported with the request and response that produced it.</p>
         </div>
       </section>
 
       {modalOpen && selectedPlan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/80 backdrop-blur-sm p-4" onClick={() => setModalOpen(false)}>
-          <div className="bg-ink2 border border-cream/15 rounded-2xl p-8 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-ink2 border border-cream/15 rounded-[3px] p-8 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             {step === 'form' && (
               <>
-                <h2 className="text-xl font-bold mb-1">{selectedPlan.name} Plan</h2>
+                <h2 className="mb-1 font-serif text-[1.6rem] font-normal leading-tight tracking-[-0.01em] text-cream">{selectedPlan.name} plan</h2>
                 <p className="text-dim text-sm mb-6">{selectedPlan.price} / month</p>
                 {verifyError && <div className="text-[#E28B7B] bg-[#E28B7B]/10 border border-[#E28B7B]/30 rounded-lg px-3 py-2 text-sm mb-3">{verifyError}</div>}
                 <form onSubmit={submitLead} className="space-y-4">
@@ -298,8 +309,8 @@ export default function PricingPage() {
                     <label className="block text-sm text-dim mb-1">Company</label>
                     <input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className="w-full px-4 py-3 rounded-lg bg-ink border border-cream/15 focus:outline-none focus:ring-2 focus:ring-jade/40 text-cream" placeholder="Acme Inc" />
                   </div>
-                  <button type="submit" disabled={formSubmitting} className="w-full py-3 rounded-lg bg-jade hover:bg-[#6FC7A5] text-ink font-semibold disabled:opacity-50 transition-colors">
-                    {formSubmitting ? 'Processing...' : 'Continue to Payment'}
+                  <button type="submit" disabled={formSubmitting} className="w-full rounded-[3px] bg-jade py-3 font-semibold text-ink transition-colors hover:bg-[#6FC7A5] disabled:opacity-50">
+                    {formSubmitting ? 'Processing...' : USDT_ADDRESS_FORMAT_OK ? 'Continue to Payment' : 'Continue'}
                   </button>
                 </form>
               </>
@@ -311,7 +322,7 @@ export default function PricingPage() {
                   <div className="w-12 h-12 bg-jade/10 rounded-full flex items-center justify-center mx-auto mb-3">
                     <svg className="w-6 h-6 text-jade" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                   </div>
-                  <h2 className="text-xl font-bold">Complete Your Payment</h2>
+                  <h2 className="font-serif text-[1.6rem] font-normal tracking-[-0.01em] text-cream">Complete your payment</h2>
                   <p className="text-dim text-sm">{selectedPlan.name} — {selectedPlan.price}</p>
                 </div>
 
@@ -352,13 +363,25 @@ export default function PricingPage() {
                   )}
                 </div>
 
-                <button
-                  onClick={() => setStep('verify')}
-                  disabled={!USDT_ADDRESS_FORMAT_OK}
-                  className="mt-4 w-full py-3 rounded-lg bg-jade hover:bg-[#6FC7A5] text-ink font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  I Have Paid — Verify Now
-                </button>
+                {USDT_ADDRESS_FORMAT_OK ? (
+                  <button
+                    onClick={() => setStep('verify')}
+                    className="mt-4 w-full rounded-[3px] bg-jade py-3 font-semibold text-ink transition-colors hover:bg-[#6FC7A5]"
+                  >
+                    I Have Paid — Verify Now
+                  </button>
+                ) : (
+                  <a
+                    href={`mailto:egegoker35@gmail.com?subject=${encodeURIComponent(
+                      `Plan activation: ${selectedPlan.name} (${selectedPlan.price}/month)`
+                    )}&body=${encodeURIComponent(
+                      `Name: ${form.name}\nCompany: ${form.company || '-'}\nEmail: ${form.email}\nPlan: ${selectedPlan.name}\n\nPlease activate this plan.`
+                    )}`}
+                    className="mt-4 block w-full rounded-[3px] bg-jade py-3 text-center font-semibold text-ink transition-colors hover:bg-[#6FC7A5]"
+                  >
+                    Email to activate this plan
+                  </a>
+                )}
               </>
             )}
 
@@ -368,7 +391,7 @@ export default function PricingPage() {
                   <div className="w-12 h-12 bg-jade/10 rounded-full flex items-center justify-center mx-auto mb-3">
                     <svg className="w-6 h-6 text-jade" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   </div>
-                  <h2 className="text-xl font-bold">Verify Payment</h2>
+                  <h2 className="font-serif text-[1.6rem] font-normal tracking-[-0.01em] text-cream">Verify payment</h2>
                   <p className="text-dim text-sm">Enter your transaction hash (TxID) from TronScan</p>
                 </div>
                 <form onSubmit={verifyPayment} className="space-y-4">
@@ -392,7 +415,7 @@ export default function PricingPage() {
                 <div className="w-16 h-16 bg-jade/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-8 h-8 text-jade" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                 </div>
-                <h2 className="text-2xl font-bold text-jade">Payment Verified!</h2>
+                <h2 className="font-serif text-[1.8rem] font-normal tracking-[-0.01em] text-jade">Payment verified</h2>
                 <p className="text-dim text-sm mt-2">Your {selectedPlan?.name} plan is now active.</p>
                 {tempPassword && (
                   <div className="mt-4 text-left bg-ink border border-cream/12 rounded-xl p-4">
