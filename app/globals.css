@@ -3,24 +3,28 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 15, 23, 42;
-  --background-end-rgb: 2, 6, 23;
+  --ink: #0b0b0a;
+  --cream: #ede8dd;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(to bottom, transparent, rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
+  color: var(--cream);
+  background: var(--ink);
   min-height: 100vh;
 }
 
-@keyframes scanline {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100%); }
+::selection {
+  background: rgba(237, 232, 221, 0.22);
+  color: var(--cream);
 }
 
-.scanline {
-  animation: scanline 3s linear infinite;
+:focus-visible {
+  outline: 2px solid rgba(237, 232, 221, 0.45);
+  outline-offset: 2px;
 }
 
 /* Both the full report and the change report are handed to customers as PDF. Anything

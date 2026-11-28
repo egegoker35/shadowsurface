@@ -34,56 +34,89 @@ const ROWS = [
 ];
 
 function riskTone(score: number) {
-  if (score >= 70) return 'text-orange-400 border-orange-400/30 bg-orange-400/10';
-  if (score >= 40) return 'text-amber-400 border-amber-400/30 bg-amber-400/10';
-  return 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10';
+  if (score >= 70) return 'text-[#A8431F] border-[#A8431F]/35';
+  if (score >= 40) return 'text-[#8A5A12] border-[#8A5A12]/35';
+  return 'text-[#2F6B4A] border-[#2F6B4A]/35';
 }
 
 export default function ReportPreview() {
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/40 overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800 bg-slate-900/70">
-        <span className="font-mono text-[11px] text-slate-400">report / example-corp.com</span>
-        <span className="font-mono text-[11px] text-slate-500">4 assets · 61s</span>
-      </div>
-
-      <div className="grid grid-cols-[minmax(0,1fr)_56px_44px] gap-2 px-4 py-2 border-b border-slate-800/70">
-        <span className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Asset</span>
-        <span className="text-[10px] uppercase tracking-[0.14em] text-slate-500 text-right">Risk</span>
-        <span className="text-[10px] uppercase tracking-[0.14em] text-slate-500 text-right">Port</span>
-      </div>
-
-      <ul className="divide-y divide-slate-800/60">
-        {ROWS.map((r) => (
-          <li key={r.host + r.port} className="px-4 py-3">
-            <div className="grid grid-cols-[minmax(0,1fr)_56px_44px] gap-2 items-baseline">
-              <span className="min-w-0 font-mono text-[13px] text-slate-200 truncate">{r.host}</span>
-              <span className={`justify-self-end rounded border px-1.5 py-0.5 font-mono text-[11px] ${riskTone(r.risk)}`}>
-                {r.risk}
-              </span>
-              <span className="justify-self-end font-mono text-[11px] text-slate-500">{r.port}</span>
+    <div className="relative">
+      {/* second sheet, so the artifact reads as a printed stack rather than a UI card */}
+      <div
+        aria-hidden
+        className="absolute inset-x-2 -bottom-2 top-3 bg-paper/25"
+      />
+      <div className="relative bg-paper text-[#141310]">
+        <div className="flex items-start justify-between border-b border-black/15 px-5 py-4">
+          <div>
+            <div className="font-mono text-[8.5px] uppercase tracking-[0.18em] text-black/45">
+              External attack surface report
             </div>
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span className="font-mono text-[10px] text-slate-500">{r.service}</span>
-              <span className="font-mono text-[10px] text-slate-500">{r.tech}</span>
+            <div className="mt-1.5 font-serif text-[19px] leading-none">example-corp.com</div>
+          </div>
+          <div className="text-right">
+            <div className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-black/45">
+              Risk
             </div>
-            <div className="mt-1.5 space-y-0.5">
-              {r.findings.map((f) => (
-                <div key={f} className="flex items-start gap-1.5">
-                  <span className="mt-[5px] h-1 w-1 shrink-0 rounded-full bg-slate-600" />
-                  <span className="text-[11px] leading-snug text-slate-400">{f}</span>
-                </div>
-              ))}
-            </div>
-          </li>
-        ))}
-      </ul>
+            <div className="mt-1 font-mono text-[15px] leading-none text-[#8A5A12]">61 / 100</div>
+          </div>
+        </div>
 
-      <div className="flex flex-col gap-1 px-4 py-2.5 border-t border-slate-800 bg-slate-900/70 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-        <span className="text-[10px] leading-snug text-slate-500">
-          Sample output. Each finding links to its request and response.
-        </span>
-        <span className="shrink-0 font-mono text-[10px] text-slate-500">MEDIUM · 61</span>
+        <div className="flex items-center justify-between border-b border-black/10 px-5 py-2 font-mono text-[9px] uppercase tracking-[0.1em] text-black/45">
+          <span>4 assets · 12 hosts</span>
+          <span>run 04 · 61s</span>
+        </div>
+
+        <div className="grid grid-cols-[minmax(0,1fr)_38px_34px] gap-2 border-b border-black/15 px-5 py-1.5">
+          <span className="font-mono text-[8px] uppercase tracking-[0.14em] text-black/40">Asset</span>
+          <span className="text-right font-mono text-[8px] uppercase tracking-[0.14em] text-black/40">
+            Risk
+          </span>
+          <span className="text-right font-mono text-[8px] uppercase tracking-[0.14em] text-black/40">
+            Port
+          </span>
+        </div>
+
+        <ul>
+          {ROWS.map((r) => (
+            <li key={r.host + r.port} className="border-b border-black/10 px-5 py-2.5 last:border-b-0">
+              <div className="grid grid-cols-[minmax(0,1fr)_38px_34px] items-baseline gap-2">
+                <span className="min-w-0 truncate font-mono text-[11px]">{r.host}</span>
+                <span
+                  className={`justify-self-end border px-1 py-px font-mono text-[9.5px] leading-tight ${riskTone(
+                    r.risk
+                  )}`}
+                >
+                  {r.risk}
+                </span>
+                <span className="justify-self-end font-mono text-[9.5px] text-black/45">{r.port}</span>
+              </div>
+              <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 font-mono text-[8.5px] text-black/40">
+                <span>{r.service}</span>
+                <span aria-hidden>·</span>
+                <span>{r.tech}</span>
+              </div>
+              <div className="mt-1 space-y-px">
+                {r.findings.map((f) => (
+                  <div key={f} className="flex items-start gap-1.5">
+                    <span aria-hidden className="mt-[6px] h-0.5 w-1.5 shrink-0 bg-black/30" />
+                    <span className="text-[10px] leading-snug text-black/75">{f}</span>
+                  </div>
+                ))}
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <div className="flex items-center justify-between gap-3 border-t border-black/15 px-5 py-2.5">
+          <span className="text-[9.5px] leading-snug text-black/50">
+            Sample output. Each finding links to its request and response.
+          </span>
+          <span className="shrink-0 font-mono text-[8.5px] uppercase tracking-[0.12em] text-[#8A5A12]">
+            Medium
+          </span>
+        </div>
       </div>
     </div>
   );

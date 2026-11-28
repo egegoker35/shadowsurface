@@ -1,12 +1,22 @@
 import './globals.css';
 import { ReactNode } from 'react';
-import { Inter, JetBrains_Mono } from 'next/font/google';
+import { Inter, JetBrains_Mono, Newsreader } from 'next/font/google';
 
 // Typography is part of the product: without an explicit family every visitor gets their
 // browser default (serif on Windows), which is why the site rendered differently per machine.
 // next/font self-hosts these at build time, so there is no runtime request to Google.
+// Three roles: Inter for UI, JetBrains Mono for machine-generated values, Newsreader for
+// display headings so the marketing surface reads like a published report.
 const sans = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
 const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono', display: 'swap' });
+const serif = Newsreader({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  style: ['normal', 'italic'],
+  variable: '--font-serif',
+  display: 'swap',
+});
+
 export const metadata = {
   title: 'ShadowSurface - Cloud Attack Surface Intelligence Platform',
   description: 'Discover, monitor, and secure your external attack surface with automated subdomain enumeration, port scanning, CVE mapping, and cloud misconfiguration detection.',
@@ -60,7 +70,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={`${sans.variable} ${mono.variable} font-sans antialiased text-white bg-slate-950`}>
+      <body className={`${sans.variable} ${mono.variable} ${serif.variable} font-sans antialiased text-cream bg-ink`}>
         {children}
       </body>
     </html>

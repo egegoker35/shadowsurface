@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import SchemaOrg from '@/components/SchemaOrg';
@@ -143,10 +143,10 @@ const LEDGER = [
 ];
 
 const BANDS = [
-  { label: 'LOW', range: '0–39', tone: 'bg-emerald-500/70', text: 'text-emerald-400', width: 'w-[40%]' },
-  { label: 'MEDIUM', range: '40–69', tone: 'bg-amber-500/70', text: 'text-amber-400', width: 'w-[30%]' },
-  { label: 'HIGH', range: '70–84', tone: 'bg-orange-500/70', text: 'text-orange-400', width: 'w-[15%]' },
-  { label: 'CRITICAL', range: '85–100', tone: 'bg-red-500/70', text: 'text-red-400', width: 'w-[15%]' },
+  { label: 'Low', range: '0–39', tone: 'bg-[#4C8C6B]', text: 'text-[#6FA98A]', width: 'w-[40%]' },
+  { label: 'Medium', range: '40–69', tone: 'bg-[#B58A45]', text: 'text-[#C4A16B]', width: 'w-[30%]' },
+  { label: 'High', range: '70–84', tone: 'bg-[#C06B45]', text: 'text-[#CF8A67]', width: 'w-[15%]' },
+  { label: 'Critical', range: '85–100', tone: 'bg-[#B0453C]', text: 'text-[#C9726A]', width: 'w-[15%]' },
 ];
 
 const AUDIENCE = [
@@ -163,6 +163,31 @@ const AUDIENCE = [
     body: 'Reconnaissance and a client-ready report in one pass, with the request and response behind every finding so the client can reproduce it.',
   },
 ];
+
+const SPECS = [
+  { v: '407', l: 'TCP ports in the engine' },
+  { v: '2,292', l: 'hostnames in the DNS dictionary' },
+  { v: '456', l: 'CVE records checked against MITRE' },
+  { v: '0', l: 'CVEs reported without a version' },
+];
+
+function Label({ n, children }: { n: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">
+      <span className="text-cream/45">{n}</span>
+      <span aria-hidden className="h-px w-5 bg-cream/20" />
+      <span>{children}</span>
+    </div>
+  );
+}
+
+function SectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <h2 className="mt-5 font-serif text-[2rem] leading-[1.12] tracking-[-0.015em] text-cream sm:text-[2.35rem]">
+      {children}
+    </h2>
+  );
+}
 
 export default function LandingPage() {
   const [target, setTarget] = useState('');
@@ -199,99 +224,100 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-emerald-500/30">
+    <div className="min-h-screen bg-ink text-cream selection:bg-cream/20 selection:text-ink">
       <SchemaOrg />
       <Navbar />
 
-      {/* ─── HERO ─────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden pt-24 pb-16 px-6">
-        {/* depth: blueprint grid + soft glow, no imagery */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.18]"
-          style={{
-            backgroundImage:
-              'linear-gradient(to right, rgb(148 163 184 / 0.25) 1px, transparent 1px), linear-gradient(to bottom, rgb(148 163 184 / 0.25) 1px, transparent 1px)',
-            backgroundSize: '56px 56px',
-            maskImage: 'radial-gradient(ellipse 70% 60% at 50% 0%, black 20%, transparent 75%)',
-            WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 50% 0%, black 20%, transparent 75%)',
-          }}
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-40 left-1/2 h-[32rem] w-[52rem] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-[110px]"
-        />
+      {/* ─── 01 HERO ──────────────────────────────────────────── */}
+      <section className="px-6 pb-20 pt-32 sm:pt-36">
+        <div className="mx-auto grid max-w-[1180px] items-start gap-14 lg:grid-cols-[minmax(0,1fr)_452px] lg:gap-16">
+          <div>
+            <div className="flex items-center gap-3">
+              <span aria-hidden className="h-px w-8 bg-cream/25" />
+              <span className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-dim">
+                External attack surface management
+              </span>
+            </div>
 
-        <div className="relative max-w-6xl mx-auto grid lg:grid-cols-12 gap-12 lg:gap-14 items-start">
-          <div className="lg:col-span-7">
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-400/80 mb-5">
-              External attack surface management
-            </p>
-            <h1 className="text-[1.95rem] sm:text-[2.5rem] font-semibold tracking-tight leading-[1.12] text-white">
-              Find what you have exposed, before someone else does.
+            <h1 className="mt-7 max-w-[19ch] font-serif text-[2.5rem] leading-[1.06] tracking-[-0.02em] text-cream sm:max-w-none sm:text-[3.1rem] lg:text-[3.35rem]">
+              Find what you have exposed,
+              <span className="block italic text-cream/65">before someone else does.</span>
             </h1>
-            <p className="mt-6 text-base sm:text-lg text-slate-400 leading-relaxed max-w-xl">
-              ShadowSurface enumerates your subdomains, fingerprints every open service and maps
-              CVEs to the exact version it detected. Every finding in the report is backed by the
-              request and response that produced it.
+
+            <p className="mt-7 max-w-[34rem] text-[15.5px] leading-[1.75] text-dim">
+              ShadowSurface enumerates your subdomains, fingerprints every open service and maps CVEs
+              to the exact version it detected. Every finding in the report is backed by the request
+              and response that produced it.
             </p>
 
-            <div className="mt-8 max-w-xl">
-              <label htmlFor="scan-target" className="block text-xs font-medium text-slate-400 mb-2">
+            <div className="mt-9 max-w-[34rem]">
+              <label
+                htmlFor="scan-target"
+                className="mb-2 block font-mono text-[10px] uppercase tracking-[0.16em] text-faint"
+              >
                 Domain
               </label>
-              <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <input
                   id="scan-target"
                   value={target}
                   onChange={(e) => setTarget(e.target.value)}
-                  placeholder="example.com"
+                  placeholder="yourcompany.com"
                   autoComplete="off"
                   spellCheck={false}
-                  className="flex-1 px-3.5 py-2.5 rounded-md bg-slate-900 border border-slate-700 font-mono text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  className="flex-1 rounded-[3px] border border-cream/15 bg-ink2 px-3.5 py-3 font-mono text-[13px] text-cream placeholder:text-faint focus:border-cream/45 focus:outline-none"
                   onKeyDown={(e) => e.key === 'Enter' && runDemo()}
                 />
                 <button
                   onClick={runDemo}
                   disabled={loading}
-                  className="px-5 py-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="rounded-[3px] bg-cream px-5 py-3 text-[13px] font-semibold text-ink transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading ? 'Scanning…' : 'Run scan'}
                 </button>
               </div>
-              <p className="mt-2.5 text-xs text-slate-500">
-                Three free scans per 30 minutes. The demo checks the first 800 hostnames over HTTP(S).
+              <p className="mt-2.5 text-[11.5px] leading-relaxed text-faint">
+                Three free scans per 30 minutes. The demo covers HTTP(S) and the first 800 dictionary
+                entries — no account needed.
               </p>
-              {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+              {error && <p className="mt-3 text-[13px] text-[#C9726A]">{error}</p>}
               {result && <DemoResult result={result} />}
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-              <Link href="/register" className="text-emerald-400 hover:text-emerald-300 font-medium">
+            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px]">
+              <Link
+                href="/register"
+                className="text-cream underline decoration-cream/30 underline-offset-4 transition-colors hover:decoration-cream"
+              >
                 Create an account
               </Link>
-              <span className="text-slate-700">·</span>
-              <Link href="/pricing" className="text-slate-400 hover:text-slate-200">
+              <Link href="/pricing" className="text-dim transition-colors hover:text-cream">
                 Plans and limits
               </Link>
             </div>
           </div>
 
-          <div className="lg:col-span-5 w-full lg:pt-2">
+          <div className="w-full">
+            <div className="mb-3 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.16em] text-faint">
+              <span>Sample output</span>
+              <span>Report / 01</span>
+            </div>
             <ReportPreview />
-            <div className="mt-3 rounded-md border border-slate-800 bg-slate-900/30 px-3.5 py-2.5">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500 mb-1.5">How that risk is built</p>
-              <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+            <div className="mt-5 border-t border-cream/10 pt-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-faint">
+                How the risk score is built
+              </p>
+              <div className="mt-2.5 flex h-1 w-full overflow-hidden bg-cream/10">
                 {BANDS.map((b) => (
                   <span key={b.label} className={`${b.tone} ${b.width}`} />
                 ))}
               </div>
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+              <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5">
                 {BANDS.map((b) => (
-                  <span key={b.label} className="flex items-center gap-1 text-[10px] text-slate-500">
-                    <span className={`h-1.5 w-1.5 rounded-full ${b.tone}`} />
+                  <span key={b.label} className="flex items-center gap-1.5 text-[10.5px] text-faint">
+                    <span className={`h-1.5 w-1.5 ${b.tone}`} />
                     <span className={b.text}>{b.label}</span>
-                    <span className="text-slate-600">{b.range}</span>
+                    <span className="font-mono text-cream/25">{b.range}</span>
                   </span>
                 ))}
               </div>
@@ -301,147 +327,161 @@ export default function LandingPage() {
       </section>
 
       {/* ─── REAL CAPABILITY NUMBERS ──────────────────────────── */}
-      <section className="border-y border-slate-800/70 bg-slate-900/20">
-        <div className="max-w-6xl mx-auto px-6 py-5">
-          <dl className="grid grid-cols-2 lg:grid-cols-4 gap-y-5 gap-x-8">
-            {[
-              { v: '456', l: 'CVE records checked against MITRE' },
-              { v: '2,292', l: 'subdomain dictionary entries' },
-              { v: '407', l: 'TCP ports in the engine' },
-              { v: '0', l: 'CVEs reported without a detected version' },
-            ].map((s) => (
-              <div key={s.l} className="group">
-                <dt className="font-mono text-xl text-white group-hover:text-emerald-400 transition-colors">{s.v}</dt>
-                <dd className="mt-0.5 text-xs text-slate-500 leading-snug">{s.l}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
+      <section className="border-y border-cream/10">
+        <dl className="mx-auto grid max-w-[1180px] grid-cols-2 gap-px bg-cream/10 sm:grid-cols-4">
+          {SPECS.map((s) => (
+            <div key={s.l} className="bg-ink px-6 py-7">
+              <dt className="font-mono text-[1.6rem] leading-none text-cream">{s.v}</dt>
+              <dd className="mt-2 text-[11.5px] leading-snug text-faint">{s.l}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
-      {/* ─── METHOD ───────────────────────────────────────────── */}
-      <section id="method" className="py-20 px-6">
-        <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-10 lg:gap-16">
+      {/* ─── 02 METHOD ────────────────────────────────────────── */}
+      <section id="method" className="px-6 py-20 sm:py-24">
+        <div className="mx-auto grid max-w-[1180px] gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-4">
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 mb-4">Method</p>
-            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-snug">
-              How a scan runs
-            </h2>
-            <p className="mt-4 text-sm text-slate-400 leading-relaxed">
-              Four stages. Each one produces the evidence the next stage depends on, and nothing
-              leaves the last stage without it.
-            </p>
-            <div className="mt-6 hidden lg:block">
-              <div className="font-mono text-[11px] text-slate-600">engine.ts</div>
-              <div className="mt-1 space-y-1 border-l border-slate-800 pl-3">
-                <p className="font-mono text-[11px] text-slate-500">enumerate() → hosts[]</p>
-                <p className="font-mono text-[11px] text-slate-500">probe() → services[]</p>
-                <p className="font-mono text-[11px] text-slate-500">match() → cves[]</p>
-                <p className="font-mono text-[11px] text-emerald-500/70">gate() → findings[]</p>
+            <div className="lg:sticky lg:top-24">
+              <Label n="02">Method</Label>
+              <SectionTitle>How a scan runs</SectionTitle>
+              <p className="mt-4 max-w-sm text-[14px] leading-[1.75] text-dim">
+                Four stages. Each one produces the evidence the next stage depends on, and nothing
+                leaves the last stage without it.
+              </p>
+              <div className="mt-7 hidden border-l border-cream/15 pl-4 lg:block">
+                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">engine.ts</p>
+                <div className="mt-2 space-y-1.5">
+                  <p className="font-mono text-[11px] text-dim">enumerate() → hosts[]</p>
+                  <p className="font-mono text-[11px] text-dim">probe() → services[]</p>
+                  <p className="font-mono text-[11px] text-dim">match() → cves[]</p>
+                  <p className="font-mono text-[11px] text-cream/80">gate() → findings[]</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="lg:col-span-8 divide-y divide-slate-800/80 border-t border-slate-800/80">
-            {METHOD.map((m) => (
-              <div key={m.step} className="py-6 grid sm:grid-cols-[44px_1fr] gap-x-5 gap-y-2 group">
-                <span className="font-mono text-xs text-slate-600 pt-1 group-hover:text-emerald-500/70 transition-colors">
-                  {m.step}
-                </span>
-                <div>
-                  <h3 className="text-sm font-semibold text-white">{m.name}</h3>
-                  <p className="mt-1.5 text-sm text-slate-400 leading-relaxed">{m.runs}</p>
-                  <p className="mt-2 text-[13px] text-slate-500 leading-relaxed border-l border-slate-800 pl-3">
-                    {m.proof}
-                  </p>
-                </div>
-              </div>
-            ))}
+          <div className="lg:col-span-8">
+            <ol className="border-t border-cream/12">
+              {METHOD.map((m) => (
+                <li
+                  key={m.step}
+                  className="group grid gap-x-6 gap-y-2 border-b border-cream/12 py-6 sm:grid-cols-[3rem_1fr]"
+                >
+                  <span className="font-mono text-[11px] text-faint transition-colors group-hover:text-cream">
+                    {m.step}
+                  </span>
+                  <div>
+                    <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-cream">{m.name}</h3>
+                    <p className="mt-1.5 text-[13.5px] leading-relaxed text-dim">{m.runs}</p>
+                    <p className="mt-2.5 border-l border-cream/15 pl-3 text-[12.5px] leading-relaxed text-faint">
+                      {m.proof}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
           </div>
         </div>
       </section>
 
-      {/* ─── COVERAGE EXPLORER ────────────────────────────────── */}
-      <section id="coverage" className="py-20 px-6 border-t border-slate-800/70 bg-slate-900/20">
-        <div className="max-w-6xl mx-auto">
-          <div className="max-w-2xl">
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 mb-4">Coverage</p>
-            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-snug">
-              What gets checked
-            </h2>
-            <p className="mt-4 text-sm text-slate-400 leading-relaxed">
-              Five groups of checks, all from the internet side. Pick one to see the technique
-              behind it.
+      {/* ─── 03 COVERAGE ──────────────────────────────────────── */}
+      <section id="coverage" className="border-t border-cream/10 px-6 py-20 sm:py-24">
+        <div className="mx-auto max-w-[1180px]">
+          <div className="max-w-[36rem]">
+            <Label n="03">Coverage</Label>
+            <SectionTitle>What gets checked</SectionTitle>
+            <p className="mt-4 text-[14px] leading-[1.75] text-dim">
+              Five groups of checks, all from the internet side. Pick one to see the technique behind
+              it.
             </p>
           </div>
 
-          <div className="mt-9 rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden">
-            <div className="flex flex-wrap gap-px bg-slate-800/60">
+          <div className="mt-9">
+            <div className="flex flex-wrap gap-px border border-cream/12 bg-cream/12">
               {TABS.map((t) => (
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
                   aria-selected={tab === t.id}
-                  className={`flex-1 min-w-[110px] px-4 py-3 text-xs font-medium transition-colors ${
+                  className={`flex-1 px-4 py-3 font-mono text-[10.5px] uppercase tracking-[0.14em] transition-colors ${
                     tab === t.id
-                      ? 'bg-slate-900 text-emerald-400'
-                      : 'bg-slate-950 text-slate-500 hover:text-slate-300 hover:bg-slate-900/60'
+                      ? 'bg-cream text-ink'
+                      : 'bg-ink text-faint hover:bg-ink2 hover:text-cream'
                   }`}
                 >
                   {t.label}
                 </button>
               ))}
             </div>
-            <div className="p-5 sm:p-6">
-              <p className="text-sm text-slate-300">{activeTab.blurb}</p>
-              <dl className="mt-4 divide-y divide-slate-800/70">
+
+            <div className="border-x border-b border-cream/12 px-5 py-6 sm:px-6">
+              <p className="text-[13.5px] text-cream">{activeTab.blurb}</p>
+              <dl className="mt-4 border-t border-cream/10">
                 {activeTab.items.map((i) => (
-                  <div key={i.name} className="py-3 grid sm:grid-cols-[190px_1fr] gap-x-6 gap-y-1">
-                    <dt className="text-[13px] font-medium text-slate-200">{i.name}</dt>
-                    <dd className="text-[13px] text-slate-500 leading-relaxed">{i.how}</dd>
+                  <div
+                    key={i.name}
+                    className="grid gap-x-6 gap-y-0.5 border-b border-cream/10 py-3 sm:grid-cols-[210px_1fr]"
+                  >
+                    <dt className="text-[13px] font-medium text-cream/90">{i.name}</dt>
+                    <dd className="font-mono text-[11.5px] leading-relaxed text-faint">{i.how}</dd>
                   </div>
                 ))}
               </dl>
             </div>
           </div>
 
-          <p className="mt-5 text-xs text-slate-500">
-            Full technical detail on <Link href="/features" className="text-slate-400 underline decoration-slate-700 underline-offset-2 hover:text-slate-200">the features page</Link>.
+          <p className="mt-5 text-[12.5px] text-faint">
+            Full technical detail on{' '}
+            <Link
+              href="/features"
+              className="text-dim underline decoration-cream/20 underline-offset-4 hover:text-cream"
+            >
+              the features page
+            </Link>
+            .
           </p>
         </div>
       </section>
 
-      {/* ─── LEDGER: WHAT WE STOPPED REPORTING ────────────────── */}
-      <section className="py-20 px-6 border-t border-slate-800/70">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-12 gap-10 lg:gap-16">
+      {/* ─── 04 RESTRAINT (paper) ─────────────────────────────── */}
+      <section className="bg-paper px-6 py-20 text-ink sm:py-24">
+        <div className="mx-auto max-w-[1180px]">
+          <div className="grid gap-10 lg:grid-cols-12 lg:gap-16">
             <div className="lg:col-span-4">
-              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 mb-4">Restraint</p>
-              <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-snug">
+              <div className="flex items-center gap-3 font-mono text-[10.5px] uppercase tracking-[0.18em] text-ink/45">
+                <span>04</span>
+                <span aria-hidden className="h-px w-5 bg-ink/25" />
+                <span>Restraint</span>
+              </div>
+              <h2 className="mt-5 font-serif text-[2rem] leading-[1.12] tracking-[-0.015em] text-ink sm:text-[2.35rem]">
                 What we stopped reporting
               </h2>
-              <p className="mt-4 text-sm text-slate-400 leading-relaxed">
-                A scanner is only useful if its findings survive scrutiny. Every row below is a
-                class of false positive this engine used to produce, and the rule that replaced it.
+              <p className="mt-4 max-w-sm text-[14px] leading-[1.75] text-ink/70">
+                A scanner is only useful if its findings survive scrutiny. Every row below is a class
+                of false positive this engine used to produce, and the rule that replaced it.
               </p>
             </div>
 
             <div className="lg:col-span-8">
-              <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 pb-2">
-                <span className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Before</span>
-                <span />
-                <span className="text-[10px] uppercase tracking-[0.14em] text-emerald-500/70">Rule now</span>
+              <div className="grid grid-cols-[1fr_1fr] gap-x-8 border-b border-ink/25 pb-2">
+                <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-ink/45">
+                  Was reported
+                </span>
+                <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-ink/45">
+                  Is reported now
+                </span>
               </div>
-              <ul className="border-t border-slate-800/80">
+              <ul>
                 {LEDGER.map((l) => (
-                  <li key={l.now} className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-1.5 py-4 border-b border-slate-800/80">
-                    <span className="text-[13px] text-slate-500 line-through decoration-slate-700 leading-relaxed">
+                  <li
+                    key={l.now}
+                    className="grid gap-x-8 gap-y-1.5 border-b border-ink/15 py-4 sm:grid-cols-[1fr_1fr]"
+                  >
+                    <span className="text-[12.5px] leading-relaxed text-ink/45 line-through decoration-ink/30">
                       {l.was}
                     </span>
-                    <span aria-hidden className="hidden sm:block text-slate-700 pt-0.5">→</span>
-                    <span className="text-[13px] text-slate-300 leading-relaxed border-l-2 border-emerald-500/30 pl-3 sm:border-l-0 sm:pl-0">
-                      {l.now}
-                    </span>
+                    <span className="text-[12.5px] leading-relaxed text-ink">{l.now}</span>
                   </li>
                 ))}
               </ul>
@@ -450,51 +490,59 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── AUDIENCE ─────────────────────────────────────────── */}
-      <section className="py-20 px-6 border-t border-slate-800/70">
-        <div className="max-w-6xl mx-auto">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 mb-4">Users</p>
-          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-snug">
-            Where it fits
-          </h2>
-          <div className="mt-10 grid sm:grid-cols-3 gap-x-10 gap-y-8">
-            {AUDIENCE.map((a) => (
-              <div key={a.role} className="border-t border-slate-800 pt-5 hover:border-emerald-500/40 transition-colors">
-                <h3 className="text-sm font-semibold text-white">{a.role}</h3>
-                <p className="mt-2 text-sm text-slate-400 leading-relaxed">{a.body}</p>
+      {/* ─── 05 AUDIENCE ──────────────────────────────────────── */}
+      <section className="px-6 py-20 sm:py-24">
+        <div className="mx-auto max-w-[1180px]">
+          <Label n="05">Where it fits</Label>
+          <SectionTitle>Three rooms, one report</SectionTitle>
+          <div className="mt-10 grid gap-x-10 gap-y-8 sm:grid-cols-3">
+            {AUDIENCE.map((a, i) => (
+              <div key={a.role} className="border-t border-cream/15 pt-5">
+                <span className="font-mono text-[10px] text-faint">0{i + 1}</span>
+                <h3 className="mt-2 text-[14px] font-semibold text-cream">{a.role}</h3>
+                <p className="mt-2 text-[13px] leading-[1.7] text-dim">{a.body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── FAQ ──────────────────────────────────────────────── */}
-      <section className="py-20 px-6 border-t border-slate-800/70">
-        <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-10 lg:gap-16">
+      {/* ─── 06 FAQ ───────────────────────────────────────────── */}
+      <section className="border-t border-cream/10 px-6 py-20 sm:py-24">
+        <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-4">
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 mb-4">Questions</p>
-            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-snug">
-              Technical FAQ
-            </h2>
+            <div className="lg:sticky lg:top-24">
+              <Label n="06">Questions</Label>
+              <SectionTitle>Technical FAQ</SectionTitle>
+              <p className="mt-4 max-w-xs text-[13.5px] leading-relaxed text-dim">
+                The answers are the same rules the engine runs on.
+              </p>
+            </div>
           </div>
-          <div className="lg:col-span-8 border-t border-slate-800/80">
-            {FAQS.map((faq, i) => (
-              <div key={faq.q} className="border-b border-slate-800/80">
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full text-left py-4 flex items-start justify-between gap-6 group"
-                  aria-expanded={openFaq === i}
-                >
-                  <span className="text-sm font-medium text-slate-200 group-hover:text-white">{faq.q}</span>
-                  <span className="text-slate-500 text-base leading-none pt-0.5 shrink-0">
-                    {openFaq === i ? '−' : '+'}
-                  </span>
-                </button>
-                {openFaq === i && (
-                  <div className="pb-5 pr-10 text-sm text-slate-400 leading-relaxed">{faq.a}</div>
-                )}
-              </div>
-            ))}
+          <div className="lg:col-span-8">
+            <div className="border-t border-cream/12">
+              {FAQS.map((faq, i) => (
+                <div key={faq.q} className="border-b border-cream/12">
+                  <button
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="group flex w-full items-start justify-between gap-6 py-4 text-left"
+                    aria-expanded={openFaq === i}
+                  >
+                    <span className="text-[14px] font-medium text-cream/90 transition-colors group-hover:text-cream">
+                      {faq.q}
+                    </span>
+                    <span className="shrink-0 pt-0.5 font-mono text-[13px] leading-none text-faint">
+                      {openFaq === i ? '−' : '+'}
+                    </span>
+                  </button>
+                  {openFaq === i && (
+                    <div className="max-w-[46rem] pb-5 pr-8 text-[13px] leading-[1.75] text-dim">
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -502,30 +550,26 @@ export default function LandingPage() {
       <FAQSchema faqs={FAQS.map((f) => ({ q: f.q, a: f.a }))} />
 
       {/* ─── CTA ──────────────────────────────────────────────── */}
-      <section className="relative py-16 px-6 border-t border-slate-800/70 overflow-hidden">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-32 left-1/2 h-64 w-[40rem] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-[100px]"
-        />
-        <div className="relative max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+      <section className="border-t border-cream/10 px-6 py-16">
+        <div className="mx-auto flex max-w-[1180px] flex-col justify-between gap-8 sm:flex-row sm:items-end">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight text-white">
+            <h2 className="font-serif text-[1.8rem] leading-[1.15] tracking-[-0.015em] text-cream sm:text-[2.1rem]">
               Run the first scan on your own domain.
             </h2>
-            <p className="mt-2 text-sm text-slate-400">
+            <p className="mt-3 text-[13.5px] text-dim">
               Free plan covers subdomain discovery and the top 10 ports. No card required.
             </p>
           </div>
-          <div className="flex gap-3 shrink-0">
+          <div className="flex shrink-0 gap-3">
             <Link
               href="/register"
-              className="px-5 py-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-colors"
+              className="rounded-[3px] bg-cream px-5 py-2.5 text-[13px] font-semibold text-ink transition-colors hover:bg-white"
             >
               Create account
             </Link>
             <Link
               href="/pricing"
-              className="px-5 py-2.5 rounded-md border border-slate-700 hover:border-slate-600 text-slate-300 text-sm font-medium transition-colors"
+              className="rounded-[3px] border border-cream/20 px-5 py-2.5 text-[13px] font-medium text-cream transition-colors hover:border-cream/40"
             >
               See pricing
             </Link>
@@ -534,38 +578,54 @@ export default function LandingPage() {
       </section>
 
       {/* ─── FOOTER ───────────────────────────────────────────── */}
-      <footer className="border-t border-slate-800/70 py-12 px-6">
-        <div className="max-w-6xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-8">
+      <footer className="border-t border-cream/10 px-6 pb-10 pt-14">
+        <div className="mx-auto grid max-w-[1180px] grid-cols-2 gap-8 sm:grid-cols-4">
           <div className="col-span-2 sm:col-span-1">
-            <div className="text-sm font-semibold text-white">ShadowSurface</div>
-            <p className="mt-2 text-xs text-slate-500 leading-relaxed">
+            <div className="flex items-center gap-2">
+              <span aria-hidden className="grid h-[14px] w-[14px] grid-cols-2 gap-[3px]">
+                <span className="bg-cream" />
+                <span className="bg-cream/30" />
+                <span className="bg-cream/30" />
+                <span className="bg-cream" />
+              </span>
+              <span className="text-[13px] font-semibold tracking-[-0.01em] text-cream">
+                ShadowSurface
+              </span>
+            </div>
+            <p className="mt-3 max-w-[15rem] text-[11.5px] leading-relaxed text-faint">
               External attack surface management with an evidence trail behind every finding.
             </p>
           </div>
           <div>
-            <div className="text-[11px] uppercase tracking-[0.14em] text-slate-500 mb-3">Product</div>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/features" className="text-slate-400 hover:text-slate-200">Features</Link></li>
-              <li><Link href="/pricing" className="text-slate-400 hover:text-slate-200">Pricing</Link></li>
-              <li><Link href="/register" className="text-slate-400 hover:text-slate-200">Get started</Link></li>
+            <div className="mb-3 font-mono text-[9.5px] uppercase tracking-[0.16em] text-faint">
+              Product
+            </div>
+            <ul className="space-y-2 text-[12.5px]">
+              <li><Link href="/features" className="text-dim hover:text-cream">Features</Link></li>
+              <li><Link href="/pricing" className="text-dim hover:text-cream">Pricing</Link></li>
+              <li><Link href="/register" className="text-dim hover:text-cream">Get started</Link></li>
             </ul>
           </div>
           <div>
-            <div className="text-[11px] uppercase tracking-[0.14em] text-slate-500 mb-3">Company</div>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/blog" className="text-slate-400 hover:text-slate-200">Blog</Link></li>
-              <li><Link href="/contact" className="text-slate-400 hover:text-slate-200">Contact</Link></li>
+            <div className="mb-3 font-mono text-[9.5px] uppercase tracking-[0.16em] text-faint">
+              Company
+            </div>
+            <ul className="space-y-2 text-[12.5px]">
+              <li><Link href="/blog" className="text-dim hover:text-cream">Blog</Link></li>
+              <li><Link href="/contact" className="text-dim hover:text-cream">Contact</Link></li>
             </ul>
           </div>
           <div>
-            <div className="text-[11px] uppercase tracking-[0.14em] text-slate-500 mb-3">Legal</div>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/privacy" className="text-slate-400 hover:text-slate-200">Privacy</Link></li>
-              <li><Link href="/terms" className="text-slate-400 hover:text-slate-200">Terms</Link></li>
+            <div className="mb-3 font-mono text-[9.5px] uppercase tracking-[0.16em] text-faint">
+              Legal
+            </div>
+            <ul className="space-y-2 text-[12.5px]">
+              <li><Link href="/privacy" className="text-dim hover:text-cream">Privacy</Link></li>
+              <li><Link href="/terms" className="text-dim hover:text-cream">Terms</Link></li>
             </ul>
           </div>
         </div>
-        <div className="max-w-6xl mx-auto mt-10 pt-6 border-t border-slate-900 text-xs text-slate-600">
+        <div className="mx-auto mt-10 max-w-[1180px] border-t border-cream/10 pt-5 font-mono text-[10.5px] text-faint">
           © {new Date().getFullYear()} ShadowSurface
         </div>
       </footer>
