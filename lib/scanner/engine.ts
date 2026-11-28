@@ -1,4 +1,4 @@
-import { resolve4, resolveMx, resolveTxt, resolveNs, resolveSoa, resolveCname } from 'dns/promises';
+import { resolve4, resolve6, resolveMx, resolveTxt, resolveNs, resolveSoa, resolveCname } from 'dns/promises';
 import { request as httpRequest } from 'http';
 import { request as httpsRequest } from 'https';
 import { connect as tlsConnect } from 'tls';
@@ -1869,6 +1869,14 @@ function mapCVEs(techs: Array<{ name: string; version?: string }>): CVEMatch[] {
 }
 
 // ─── Advanced Web Vulnerability Scanner (Nessus WAS level) ─────────────────
+import {
+  findNewDbError,
+  findNewCommandOutput,
+  findLeakedSecret,
+  hasUnencodedReflection,
+  reflectionContext,
+} from './detection';
+
 async function detectWebVulnsAdvanced(url: string, headers: Record<string, string>, body: string, status: number): Promise<WebVuln[]> {
   const vulns: WebVuln[] = [];
   const baseUrl = url.split('?')[0];
@@ -1877,68 +1885,11 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
   const respHdrs = headers;
   const hasBody = body && body.length > 0;
 
-  // SQLi Detection (error-based + blind patterns)
-  const sqliPatterns = [
-    { rx: /SQL syntax.*MySQL/i, tech: 'MySQL', payload: "'" },
-    { rx: /Warning.*mysql_.*\(\)/i, tech: 'MySQL' },
-    { rx: /valid MySQL result/i, tech: 'MySQL' },
-    { rx: /MySqlException \(0x/i, tech: 'MySQL' },
-    { rx: /PostgreSQL.*ERROR/i, tech: 'PostgreSQL' },
-    { rx: /Warning.*pg_.*\(\)/i, tech: 'PostgreSQL' },
-    { rx: /PLS-00923.*ORACLE.*error.*ORA-00936/i, tech: 'Oracle' },
-    { rx: /ORA-00933.*SQL command not properly ended/i, tech: 'Oracle' },
-    { rx: /Microsoft SQL Server.*error.*80040e14/i, tech: 'MSSQL' },
-    { rx: /ODBC SQL Server Driver/i, tech: 'MSSQL' },
-    { rx: /SQLServer JDBC Driver/i, tech: 'MSSQL' },
-    { rx: /sqlite3.*operationalerror/i, tech: 'SQLite' },
-    { rx: /no such column/i, tech: 'SQLite/Generic' },
-    { rx: /sqlite3_prepare/i, tech: 'SQLite' },
-    { rx: /DB2 SQL error/i, tech: 'DB2' },
-    { rx: /\[IBM\]\[CLI Driver\]\[DB2\/6000\]/i, tech: 'DB2' },
-    { rx: /MariaDB.*error/i, tech: 'MariaDB' },
-    { rx: /You have an error in your SQL syntax/i, tech: 'Generic' },
-    { rx: /sql error near/i, tech: 'Generic' },
-    { rx: /syntax error.*in query expression/i, tech: 'Generic' },
-    { rx: /unclosed quotation mark/i, tech: 'Generic' },
-    { rx: /quoted string not properly terminated/i, tech: 'Generic' },
-    { rx: /pg_query \(\)\s*\[\]:\s*query failed:/i, tech: 'PostgreSQL' },
-    { rx: /A syntax error has occurred/i, tech: 'Generic' },
-    { rx: /java\.sql\.SQLException/i, tech: 'Java/JDBC' },
-    { rx: /Unexpected end of command in statement/i, tech: 'Generic' },
-    { rx: /Dynamic SQL Error/i, tech: 'Firebird' },
-    { rx: /Sybase message:/i, tech: 'Sybase' },
-    { rx: /Sybase ASE Error/i, tech: 'Sybase' },
-    { rx: /Ingres\s+\|\|\s+Ingres\/Net/i, tech: 'Ingres' },
-    { rx: /Ingres\s+SQL\s+State/i, tech: 'Ingres' },
-    { rx: /SQL Server.*Native Client/i, tech: 'MSSQL' },
-  ];
-  for (const p of sqliPatterns) {
-    if (p.rx.test(body) || p.rx.test(headers['x-debug-error'] || '')) {
-      vulns.push({ type: 'sqli', severity: 'critical', url: baseUrl, description: `SQL injection error pattern detected (${p.tech}) — potential SQLi point`, evidence: body.slice(0,200), confidence: 'likely' });
-      break;
-    }
-  }
-
-  // XSS Detection
-  // Passive XSS markup is NOT reported: identical markup (demo alert() code, security articles, stored samples)
-  // occurs in benign pages, so a passive match is speculation. XSS is only reported by the active reflection probe.
-
-  // LFI / Path Traversal (only strong signals: actual file content or encoded traversal echoes)
-  const lfiPatterns = [
-    /root\s*:\s*x\s*:\s*0\s*:\s*0\s*:/i,
-    /system32\/drivers\/etc\/hosts/i, /\[extensions\]/i, /\[fonts\]/i,
-    /\[MCPI\]/i, /\[PADDING\]/i, /\[Mail\]/i, /\[MCI Extensions\]/i,
-    /\[files\]/i, /\[windows\]/i, /type\s+\w+\s*:\s*directory/i,
-    /php:\/\/filter/i, /php:\/\/input/i, /data:\/\/text\/plain/i,
-    /\.\.\/%2f/i, /%2e%2e%2f/i, /%252e%252e%252f/i,
-    new RegExp('%252e%252e', 'i'), new RegExp('..\\..\\..\\..\\etc\/passwd', 'i'),
-    /..%c0%af..%c0%af..%c0%afetc\/passwd/i,
-    /..%c1%9c..%c1%9c..%c1%9cetc\/passwd/i,
-    /proc\/self\/environ/i, /proc\/version/i, /proc\/cmdline/i,
-  ];
-  for (const rx of lfiPatterns) {
-    if (rx.test(body)) { vulns.push({ type: 'lfi', severity: 'critical', url: baseUrl, description: 'Path traversal / LFI vector — sensitive system content in response', evidence: body.slice(0,200), confidence: 'likely' }); break; }
-  }
+  // Passive SQLi and LFI inference removed. A page that quotes a database error, an
+  // /etc/passwd line or a stack trace is not proof that the page is injectable: documentation,
+  // release notes, security blogs and archived error pages all contain those strings verbatim.
+  // Injection is reported only by the active parameter probe below, which compares the payload
+  // response against the same page without the payload.
 
   // RCE / Command Injection
   // Passive RCE artifacts are NOT reported: ping/id banners appear in ordinary documentation and status pages.
@@ -2010,23 +1961,11 @@ async function detectWebVulnsAdvanced(url: string, headers: Record<string, strin
   if (!hasLoginForm) {
     // A token with a provider-specific format is self-evidencing. A generic KEY=value assignment is
     // only evidence when the value is not a documentation placeholder ("your-password", "example", ...).
-    const formatSecretRx = [
-      /\bAKIA[0-9A-Z]{16}\b/,
-      /-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----/,
-      /\bsk_live_[0-9a-zA-Z]{16,}/,
-      /\bghp_[0-9A-Za-z]{36}\b/,
-      /\bxox[baprs]-[0-9A-Za-z-]{10,}/,
-      /\bAIza[0-9A-Za-z_-]{35}\b/,
-    ];
-    const assignmentSecretRx = /\b(?:DB_|DATABASE_)?(?:PASSWORD|PASSWD|API_KEY|SECRET_KEY|ACCESS_KEY|PRIVATE_KEY|CLIENT_SECRET|APP_KEY|AUTH_TOKEN)\s*[:=]\s*["']([^"']{4,})["']/i;
-    const placeholderValueRx = /^(?:your|example|sample|placeholder|change|xxx|todo|dummy|test|foo|bar|secret|password|passwd|\*{3,}|\.{3,}|<)|\$\{|process\.env/i;
-    let disclosed = formatSecretRx.some(rx => rx.test(body));
-    if (!disclosed) {
-      const m = body.match(assignmentSecretRx);
-      if (m && !placeholderValueRx.test(m[1].trim())) disclosed = true;
-    }
+    // Format-exact, placeholder-aware and redacted by construction (see detection.ts).
+    const leaked = findLeakedSecret(body);
+    const disclosed = leaked !== null;
     if (disclosed) {
-      vulns.push({ type: 'info_disclosure', severity: 'critical', url: baseUrl, description: 'Sensitive configuration or credential leakage detected in response', evidence: body.slice(0,200), confidence: 'confirmed' });
+      vulns.push({ type: 'info_disclosure', severity: 'critical', url: baseUrl, description: `Credential exposed in the response body: ${leaked!.kind}`, evidence: leaked!.display, confidence: 'confirmed' });
     }
   }
 
@@ -2260,51 +2199,82 @@ async function testParameterInjection(baseUrl: string, headers: Record<string, s
   // Active SQLi probe: send quote and apostrophe to common param names
   const sqlPayloads = ["'", "\"", "'--", "';", "\"\"", "' OR '1'='1", "1' AND 1=1--", "1' AND 1=2--"];
   const commonParams = ['id','page','user','search','q','query','s','cat','category','product','item','news','article','post','type','filter','sort','order','limit','offset','ref','token','key','code','name','email','username','password','file','path','url','redirect','return','callback','action','do','cmd','exec','run','view','preview','format','output','lang','locale','currency','amount','price','quantity','sku','ean','upc','isbn','issn','doi','ref_id','referrer','source','medium','campaign','term','content','gclid','fbclid','utm_source','utm_medium','utm_campaign','utm_term','utm_content'];
-  const paramBatch = commonParams.slice(0,18);
+  // Error-based SQL injection. The signature has to appear ONLY in the payload response;
+  // the same page without the payload is the control.
+  const baselineText = body || '';
+  const paramBatch = commonParams.slice(0, 18);
   await Promise.all(paramBatch.map(async (param) => {
-    for (const payload of sqlPayloads.slice(0,2)) { // limit for performance
+    for (const payload of sqlPayloads.slice(0, 2)) { // limit for performance
       try {
         const testUrl = `${base}?${param}=${encodeURIComponent(payload)}`;
         const res = await fetchURL(testUrl, 'GET', { 'Connection': 'close' }, undefined, timeout);
-        const rb = res.body.toLowerCase();
-        if ((/sql syntax|mysql|postgresql|oracle|sqlite|mssql|db2|sybase|unclosed quotation|syntax error|warning.*mysql|valid mysql|pg_query|sqlite3|unexpected end of command|dynamic sql error/i.test(rb)) && res.status >= 200 && res.status < 500) {
-          vulns.push({ type: 'sqli', severity: 'critical', url: testUrl, description: `SQL injection confirmed — parameter "${param}" triggers database error with payload "${payload}"`, evidence: res.body.slice(0,200), confidence: 'confirmed' });
-          return; // per-param, one finding enough
-        }
+        if (res.status < 200 || res.status >= 500) continue;
+        const hit = findNewDbError(res.body, baselineText);
+        if (!hit) continue;
+        vulns.push({
+          type: 'sqli',
+          severity: 'critical',
+          url: testUrl,
+          description: `Error-based SQL injection — parameter "${param}" returns a ${hit.tech} error for payload "${payload}" that the page does not contain without the payload`,
+          evidence: hit.evidence,
+          confidence: 'confirmed',
+        });
+        return; // per-param, one finding enough
       } catch {}
     }
   }));
 
-  // Active XSS probe: reflected payload detection
-  const xssPayloads = ['<testxss>', '\"><testxss>', "'><testxss>", "<img src=x onerror=alert(1)>"];
+  // Reflected XSS. Only a VERBATIM reflection counts, and only in an HTML response.
+  const xssPayloads = ['"><ssx9z>', '<svg/onload=ssx9z(1)>'];
   const xssParams = ['q','search','query','s','term','name','message','comment','subject','body','content','text','title','desc','description','label','tag','keyword','redirect','return','url','link','href','src','path','file','callback'];
-  await Promise.all(xssParams.slice(0,12).map(async (param) => {
-    for (const payload of xssPayloads.slice(0,2)) {
+  await Promise.all(xssParams.slice(0, 12).map(async (param) => {
+    for (const payload of xssPayloads) {
       try {
         const testUrl = `${base}?${param}=${encodeURIComponent(payload)}`;
         const res = await fetchURL(testUrl, 'GET', { 'Connection': 'close' }, undefined, timeout);
-        if (res.body.includes(payload) || res.body.includes(payload.replace(/"/g,'&quot;')) || res.body.includes(payload.replace(/</g,'&lt;'))) {
-          if (!vulns.some(v => v.type === 'xss' && v.url === base)) {
-            vulns.push({ type: 'xss', severity: 'high', url: testUrl, description: `Reflected XSS confirmed — parameter "${param}" reflects input without encoding: "${payload}"`, evidence: res.body.slice(0,200), confidence: 'confirmed' });
-          }
-          return;
+        const ctype = (res.headers['content-type'] || '').toLowerCase();
+        if (!ctype.includes('html')) continue;
+        if (!hasUnencodedReflection(res.body, payload)) continue;
+        if (hasUnencodedReflection(baselineText, payload)) continue;
+        const executable = payload.startsWith('<svg');
+        if (!vulns.some((v) => v.type === 'xss' && v.url === base)) {
+          vulns.push({
+            type: 'xss',
+            severity: 'high',
+            url: testUrl,
+            description: executable
+              ? `Reflected XSS — parameter "${param}" returns "${payload}" unencoded inside an HTML response, so a browser parses it as markup and runs the handler`
+              : `Reflected HTML injection — parameter "${param}" returns "${payload}" unencoded inside an HTML response; with an event handler this becomes script execution`,
+            evidence: reflectionContext(res.body, payload),
+            confidence: executable ? 'confirmed' : 'likely',
+          });
         }
+        return;
       } catch {}
     }
   }));
 
-  // Active Command Injection probe
-  const cmdPayloads = [';id', '|id', '&id', '`id`', '$(id)', ';whoami', '|whoami'];
+  // Command injection. The marker must be absent from the page without the payload; the old
+  // pattern also matched the bare words "root", "daemon" and "usr/bin", which appear on
+  // countless ordinary pages.
+  const cmdPayloads = [';id', '|id', ';whoami', '|whoami'];
   const cmdParams = ['host','ip','cmd','exec','command','run','ping','target','url','path','file','domain','address','name','input'];
-  await Promise.all(cmdParams.slice(0,8).map(async (param) => {
-    for (const payload of cmdPayloads.slice(0,2)) {
+  await Promise.all(cmdParams.slice(0, 8).map(async (param) => {
+    for (const payload of cmdPayloads.slice(0, 2)) {
       try {
         const testUrl = `${base}?${param}=${encodeURIComponent(payload)}`;
         const res = await fetchURL(testUrl, 'GET', { 'Connection': 'close' }, undefined, timeout);
-        if (/uid=\d+\(|uid=\d+\s+gid=\d+|www-data|root|daemon|bin\/bash|usr\/bin|windows nt|microsoft windows/i.test(res.body)) {
-          vulns.push({ type: 'rce', severity: 'critical', url: testUrl, description: `Command injection confirmed — parameter "${param}" executes system commands with "${payload}"`, evidence: res.body.slice(0,200), confidence: 'confirmed' });
-          return;
-        }
+        const hit = findNewCommandOutput(res.body, baselineText);
+        if (!hit) continue;
+        vulns.push({
+          type: 'rce',
+          severity: 'critical',
+          url: testUrl,
+          description: `Command injection — parameter "${param}" with payload "${payload}" returns operating-system command output that the page does not contain without the payload`,
+          evidence: hit.evidence,
+          confidence: 'confirmed',
+        });
+        return;
       } catch {}
     }
   }));
@@ -2733,6 +2703,24 @@ async function dohQuery(name: string, type: string, timeoutMs = 6000): Promise<A
   }
 }
 
+/**
+ * Whether a host name exists in DNS.
+ *
+ * A failed A lookup is not proof that a name is gone: IPv6-only targets, CNAME chains and
+ * transient resolver errors all make resolve4() throw, and every such case was reported as a
+ * dangling CNAME. Only a definitive NXDOMAIN with no successful answer of any kind counts as
+ * missing; an unknown state is treated as alive so a takeover is never invented.
+ */
+async function nameExists(name: string): Promise<boolean> {
+  const settled = await Promise.allSettled([resolve4(name), resolve6(name), resolveCname(name)]);
+  const answered = settled.some((r) => r.status === 'fulfilled' && Array.isArray(r.value) && r.value.length > 0);
+  if (answered) return true;
+  const nxdomain = settled.some(
+    (r) => r.status === 'rejected' && String((r.reason as any)?.code || '').toUpperCase() === 'ENOTFOUND',
+  );
+  return !nxdomain;
+}
+
 export async function analyzeDNS(domain: string): Promise<{ records: DNSRecord[]; spfPolicy?: string; dmarcPolicy?: string; dkimPresent?: boolean; dnssec?: boolean; caa?: string[]; subdomainTakeover?: string[]; zoneTransfer?: boolean }> {
   const records: DNSRecord[] = [];
   let spfPolicy: string | undefined;
@@ -2838,7 +2826,8 @@ export async function analyzeDNS(domain: string): Promise<{ records: DNSRecord[]
     const cname = await resolveCname(domain).catch(() => [] as string[]);
     for (const c of cname) {
       records.push({ type: 'CNAME', value: c });
-      try { await resolve4(c); } catch { subdomainTakeover.push(c); }
+      // A CNAME is only dangling when the target name genuinely does not exist in DNS.
+      if (!(await nameExists(c))) subdomainTakeover.push(c);
     }
   } catch {}
 
@@ -2869,7 +2858,7 @@ async function scanCloud(domain: string): Promise<CloudAsset[]> {
     try {
       const res = await fetchURL(`https://${name}.s3.amazonaws.com`, 'GET', {}, undefined, 8000);
       // Only report if actually public (200 with bucket listing) or if body shows real exposure
-      if (res.status === 200 && (res.body.includes('ListBucketResult') || res.body.includes('<Contents>') || res.body.includes('<Key>'))) {
+      if (res.status === 200 && res.body.includes('ListBucketResult') && res.body.includes('<Key>')) {
         assets.push({ id: genId(), provider: 'aws', serviceType: 'S3 Bucket', resourceId: name, url: `https://${name}.s3.amazonaws.com`, permissions: ['ListBucket'], misconfigurations: [{ type: 'cloud_misconfig', severity: 'critical', description: `S3 bucket ${name} is publicly listable` }], riskScore: 85, severity: 'critical', exposureLevel: 'public' });
       }
       // If 403 with explicit AccessDenied in body, it's private - don't report
@@ -2934,13 +2923,30 @@ async function scanCloud(domain: string): Promise<CloudAsset[]> {
     }
   } catch {}
 
-  // Docker/K8s exposed ports
-  for (const port of [2375,2376,6443]) {
+  // Container or orchestrator API exposure. Proof required: the version endpoint must answer
+  // with the API document. Matching the word "docker" in an arbitrary body, or a bare TCP
+  // connect, was not evidence that the API was reachable.
+  for (const port of [2375, 2376, 6443]) {
     try {
-      const banner = await bannerGrab(domain, port, 5000);
-      if (banner.body.includes('Docker') || banner.body.includes('docker') || banner.body.includes('Kubernetes') || banner.body.includes('k8s') || banner.body.includes('etcd')) {
-        const svc = banner.body.includes('Kubernetes') || banner.body.includes('k8s') ? 'Kubernetes API' : banner.body.includes('etcd') ? 'etcd' : 'Docker Daemon';
-        assets.push({ id: genId(), provider: 'aws', serviceType: svc, resourceId: `${domain}:${port}`, url: `http://${domain}:${port}`, permissions: ['Connect'], misconfigurations: [{ type: 'cloud_misconfig', severity: 'critical', description: `${svc} exposed on port ${port} without proper network controls` }], riskScore: 90, severity: 'critical', exposureLevel: 'public' });
+      const probe = await fetchURL(`http://${domain}:${port}/version`, 'GET', {}, undefined, 5000);
+      if (probe.status === 200 && /"ApiVersion"\s*:|"gitVersion"\s*:/.test(probe.body)) {
+        const svc = port === 6443 ? 'Kubernetes API' : 'Docker Engine API';
+        assets.push({
+          id: genId(),
+          provider: 'aws',
+          serviceType: svc,
+          resourceId: `${domain}:${port}`,
+          url: `http://${domain}:${port}/version`,
+          permissions: ['Connect'],
+          misconfigurations: [{
+            type: 'cloud_misconfig',
+            severity: 'critical',
+            description: `${svc} answers on port ${port} without authentication`,
+          }],
+          riskScore: 90,
+          severity: 'critical',
+          exposureLevel: 'public',
+        });
       }
     } catch {}
   }
@@ -3747,7 +3753,7 @@ export class ScannerEngine {
       if (dnsInfo.dnssec === false) primary.findings.push({ type:'dns_weakness', severity:'low', description:'DNSSEC not enabled', evidence:'No DNSKEY record published' });
       if (dnsInfo.subdomainTakeover && dnsInfo.subdomainTakeover.length > 0) {
         for (const st of dnsInfo.subdomainTakeover) {
-          primary.findings.push({ type:'subdomain_takeover', severity:'critical', description:`Potential subdomain takeover: ${st}`, evidence:`Dangling CNAME: ${st}` });
+          primary.findings.push({ type:'subdomain_takeover', severity:'high', description:`Dangling CNAME — ${st} does not resolve, so a third party could register the name and serve content under this subdomain`, evidence:`CNAME target ${st} returns NXDOMAIN` });
         }
       }
     }

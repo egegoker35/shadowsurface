@@ -22,3 +22,11 @@ body {
 .scanline {
   animation: scanline 3s linear infinite;
 }
+
+/* Both the full report and the change report are handed to customers as PDF. Anything
+   marked no-print (navigation, buttons) must not appear on the printed page. */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #ffffff !important; }
+  section, table { break-inside: avoid; }
+}

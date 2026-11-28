@@ -102,6 +102,10 @@ export default function ScanDetailPage() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
             View Report
           </button>
+          <button onClick={() => window.open(`/dashboard/scans/${scan.id}/changes`, '_blank')} className="px-4 py-2 rounded-lg bg-sky-900/30 hover:bg-sky-900/50 border border-sky-800 text-sky-300 text-sm font-medium transition-colors flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8m-8 4h8m-8 4h5" /></svg>
+            Changes
+          </button>
         </div>
       </div>
 
