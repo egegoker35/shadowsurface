@@ -3547,7 +3547,10 @@ export class ScannerEngine {
     this.scanResult.assets = assets;
     this.scanResult.durationSeconds=(Date.now()-start)/1000;
     this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:0, highRiskCount:0, mediumRiskCount:0, lowRiskCount:0, infoCount:0, totalCVEs:0, totalWebVulns:0, sslIssues:0, totalExploits:0, weakSSLCount:0, missingHeaderCount:0, exposedDBCount:0, exposedAdminCount:0 };
-    this.scanResult.executiveSummary={ overallRisk:'LOW', riskScore:0, criticalFindings:0, attackSurfaceSize:Object.keys(subdomains).length, recommendations:['Run full scan for deeper analysis'], threatActors:['None identified'], complianceStatus:{owaspCompliant:true,pciDssCompliant:true,gdprCompliant:true}, mitreTactics:['TA0043-Reconnaissance'] };
+    // Discovery only: assets were enumerated, nothing was tested. Claiming LOW risk or a
+    // compliance verdict here would be a statement this scan never verified, so the summary
+    // says so instead of inheriting the full-scan defaults.
+    this.scanResult.executiveSummary={ overallRisk:'INCONCLUSIVE', riskScore:0, criticalFindings:0, attackSurfaceSize:Object.keys(subdomains).length, recommendations:['Discovery only — no ports, TLS, web configuration or vulnerabilities were tested. Run a full scan for an assessment.'], threatActors:['Not assessed'], mitreTactics:['TA0043-Reconnaissance'] };
     this.applyCoverage(this.scanResult.statistics?.totalSubdomains || 0);
     return this.scanResult;
   }
