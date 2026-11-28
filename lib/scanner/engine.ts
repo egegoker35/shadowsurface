@@ -3141,7 +3141,6 @@ async function scanPortsOnAssets(subdomains: Record<string, string[]>, ports: nu
                   cveConfidence: cves.length>0 ? 'high' : 'low',
                   cloudProvider: null, riskScore: 0, findings, headers: (web && web.headers) ? web.headers : { server: (probe.headers['server'] || probe.body.slice(0,80)) }, sslInfo, sslGrade, waf,
                   webVulns, discoveredEndpoints, firstSeen: new Date().toISOString(),
-                  complianceStatus: { owasp:[], pciDss:[], gdpr:[] },
                   cvssMax: cves.length ? Math.max(...cves.map(c=>c.cvss)) : 0,
                   exploitAvailable: cves.some(c=>c.exploitAvailable),
                 };
@@ -3446,25 +3445,6 @@ function generateThreatActors(assets: DiscoveredAsset[]): { actors: string[]; mi
   return { actors, mitreTactics: Array.from(new Set(mitre)) };
 }
 
-export function complianceCheck(assets: DiscoveredAsset[]): ScanResult['executiveSummary']['complianceStatus'] {
-  let owaspCompliant = true;
-  let pciDssCompliant = true;
-  let gdprCompliant = true;
-  for (const a of assets) {
-    if ((a.webVulns||[]).some(w=>w.severity==='critical'||w.severity==='high')) owaspCompliant = false;
-    // PCI DSS TLS requirements apply only to assets that terminate TLS, and only observed
-    // weaknesses may fail them. A failed/unperformed handshake is unknown, not non-compliant.
-    const tlsAsset = a.port === 443 || a.port === 8443 || !!a.sslInfo;
-    if (tlsAsset) {
-      const weakGrade = a.sslGrade === 'F' || a.sslGrade === 'T' || a.sslGrade === 'X';
-      const weakProtoObserved = !!a.sslInfo && (a.sslInfo.tls10 === true || a.sslInfo.tls11 === true || a.sslInfo.weakCipher === true);
-      const noModernObserved = !!a.sslInfo && a.sslInfo.protocolKnown === true && !a.sslInfo.tls12 && !a.sslInfo.tls13;
-      if (weakGrade || a.sslInfo?.certExpired === true || weakProtoObserved || noModernObserved) pciDssCompliant = false;
-    }
-    if (a.findings.some(f=>f.type==='exposed_database'||f.type==='info_disclosure')) gdprCompliant = false;
-  }
-  return { owaspCompliant, pciDssCompliant, gdprCompliant };
-}
 
 // ─── Scanner Engine Class ─────────────────────────────────────────────────
 export class ScannerEngine {
@@ -3593,7 +3573,7 @@ export class ScannerEngine {
     this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:countCriticalFindings(assets), highRiskCount:assets.filter(a=>a.riskScore>=70&&a.riskScore<85).length, mediumRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, lowRiskCount:assets.filter(a=>a.riskScore<40).length, infoCount:countInfoFindings(assets), totalCVEs:new Set(assets.flatMap(a=>a.cves)).size, totalWebVulns:assets.reduce((s,a)=>s+(a.webVulns?.length||0),0), sslIssues:assets.filter(a=>a.sslGrade&&(['D','E','F','T','X'] as any[]).includes(a.sslGrade)).length, totalExploits:assets.filter(a=>a.exploitAvailable).length, weakSSLCount:assets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length, missingHeaderCount:countMissingHeaders(assets), exposedDBCount:assets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length, exposedAdminCount:countExposedAdmin(assets) };
     const maxPortRisk = Math.max(...assets.map(a=>a.riskScore),0);
     const portThreats = assets.filter(a=>a.findings.length>0 || (a.webVulns && a.webVulns.length>0)).length;
-    this.scanResult.executiveSummary={ overallRisk:riskLabel(maxPortRisk), riskScore:maxPortRisk, criticalFindings:countCriticalFindings(assets), attackSurfaceSize:assets.length, recommendations:['Run full scan for CVE and cloud checks'], threatActors:portThreats>0?['Opportunistic attackers','Reconnaissance groups']:['None identified'], complianceStatus:complianceCheck(assets), mitreTactics:['TA0043-Reconnaissance'] };
+    this.scanResult.executiveSummary={ overallRisk:riskLabel(maxPortRisk), riskScore:maxPortRisk, criticalFindings:countCriticalFindings(assets), attackSurfaceSize:assets.length, scanLimitations:['Black-box, unauthenticated testing only — authenticated areas, business logic and social engineering were not assessed.','Findings cover only the checks that ran; a missing finding is not proof that a weakness does not exist.'], recommendations:['Run full scan for CVE and cloud checks'], threatActors:portThreats>0?['Opportunistic attackers','Reconnaissance groups']:['None identified'], mitreTactics:['TA0043-Reconnaissance'] };
     this.applyCoverage(this.scanResult.statistics?.totalSubdomains || 0);
     return this.scanResult;
   }
@@ -3624,7 +3604,7 @@ export class ScannerEngine {
     this.scanResult.assets=assets; this.scanResult.durationSeconds=(Date.now()-start)/1000;
     this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:0, criticalFindings:crit, highRiskCount:assets.filter(a=>a.riskScore>=70&&a.riskScore<85).length, mediumRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, lowRiskCount:assets.filter(a=>a.riskScore<40).length, infoCount:countInfoFindings(assets), totalCVEs:totalCves, totalWebVulns, sslIssues, totalExploits:assets.filter(a=>a.exploitAvailable).length, weakSSLCount:assets.filter(a=>a.sslGrade==='F'||a.sslGrade==='T'||a.sslGrade==='X').length, missingHeaderCount:countMissingHeaders(assets), exposedDBCount:assets.filter(a=>a.findings.some(f=>f.type==='exposed_database')).length, exposedAdminCount:countExposedAdmin(assets) };
     const {actors, mitreTactics} = generateThreatActors(assets);
-    this.scanResult.executiveSummary={ overallRisk:riskLabel(peekRiskScore(assets)), riskScore:peekRiskScore(assets), criticalFindings:crit, attackSurfaceSize:assets.length, recommendations:generateRecommendations(assets,[],dnsInfo), threatActors:actors, complianceStatus:complianceCheck(assets), mitreTactics };
+    this.scanResult.executiveSummary={ overallRisk:riskLabel(peekRiskScore(assets)), riskScore:peekRiskScore(assets), criticalFindings:crit, attackSurfaceSize:assets.length, scanLimitations:['DNS and subdomain inventory only — no ports, TLS or web application behaviour were tested.','A dangling DNS record is reported only when the target name does not exist in DNS.'], recommendations:generateRecommendations(assets,[],dnsInfo), threatActors:actors, mitreTactics };
     this.scanResult.dnsAnalysis = dnsInfo;
     this.applyCoverage(this.scanResult.statistics?.totalSubdomains || 0);
     return this.scanResult;
@@ -3638,7 +3618,7 @@ export class ScannerEngine {
     this.scanResult.statistics={ totalSubdomains:0, totalAssets:0, totalCloudAssets:cloudAssets.length, criticalFindings:cloudAssets.filter(a=>a.severity==='critical').length, highRiskCount:cloudAssets.filter(a=>a.severity==='high').length, mediumRiskCount:cloudAssets.filter(a=>a.severity==='medium').length, lowRiskCount:0, infoCount:0, totalCVEs:0, totalWebVulns:0, sslIssues:0, totalExploits:0, weakSSLCount:0, missingHeaderCount:0, exposedDBCount:0, exposedAdminCount:0 };
     // riskScore was criticalCount*25, which is unbounded (4 criticals = 100) and ignores high/medium.
     const cloudMaxRisk = Math.max(...cloudAssets.map(c=>c.riskScore||0),0);
-    this.scanResult.executiveSummary={ overallRisk:cloudAssets.some(a=>a.severity==='critical')?'CRITICAL':cloudAssets.some(a=>a.severity==='high')?'HIGH':cloudAssets.some(a=>a.severity==='medium')?'MEDIUM':'LOW', riskScore:cloudMaxRisk, criticalFindings:cloudAssets.filter(a=>a.severity==='critical').length, attackSurfaceSize:cloudAssets.length, recommendations:generateRecommendations([],cloudAssets,dnsFindings), threatActors:['Cloud-focused threat actors','Data exfiltration groups'], complianceStatus:{owaspCompliant:true,pciDssCompliant:true,gdprCompliant:!cloudAssets.some(a=>a.severity==='critical')}, mitreTactics:['TA0001-Initial Access','TA0009-Collection'] };
+    this.scanResult.executiveSummary={ scanLimitations:['Only public cloud storage endpoints were checked; ports, TLS and web application behaviour were not tested.'], overallRisk:cloudAssets.some(a=>a.severity==='critical')?'CRITICAL':cloudAssets.some(a=>a.severity==='high')?'HIGH':cloudAssets.some(a=>a.severity==='medium')?'MEDIUM':'LOW', riskScore:cloudMaxRisk, criticalFindings:cloudAssets.filter(a=>a.severity==='critical').length, attackSurfaceSize:cloudAssets.length, recommendations:generateRecommendations([],cloudAssets,dnsFindings), threatActors:['Cloud-focused threat actors','Data exfiltration groups'], mitreTactics:['TA0001-Initial Access','TA0009-Collection'] };
     this.applyCoverage(this.scanResult.statistics?.totalSubdomains || 0);
     return this.scanResult;
   }
@@ -3689,7 +3669,6 @@ export class ScannerEngine {
     const recs: string[] = [];
     const actorSet = new Set<string>();
     const tacticSet = new Set<string>();
-    let owasp = true, pci = true, gdpr = true;
     let failedTargets = 0;
 
     for (const t of targets) {
@@ -3715,8 +3694,6 @@ export class ScannerEngine {
         for (const r of res.executiveSummary?.recommendations || []) if (!recs.includes(r) && recs.length < 12) recs.push(r);
         for (const a of res.executiveSummary?.threatActors || []) actorSet.add(a);
         for (const m of res.executiveSummary?.mitreTactics || []) tacticSet.add(m);
-        const cs = res.executiveSummary?.complianceStatus;
-        if (cs) { owasp = owasp && !!cs.owaspCompliant; pci = pci && !!cs.pciDssCompliant; gdpr = gdpr && !!cs.gdprCompliant; }
       } catch {
         failedTargets++;
       }
@@ -3760,7 +3737,7 @@ export class ScannerEngine {
     if (failedTargets > 0) recs.push(`${failedTargets} of ${targets.length} target(s) could not be fully scanned - re-run them individually`);
     const {actors} = generateThreatActors(dedupedAssets);
     for (const a of actors) actorSet.add(a);
-    this.scanResult.executiveSummary = { overallRisk: riskLabel(peekRiskScore(dedupedAssets, dedupedCloud)), riskScore: peekRiskScore(dedupedAssets, dedupedCloud), criticalFindings: crit, attackSurfaceSize: dedupedAssets.length + dedupedCloud.length, recommendations: recs.length ? recs : ['No action required - no significant findings'], threatActors: Array.from(actorSet), complianceStatus: { owaspCompliant: owasp, pciDssCompliant: pci, gdprCompliant: gdpr }, mitreTactics: Array.from(tacticSet) };
+    this.scanResult.executiveSummary = { scanLimitations:['Black-box, unauthenticated testing only — authenticated areas, business logic and social engineering were not assessed.','Findings cover only the checks that ran; a missing finding is not proof that a weakness does not exist.'], overallRisk: riskLabel(peekRiskScore(dedupedAssets, dedupedCloud)), riskScore: peekRiskScore(dedupedAssets, dedupedCloud), criticalFindings: crit, attackSurfaceSize: dedupedAssets.length + dedupedCloud.length, recommendations: recs.length ? recs : ['No action required - no significant findings'], threatActors: Array.from(actorSet), mitreTactics: Array.from(tacticSet) };
     this.scanResult.dnsAnalysis = dnsInfo;
     this.applyCoverage(this.scanResult.statistics?.totalSubdomains || 0);
     return this.scanResult;
@@ -3829,7 +3806,7 @@ export class ScannerEngine {
     this.scanResult.completedAt=new Date().toISOString();
     this.scanResult.statistics={ totalSubdomains:Object.keys(subdomains).length, totalAssets:assets.length, totalCloudAssets:cloudAssets.length, criticalFindings:crit, highRiskCount:assets.filter(a=>a.riskScore>=70&&a.riskScore<85).length, mediumRiskCount:assets.filter(a=>a.riskScore>=40&&a.riskScore<70).length, lowRiskCount:assets.filter(a=>a.riskScore<40).length, infoCount:countInfoFindings(assets), totalCVEs:totalCves, totalWebVulns, sslIssues, totalExploits, weakSSLCount, missingHeaderCount, exposedDBCount, exposedAdminCount: countExposedAdmin(assets) };
     const {actors, mitreTactics} = generateThreatActors(assets);
-    this.scanResult.executiveSummary={ overallRisk:riskLabel(peekRiskScore(assets, cloudAssets)), riskScore:peekRiskScore(assets, cloudAssets), criticalFindings:crit, attackSurfaceSize:assets.length+cloudAssets.length, recommendations: generateRecommendations(assets,cloudAssets,dnsInfo), threatActors:actors, complianceStatus:complianceCheck(assets), mitreTactics };
+    this.scanResult.executiveSummary={ scanLimitations:['Black-box, unauthenticated testing only — authenticated areas, business logic and social engineering were not assessed.','Findings cover only the checks that ran; a missing finding is not proof that a weakness does not exist.'], overallRisk:riskLabel(peekRiskScore(assets, cloudAssets)), riskScore:peekRiskScore(assets, cloudAssets), criticalFindings:crit, attackSurfaceSize:assets.length+cloudAssets.length, recommendations: generateRecommendations(assets,cloudAssets,dnsInfo), threatActors:actors, mitreTactics };
     this.scanResult.dnsAnalysis = dnsInfo;
     this.applyCoverage(this.scanResult.statistics?.totalSubdomains || 0);
     return this.scanResult;

@@ -131,11 +131,6 @@ export interface DiscoveredAsset {
   osFingerprint?: string;
   uptime?: string;
   traceroute?: string[];
-  complianceStatus?: {
-    owasp?: string[];
-    pciDss?: string[];
-    gdpr?: string[];
-  };
   exploitAvailable?: boolean;
   cvssMax?: number;
 }
@@ -215,11 +210,6 @@ export interface ScanResult {
     mitreTactics?: string[];
     /** Explicit statements about what this scan could not observe. */
     scanLimitations?: string[];
-    complianceStatus?: {
-      owaspCompliant: boolean;
-      pciDssCompliant: boolean;
-      gdprCompliant: boolean;
-    };
   };
   dnsAnalysis?: {
     records: DNSRecord[];
