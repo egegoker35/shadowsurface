@@ -1651,7 +1651,9 @@ const CVE_DB: CVEEntry[] = [
 
 
 // ─── Security Headers Checklist ───────────────────────────────────────────
-const SECURITY_HEADERS = ['Strict-Transport-Security','Content-Security-Policy','X-Frame-Options','X-Content-Type-Options','Referrer-Policy','Permissions-Policy','Cross-Origin-Embedder-Policy','Cross-Origin-Opener-Policy','Cross-Origin-Resource-Policy'];
+// Baseline headers only. COOP/COEP/CORP are optional isolation headers that most sites and
+// frameworks do not set; listing them as missing on every asset was noise, not a weakness.
+const SECURITY_HEADERS = ['Strict-Transport-Security','Content-Security-Policy','X-Frame-Options','X-Content-Type-Options','Referrer-Policy','Permissions-Policy'];
 
 
 

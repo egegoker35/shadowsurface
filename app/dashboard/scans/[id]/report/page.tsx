@@ -224,6 +224,11 @@ export default function ScanReportPage() {
                 </tbody>
               </table>
             </div>
+            {assets.some((a: any) => a.cves?.length > 0) && (
+              <p className="text-xs text-slate-500 mt-2">
+                CVE matches come from detected component versions (banner/fingerprint). They indicate that a component may be affected — no CVE was exploited during this scan.
+              </p>
+            )}
             {assets.some((a: any) => a.discoveredEndpoints?.length > 0) && (
               <div className="mt-3 border border-slate-200 rounded-xl bg-white p-4">
                 <h3 className="text-sm font-bold text-slate-700 mb-2">Discovered Endpoints</h3>
